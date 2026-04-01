@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  }
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String?
+  plan          String    @default("hobby")
+  createdAt     DateTime  @default(now())
+  apiaries      Apiary[]
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Apiary {
+  id        String    @id @default(cuid())
+  name      String
+  lat       Float?
+  lng       Float?
+  notes     String?
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  colonies  Colony[]
+  createdAt DateTime  @default(now())
+}
+
+model Colony {
+  id          String       @id @default(cuid())
+  name        String
+  queenYear   Int?
+  queenColor  String?
+  apiaryId    String
+  apiary      Apiary       @relation(fields: [apiaryId], references: [id], onDelete: Cascade)
+  inspections Inspection[]
+  treatments  Treatment[]
+  nfcTags     NfcTag[]
+  createdAt   DateTime     @default(now())
+}
+
+model Inspection {
+  id             String           @id @default(cuid())
+  date           DateTime         @default(now())
+  notes          String?
+  createdOffline Boolean          @default(false)
+  colonyId       String
+  colony         Colony           @relation(fields: [colonyId], references: [id], onDelete: Cascade)
+  items          InspectionItem[]
+  createdAt      DateTime         @default(now())
+}
+
+model InspectionItem {
+  id           String     @id @default(cuid())
+  key          String
+  value        String
+  inspectionId String
+  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+}
+
+model Treatment {
+  id        String   @id @default(cuid())
+  type      String
+  amount    Float?
+  unit      String?
+  date      DateTime @default(now())
+  notes     String?
+  colonyId  String
+  colony    Colony   @relation(fields: [colonyId], references: [id], onDelete: Cascade)
+}
+
+model NfcTag {
+  id        String      @id @default(cuid())
+  uid       String      @unique
+  label     String?
+  colonyId  String
+  colony    Colony      @relation(fields: [colonyId], references: [id], onDelete: Cascade)
+  actions   NfcAction[]
+  createdAt DateTime    @default(now())
+}
+
+model NfcAction {
+  id            String  @id @default(cuid())
+  type          String
+  defaultValues Json?
+  nfcTagId      String
+  nfcTag        NfcTag  @relation(fields: [nfcTagId], references: [id], onDelete: Cascade)
+}
+
+// NextAuth required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
