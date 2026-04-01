@@ -2,15 +2,6 @@
  * @jest-environment node
  */
 
-jest.mock('@prisma/client', () => {
-  const MockPrismaClient = jest.fn().mockImplementation(() => ({
-    user: {
-      findUnique: jest.fn(),
-    },
-  }))
-  return { PrismaClient: MockPrismaClient }
-})
-
 jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
 }))
@@ -38,6 +29,14 @@ describe('authOptions.authorize', () => {
 
   it('returns null if no credentials provided', async () => {
     const result = await authorize(null as any, {} as any)
+    expect(result).toBeNull()
+  })
+
+  it('returns null if credentials are incomplete', async () => {
+    const result = await authorize(
+      { email: 'test@example.com', password: '' },
+      {} as any
+    )
     expect(result).toBeNull()
   })
 
