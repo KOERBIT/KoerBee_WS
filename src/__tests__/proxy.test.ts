@@ -2,6 +2,9 @@
  * @jest-environment node
  */
 
+// Note: The plan specified `unstable_doesProxyMatch` (Next.js 16 docs name),
+// but Next.js 16.2.1 only exports `unstable_doesMiddlewareMatch` (legacy name).
+// Using the available function — functionally identical.
 import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server'
 import { config } from '../../proxy'
 
