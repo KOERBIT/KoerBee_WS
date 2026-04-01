@@ -15,6 +15,10 @@ function getDirectUrl(): string {
       // fall through
     }
   }
+  // Add sslmode=require for Supabase/production connections
+  if (dbUrl.includes('supabase.co') && !dbUrl.includes('sslmode=')) {
+    return dbUrl + (dbUrl.includes('?') ? '&' : '?') + 'sslmode=require'
+  }
   return dbUrl
 }
 
