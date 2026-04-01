@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
 
 // The prisma+postgres:// URL is the local Prisma dev proxy.
 // Prisma v7 requires a driver adapter for direct connections.
@@ -15,17 +16,18 @@ function getDirectUrl(): string {
       // fall through
     }
   }
-  // Add sslmode=require for Supabase/production connections
-  if (dbUrl.includes('supabase.co') && !dbUrl.includes('sslmode=')) {
-    return dbUrl + (dbUrl.includes('?') ? '&' : '?') + 'sslmode=require'
-  }
   return dbUrl
 }
+
+const pool = new Pool({
+  connectionString: getDirectUrl(),
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+})
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
 export const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient({ adapter: new PrismaPg({ connectionString: getDirectUrl() }) })
+  new PrismaClient({ adapter: new PrismaPg(pool) })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
