@@ -14,6 +14,7 @@ model User {
   plan          String    @default("hobby")
   createdAt     DateTime  @default(now())
   apiaries      Apiary[]
+  tasks         Task[]
   accounts      Account[]
   sessions      Session[]
 }
@@ -27,6 +28,7 @@ model Apiary {
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   colonies  Colony[]
+  tasks     Task[]
   createdAt DateTime  @default(now())
 }
 
@@ -40,6 +42,7 @@ model Colony {
   inspections Inspection[]
   treatments  Treatment[]
   nfcTags     NfcTag[]
+  tasks       Task[]
   createdAt   DateTime     @default(now())
 }
 
@@ -89,6 +92,22 @@ model NfcAction {
   defaultValues Json?
   nfcTagId      String
   nfcTag        NfcTag  @relation(fields: [nfcTagId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  dueDate     DateTime?
+  completed   Boolean   @default(false)
+  priority    String    @default("normal")
+  colonyId    String?
+  colony      Colony?   @relation(fields: [colonyId], references: [id], onDelete: SetNull)
+  apiaryId    String?
+  apiary      Apiary?   @relation(fields: [apiaryId], references: [id], onDelete: SetNull)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
 }
 
 // NextAuth required models
