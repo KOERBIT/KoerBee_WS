@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
         data: actions.map((a: { type: string; defaultValues?: object }) => ({
           nfcTagId: tag.id,
           type: a.type,
-          defaultValues: a.defaultValues ?? null,
+          defaultValues: a.defaultValues ?? Prisma.DbNull,
         })),
       })
     }

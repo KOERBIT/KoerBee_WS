@@ -58,7 +58,7 @@ export default async function NfcPage() {
         </div>
       </div>
 
-      <NfcTagList tags={tags} />
+      <NfcTagList tags={tags as any} />
     </div>
   )
 }

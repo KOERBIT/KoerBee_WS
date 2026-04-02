@@ -13,7 +13,7 @@ const ACTION_LABELS: Record<string, string> = {
 interface NfcAction {
   id: string
   type: string
-  defaultValues: Record<string, string> | null
+  defaultValues: Record<string, unknown> | null
 }
 
 interface Tag {
@@ -86,7 +86,7 @@ export function NfcTagList({ tags }: { tags: Tag[] }) {
               {tag.actions.map(a => (
                 <span key={a.id} className="text-[11px] font-medium bg-zinc-100 text-zinc-600 px-2.5 py-1 rounded-full">
                   {ACTION_LABELS[a.type] ?? a.type}
-                  {a.defaultValues?.amount && ` (${a.defaultValues.amount} ${a.defaultValues.unit ?? ''})`}
+                  {a.defaultValues?.amount ? ` (${String(a.defaultValues.amount)} ${String(a.defaultValues.unit ?? '')})` : ''}
                 </span>
               ))}
             </div>
