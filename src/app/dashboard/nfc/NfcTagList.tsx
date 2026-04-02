@@ -6,12 +6,8 @@ import { useRouter } from 'next/navigation'
 const ACTION_LABELS: Record<string, string> = {
   inspection:    'Durchsicht',
   varroa:        'Varroabehandlung',
-  feeding:       'Fütterung',
+  feeding:       'Füttern',
   honey_harvest: 'Honigernte',
-  oxalic_acid:   'Oxalsäure',
-  formic_acid:   'Ameisensäure',
-  thymol:        'Thymol',
-  other:         'Sonstiges',
 }
 
 interface NfcAction {

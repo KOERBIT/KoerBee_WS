@@ -2,27 +2,18 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Modal from '@/components/Modal'
 
 const ACTION_TYPES = [
   { value: 'inspection',    label: 'Durchsicht' },
   { value: 'varroa',        label: 'Varroabehandlung' },
-  { value: 'feeding',       label: 'Fütterung' },
+  { value: 'feeding',       label: 'Füttern' },
   { value: 'honey_harvest', label: 'Honigernte' },
-  { value: 'oxalic_acid',   label: 'Oxalsäure' },
-  { value: 'formic_acid',   label: 'Ameisensäure' },
-  { value: 'thymol',        label: 'Thymol' },
-  { value: 'other',         label: 'Sonstiges' },
 ]
 
-const NEEDS_AMOUNT = ['feeding', 'varroa', 'honey_harvest', 'oxalic_acid', 'formic_acid', 'thymol']
+const NEEDS_AMOUNT = ['feeding', 'honey_harvest']
 const UNITS: Record<string, string[]> = {
-  feeding: ['kg', 'l'],
-  honey_harvest: ['kg'],
-  varroa: ['ml', 'g'],
-  oxalic_acid: ['ml', 'g'],
-  formic_acid: ['ml', 'g'],
-  thymol: ['g', 'Stück'],
+  feeding:      ['kg', 'l'],
+  honey_harvest:['kg'],
 }
 
 interface Colony { id: string; name: string; apiary: { name: string } }
@@ -44,7 +35,12 @@ export function NfcTagManager({ colonies }: { colonies: Colony[] }) {
     setActions(a => a.filter((_, idx) => idx !== i))
   }
   function updateAction(i: number, key: keyof ActionForm, value: string) {
-    setActions(a => a.map((act, idx) => idx === i ? { ...act, [key]: value } : act))
+    setActions(a => a.map((act, idx) => {
+      if (idx !== i) return act
+      const updated = { ...act, [key]: value }
+      if (key === 'type') updated.unit = UNITS[value]?.[0] ?? 'kg'
+      return updated
+    }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -135,12 +131,12 @@ export function NfcTagManager({ colonies }: { colonies: Colony[] }) {
                           <div className="col-span-2">
                             <input type="number" step="0.1" min="0" value={action.amount}
                               onChange={e => updateAction(i, 'amount', e.target.value)}
-                              placeholder="Standardmenge"
+                              placeholder="Standardmenge (optional)"
                               className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
                           </div>
                           <select value={action.unit} onChange={e => updateAction(i, 'unit', e.target.value)}
                             className="border border-zinc-200 rounded-lg px-2 py-2 text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
-                            {(UNITS[action.type] ?? ['kg','l','ml','g']).map(u => <option key={u}>{u}</option>)}
+                            {(UNITS[action.type] ?? ['kg', 'l']).map(u => <option key={u}>{u}</option>)}
                           </select>
                         </div>
                       )}

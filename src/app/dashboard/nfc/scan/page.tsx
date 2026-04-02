@@ -8,22 +8,14 @@ type ScanState = 'idle' | 'scanning' | 'found' | 'notfound' | 'success' | 'error
 const ACTION_LABELS: Record<string, string> = {
   inspection:   'Durchsicht',
   varroa:       'Varroabehandlung',
-  feeding:      'Fütterung',
+  feeding:      'Füttern',
   honey_harvest:'Honigernte',
-  oxalic_acid:  'Oxalsäure',
-  formic_acid:  'Ameisensäure',
-  thymol:       'Thymol',
-  other:        'Sonstiges',
 }
 
-const NEEDS_AMOUNT = ['feeding', 'varroa', 'honey_harvest', 'oxalic_acid', 'formic_acid', 'thymol']
+const NEEDS_AMOUNT = ['feeding', 'honey_harvest']
 const AMOUNT_UNITS: Record<string, string[]> = {
   feeding:      ['kg', 'l'],
   honey_harvest:['kg'],
-  varroa:       ['ml', 'g'],
-  oxalic_acid:  ['ml', 'g'],
-  formic_acid:  ['ml', 'g'],
-  thymol:       ['g', 'Stück'],
 }
 
 interface NfcAction { id: string; type: string; defaultValues: Record<string, string> | null }
@@ -52,8 +44,8 @@ export default function NfcScanPage() {
     const data = await res.json()
     if (data.found) {
       setTag(data.tag)
-      setSelectedAction(data.tag.actions[0]?.type ?? '')
       const firstAction = data.tag.actions[0]
+      setSelectedAction(firstAction?.type ?? '')
       if (firstAction?.defaultValues?.unit) setUnit(firstAction.defaultValues.unit)
       if (firstAction?.defaultValues?.amount) setAmount(String(firstAction.defaultValues.amount))
       setState('found')
@@ -89,14 +81,13 @@ export default function NfcScanPage() {
       body: JSON.stringify({
         tagId: tag.id,
         actionType: selectedAction,
-        amount: amount ? parseFloat(amount) : null,
-        unit: unit || null,
+        amount: NEEDS_AMOUNT.includes(selectedAction) && amount ? parseFloat(amount) : null,
+        unit: NEEDS_AMOUNT.includes(selectedAction) ? unit : null,
         notes: notes || null,
       }),
     })
     if (res.ok) {
-      const label = ACTION_LABELS[selectedAction] ?? selectedAction
-      setResult(`✓ ${label} für ${tag.colony.name} gebucht`)
+      setResult(`${ACTION_LABELS[selectedAction] ?? selectedAction} für ${tag.colony.name} gebucht`)
       setState('success')
     } else {
       setState('error')
@@ -114,12 +105,19 @@ export default function NfcScanPage() {
     setManualUid('')
   }
 
-  const currentAction = tag?.actions.find(a => a.type === selectedAction)
+  function selectAction(type: string, defaultValues: Record<string, string> | null) {
+    setSelectedAction(type)
+    if (defaultValues?.unit) setUnit(defaultValues.unit)
+    else setUnit(AMOUNT_UNITS[type]?.[0] ?? 'kg')
+    if (defaultValues?.amount) setAmount(String(defaultValues.amount))
+    else setAmount('')
+  }
+
   const showAmount = NEEDS_AMOUNT.includes(selectedAction)
-  const units = AMOUNT_UNITS[selectedAction] ?? ['kg', 'l', 'ml', 'g']
+  const units = AMOUNT_UNITS[selectedAction] ?? ['kg', 'l']
 
   return (
-    <div className="px-4 py-8 max-w-md mx-auto">
+    <div className="px-4 py-8 max-w-md mx-auto pb-24 md:pb-8">
       <div className="flex items-center gap-3 mb-8">
         <Link href="/dashboard/nfc" className="w-8 h-8 flex items-center justify-center rounded-xl bg-zinc-100 hover:bg-zinc-200 transition-colors text-zinc-500">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -192,13 +190,9 @@ export default function NfcScanPage() {
             <label className="block text-[13px] font-medium text-zinc-700 mb-2">Aktion</label>
             <div className="space-y-2">
               {tag.actions.length > 0 ? tag.actions.map(a => (
-                <button key={a.type} onClick={() => {
-                  setSelectedAction(a.type)
-                  if (a.defaultValues?.unit) setUnit(a.defaultValues.unit as string)
-                  if (a.defaultValues?.amount) setAmount(String(a.defaultValues.amount))
-                }}
+                <button key={a.type} onClick={() => selectAction(a.type, a.defaultValues)}
                   className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-colors ${selectedAction === a.type ? 'border-amber-400 bg-amber-50' : 'border-zinc-100 bg-white hover:border-zinc-200'}`}>
-                  <div className={`w-4 h-4 rounded-full border-2 ${selectedAction === a.type ? 'border-amber-500 bg-amber-500' : 'border-zinc-300'}`} />
+                  <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${selectedAction === a.type ? 'border-amber-500 bg-amber-500' : 'border-zinc-300'}`} />
                   <span className="text-[14px] font-medium text-zinc-900">{ACTION_LABELS[a.type] ?? a.type}</span>
                 </button>
               )) : (
@@ -214,7 +208,7 @@ export default function NfcScanPage() {
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
                 <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">
-                  {selectedAction === 'honey_harvest' ? 'Ernte' : selectedAction === 'feeding' ? 'Futtermenge' : 'Menge'}
+                  {selectedAction === 'honey_harvest' ? 'Erntemenge' : 'Futtermenge'}
                 </label>
                 <input type="number" step="0.1" min="0" value={amount} onChange={e => setAmount(e.target.value)}
                   placeholder="0.0"
@@ -267,7 +261,7 @@ export default function NfcScanPage() {
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <p className="text-[16px] font-semibold text-zinc-900">{result}</p>
+          <p className="text-[16px] font-semibold text-zinc-900 text-center">{result}</p>
           <p className="text-[13px] text-zinc-400">
             {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
           </p>
