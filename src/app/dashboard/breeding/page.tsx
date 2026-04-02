@@ -105,6 +105,12 @@ export default function BreedingPage() {
     load()
   }
 
+  async function deleteBatch(lineId: string, batchId: string) {
+    if (!confirm('Zuchtgang löschen?')) return
+    await fetch(`/api/breeding/${lineId}/batches/${batchId}`, { method: 'DELETE' })
+    load()
+  }
+
   async function toggleEvent(eventId: string, completed: boolean) {
     await fetch(`/api/breeding/events/${eventId}`, {
       method: 'PATCH',
@@ -113,8 +119,6 @@ export default function BreedingPage() {
     })
     load()
   }
-
-  const today = new Date().toISOString().slice(0, 10)
 
   if (loading) return (
     <div className="px-8 py-8 flex items-center justify-center">
@@ -212,7 +216,7 @@ export default function BreedingPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[12px] font-medium text-zinc-500 mb-1">Umlarv-Datum *</label>
-                        <input type="date" required value={graftDate} onChange={e => setGraftDate(e.target.value)} max={today}
+                        <input type="date" required value={graftDate} onChange={e => setGraftDate(e.target.value)}
                           className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
                       </div>
                       <div>
@@ -260,6 +264,12 @@ export default function BreedingPage() {
                             )}
                             {batch.notes && <p className="text-[12px] text-zinc-400">{batch.notes}</p>}
                           </div>
+                          <button onClick={() => deleteBatch(line.id, batch.id)}
+                            className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-rose-50 text-zinc-300 hover:text-rose-500 transition-colors ml-2 shrink-0">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M9 6V4h6v2"/>
+                            </svg>
+                          </button>
                           {next && daysToNext !== null && (
                             <div className={`text-right ${daysToNext < 0 ? 'text-rose-600' : daysToNext === 0 ? 'text-amber-600' : 'text-zinc-500'}`}>
                               <p className="text-[12px] font-semibold">

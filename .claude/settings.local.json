@@ -23,7 +23,8 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({**d.get\\(''''dependencies'''',{}\\), **d.get\\(''''devDependencies'''',{}\\)}, indent=2\\)\\)\")",
       "Bash(ls .env*)",
       "Bash(find C:/Users/koerbe/PycharmProjects/Bee/node_modules/next/dist/docs -name *proxy* -o -name *middleware*)",
-      "Bash(ls /c/Users/koerbe/PycharmProjects/Bee/.env*)"
+      "Bash(ls /c/Users/koerbe/PycharmProjects/Bee/.env*)",
+      "Bash(ls:*)"
     ]
   }
 }
