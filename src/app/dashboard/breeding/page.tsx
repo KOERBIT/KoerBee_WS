@@ -11,6 +11,59 @@ const EVENT_LABELS: Record<string, { label: string; day: number; color: string }
   assessment: { label: 'Beurteilung',  day: 28, color: 'bg-green-100 text-green-700 border-green-200' },
 }
 
+function PhaseIcon({ type, size = 13 }: { type: string; size?: number }) {
+  const s = size
+  switch (type) {
+    case 'graft': // Larve – kleiner Wurm
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <ellipse cx="7" cy="12" rx="5" ry="4"/>
+          <path d="M12 12c1-3 4-5 7-4"/>
+          <circle cx="20" cy="9" r="1.5" fill="currentColor"/>
+        </svg>
+      )
+    case 'check': // Lupe – Kontrolle
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      )
+    case 'hatch': // Schlupf – Kreis bricht auf
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2a8 8 0 108 8"/>
+          <path d="M16 2l4 4-4 4"/>
+          <path d="M20 6h-6"/>
+        </svg>
+      )
+    case 'mating': // Begattung – Flügel
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 12C8 8 3 9 3 13s4 5 9 3"/>
+          <path d="M12 12c4-4 9-3 9 1s-4 5-9 3"/>
+        </svg>
+      )
+    case 'laying': // Eilage – Wabe mit Punkt
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2l4 7H8z"/>
+          <path d="M8 9l-5 4 5 4"/>
+          <path d="M16 9l5 4-5 4"/>
+          <path d="M8 17l4 5 4-5"/>
+          <circle cx="12" cy="13" r="1.5" fill="currentColor"/>
+        </svg>
+      )
+    case 'assessment': // Beurteilung – Stern
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      )
+    default:
+      return null
+  }
+}
+
 interface BreedingEvent {
   id: string
   type: string
@@ -297,8 +350,10 @@ export default function BreedingPage() {
                                     : meta?.color ?? 'bg-zinc-100 text-zinc-600 border-zinc-200'
                                 }`}
                               >
-                                {event.completed && (
+                                {event.completed ? (
                                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                ) : (
+                                  <PhaseIcon type={event.type} size={12} />
                                 )}
                                 {meta?.label}
                                 <span className="opacity-60">

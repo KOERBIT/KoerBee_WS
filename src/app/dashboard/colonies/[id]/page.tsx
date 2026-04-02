@@ -1,3 +1,4 @@
+import React from 'react'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -21,17 +22,63 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   swarmed:   { label: 'Abgeschwärmt',color: 'bg-amber-100 text-amber-700' },
 }
 
-const TREATMENT_LABELS: Record<string, string> = {
-  varroa: 'Varroabehandlung', feeding: 'Fütterung', oxalic_acid: 'Oxalsäure',
-  formic_acid: 'Ameisensäure', thymol: 'Thymol', antibiotic: 'Antibiotikum', other: 'Sonstiges',
-}
-
 const CRITERIA_LABELS: Record<string, string> = {
   population: 'Volksstärke', temperament: 'Sanftmut', vitality: 'Vitalität',
   brood_pattern: 'Brutnest', comb_building: 'Wabenbau', food_stores: 'Futtervorrat',
   swarm_drive: 'Schwarmtrieb', varroa: 'Varroa %', honey_supers: 'Honigräume',
   queen_seen: 'Königin gesehen', queen_cells: 'Königinnenzellen',
   disease_signs: 'Krankheitsanzeichen', notes_field: 'Anmerkungen',
+}
+
+function treatmentCategory(type: string): { label: string; icon: React.ReactNode; color: string } {
+  if (type === 'feeding') return {
+    label: 'Fütterung',
+    color: 'bg-blue-50 text-blue-600',
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2C6 2 3 7 3 12a9 9 0 0018 0c0-5-3-10-9-10z"/><path d="M12 12v5"/>
+      </svg>
+    ),
+  }
+  if (type === 'honey_harvest') return {
+    label: 'Honigernte',
+    color: 'bg-amber-50 text-amber-600',
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2l2.4 4.8 5.2.8-3.8 3.6.9 5.3L12 14l-4.7 2.5.9-5.3L4.4 7.6l5.2-.8z"/>
+      </svg>
+    ),
+  }
+  if (['varroa','oxalic_acid','formic_acid','thymol','antibiotic'].includes(type)) return {
+    label: 'Varroabehandlung',
+    color: 'bg-rose-50 text-rose-600',
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2l9 4.5v5C21 17 17 21 12 22 7 21 3 17 3 11.5v-5z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+    ),
+  }
+  return {
+    label: 'Behandlung',
+    color: 'bg-zinc-100 text-zinc-500',
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8.5 2H5a2 2 0 00-2 2v16a2 2 0 002 2h14a2 2 0 002-2V8.5L15.5 2z"/>
+        <polyline points="15 2 15 9 22 9"/>
+      </svg>
+    ),
+  }
+}
+
+const INSPECTION_META = {
+  label: 'Kontrolle',
+  color: 'bg-green-50 text-green-600',
+  icon: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  ),
 }
 
 export default async function ColonyDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -119,80 +166,100 @@ export default async function ColonyDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Inspektionen */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold text-zinc-900">Inspektionen</h2>
-            <Link href="/dashboard/inspections" className="text-[13px] font-medium text-amber-600 hover:text-amber-700 transition-colors">+ Neue</Link>
-          </div>
-          {colony.inspections.length === 0 ? (
-            <p className="px-5 py-8 text-center text-[13px] text-zinc-400">Noch keine Inspektionen</p>
-          ) : (
-            <div className="divide-y divide-zinc-50 max-h-96 overflow-y-auto">
-              {colony.inspections.map((ins) => {
-                const varroaItem = ins.items.find(i => i.key === 'varroa')
-                const popItem = ins.items.find(i => i.key === 'population')
-                return (
-                  <div key={ins.id} className="px-5 py-3.5">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[13px] font-semibold text-zinc-800">
-                        {new Date(ins.date).toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
-                      <div className="flex items-center gap-3">
-                        {varroaItem && <span className="text-[12px] text-zinc-500">Varroa: <strong>{varroaItem.value}%</strong></span>}
-                        {popItem && (
-                          <div className="flex gap-0.5">
-                            {[1,2,3,4,5].map(n => (
-                              <div key={n} className={`w-2 h-2 rounded-sm ${parseInt(popItem.value) >= n ? 'bg-amber-400' : 'bg-zinc-100'}`} />
-                            ))}
-                          </div>
+      {/* Chronik – unified timeline */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold text-zinc-900">Chronik</h2>
+          <Link href="/dashboard/inspections" className="text-[13px] font-medium text-amber-600 hover:text-amber-700 transition-colors">+ Kontrolle</Link>
+        </div>
+        {colony.inspections.length === 0 && colony.treatments.length === 0 ? (
+          <p className="px-5 py-10 text-center text-[13px] text-zinc-400">Noch keine Einträge</p>
+        ) : (() => {
+          type TimelineItem =
+            | { kind: 'inspection'; date: Date; id: string; ins: typeof colony.inspections[0] }
+            | { kind: 'treatment'; date: Date; id: string; t: typeof colony.treatments[0] }
+
+          const items: TimelineItem[] = [
+            ...colony.inspections.map(ins => ({ kind: 'inspection' as const, date: new Date(ins.date), id: ins.id, ins })),
+            ...colony.treatments.map(t => ({ kind: 'treatment' as const, date: new Date(t.date), id: t.id, t })),
+          ].sort((a, b) => b.date.getTime() - a.date.getTime())
+
+          return (
+            <div className="px-5 py-4 space-y-4">
+              {items.map((item, idx) => {
+                if (item.kind === 'inspection') {
+                  const ins = item.ins
+                  const varroaItem = ins.items.find(i => i.key === 'varroa')
+                  const popItem = ins.items.find(i => i.key === 'population')
+                  const notesItem = ins.items.find(i => i.key === 'notes_field')
+                  return (
+                    <div key={item.id} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${INSPECTION_META.color}`}>
+                          {INSPECTION_META.icon}
+                        </div>
+                        {idx < items.length - 1 && <div className="w-px flex-1 bg-zinc-100 mt-1" />}
+                      </div>
+                      <div className="pb-4 flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[13px] font-semibold text-zinc-900">{INSPECTION_META.label}</span>
+                          <span className="text-[12px] text-zinc-400">
+                            {item.date.toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {varroaItem && (
+                            <span className="text-[11px] bg-rose-50 text-rose-600 px-2 py-0.5 rounded-md font-medium">Varroa {varroaItem.value}%</span>
+                          )}
+                          {popItem && (
+                            <div className="flex gap-0.5">
+                              {[1,2,3,4,5].map(n => (
+                                <div key={n} className={`w-2 h-2 rounded-sm ${parseInt(popItem.value) >= n ? 'bg-amber-400' : 'bg-zinc-100'}`} />
+                              ))}
+                            </div>
+                          )}
+                          {ins.items.filter(i => !['varroa','population','notes_field'].includes(i.key)).slice(0,3).map(it => (
+                            <span key={it.key} className="text-[11px] bg-zinc-50 text-zinc-500 px-2 py-0.5 rounded-md">
+                              {CRITERIA_LABELS[it.key] ?? it.key}: {it.value}
+                            </span>
+                          ))}
+                        </div>
+                        {(ins.notes || notesItem?.value) && (
+                          <p className="text-[12px] text-zinc-400 italic mt-1">{ins.notes || notesItem?.value}</p>
                         )}
                       </div>
                     </div>
-                    {ins.items.filter(i => !['varroa','population','notes_field'].includes(i.key)).length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {ins.items.filter(i => !['varroa','population','notes_field'].includes(i.key)).slice(0,4).map(item => (
-                          <span key={item.key} className="text-[11px] bg-zinc-50 text-zinc-500 px-2 py-0.5 rounded-md">
-                            {CRITERIA_LABELS[item.key] ?? item.key}: {item.value}
-                          </span>
-                        ))}
+                  )
+                } else {
+                  const t = item.t
+                  const meta = treatmentCategory(t.type)
+                  return (
+                    <div key={item.id} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${meta.color}`}>
+                          {meta.icon}
+                        </div>
+                        {idx < items.length - 1 && <div className="w-px flex-1 bg-zinc-100 mt-1" />}
                       </div>
-                    )}
-                    {ins.notes && <p className="text-[12px] text-zinc-400 italic mt-1.5">{ins.notes}</p>}
-                  </div>
-                )
+                      <div className="pb-4 flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[13px] font-semibold text-zinc-900">{meta.label}</span>
+                          <span className="text-[12px] text-zinc-400">
+                            {item.date.toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                        {t.amount && (
+                          <span className="text-[12px] text-zinc-500">{t.amount} {t.unit}</span>
+                        )}
+                        {t.notes && <p className="text-[12px] text-zinc-400 italic mt-0.5">{t.notes}</p>}
+                      </div>
+                    </div>
+                  )
+                }
               })}
             </div>
-          )}
-        </div>
-
-        {/* Behandlungen */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold text-zinc-900">Behandlungen</h2>
-            <Link href="/dashboard/treatments" className="text-[13px] font-medium text-amber-600 hover:text-amber-700 transition-colors">+ Neue</Link>
-          </div>
-          {colony.treatments.length === 0 ? (
-            <p className="px-5 py-8 text-center text-[13px] text-zinc-400">Noch keine Behandlungen</p>
-          ) : (
-            <div className="divide-y divide-zinc-50 max-h-96 overflow-y-auto">
-              {colony.treatments.map((t) => (
-                <div key={t.id} className="px-5 py-3.5 flex items-center justify-between">
-                  <div>
-                    <p className="text-[13px] font-medium text-zinc-800">{TREATMENT_LABELS[t.type] ?? t.type}</p>
-                    <p className="text-[12px] text-zinc-400 mt-0.5">
-                      {new Date(t.date).toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </p>
-                  </div>
-                  {t.amount && (
-                    <span className="text-[13px] font-medium text-zinc-600">{t.amount} {t.unit}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+          )
+        })()}
       </div>
     </div>
   )

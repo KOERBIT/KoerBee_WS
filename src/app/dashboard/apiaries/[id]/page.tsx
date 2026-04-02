@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ApiaryDetailActions } from './ApiaryDetailActions'
 import { AddColonyButton } from '@/app/dashboard/colonies/ColonyActions'
+import { WeatherWidget } from '@/components/WeatherWidget'
 
 const QUEEN_COLOR_DOT: Record<string, string> = {
   weiß: 'bg-white border border-zinc-300',
@@ -95,6 +96,11 @@ export default async function ApiaryDetailPage({ params }: { params: Promise<{ i
           </p>
           <p className="text-[13px] text-zinc-500 mt-1">{apiary.statusNote}</p>
         </div>
+      )}
+
+      {/* Weather */}
+      {apiary.lat && apiary.lng && (
+        <WeatherWidget lat={apiary.lat} lng={apiary.lng} />
       )}
 
       {/* Stats */}
