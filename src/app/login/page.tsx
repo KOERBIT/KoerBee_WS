@@ -3,6 +3,7 @@
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, Suspense } from 'react'
+import Image from 'next/image'
 
 function LoginForm() {
   const router = useRouter()
@@ -36,54 +37,81 @@ function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-sm bg-white rounded-xl shadow p-8">
-      <h1 className="text-2xl font-semibold mb-6 text-center">Bee</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="email" className="text-sm font-medium text-zinc-700">
-            E-Mail
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            className="border border-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
+    <div className="w-full max-w-sm">
+      {/* Logo */}
+      <div className="flex flex-col items-center mb-8">
+        <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg mb-4">
+          <Image
+            src="/Koerbee_Logo.jpg"
+            alt="KörBee Logo"
+            width={80}
+            height={80}
+            className="object-cover w-full h-full"
           />
         </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="password" className="text-sm font-medium text-zinc-700">
-            Passwort
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            className="border border-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
-          />
-        </div>
-        {error && (
-          <p className="text-sm text-red-600 text-center">{error}</p>
-        )}
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-2 bg-zinc-900 text-white rounded-lg py-2 text-sm font-medium hover:bg-zinc-700 disabled:opacity-50 transition-colors"
-        >
-          {loading ? 'Wird eingeloggt…' : 'Anmelden'}
-        </button>
-      </form>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">KörBee</h1>
+        <p className="text-[14px] text-zinc-500 mt-1">Melde dich in deinem Konto an</p>
+      </div>
+
+      {/* Card */}
+      <div className="bg-white rounded-2xl shadow-sm border border-zinc-100 px-7 py-8">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="email" className="text-[13px] font-medium text-zinc-700">
+              E-Mail
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              className="border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-colors"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="password" className="text-[13px] font-medium text-zinc-700">
+              Passwort
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              className="border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-colors"
+            />
+          </div>
+          {error && (
+            <div className="bg-rose-50 border border-rose-100 rounded-xl px-3.5 py-2.5">
+              <p className="text-[13px] text-rose-600 text-center">{error}</p>
+            </div>
+          )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-1 bg-amber-500 hover:bg-amber-600 text-white rounded-xl py-2.5 text-[14px] font-semibold disabled:opacity-50 transition-colors shadow-sm"
+          >
+            {loading ? 'Wird eingeloggt…' : 'Anmelden'}
+          </button>
+        </form>
+      </div>
+
+      <p className="text-center text-[12px] text-zinc-400 mt-6">
+        KörBee Imkerei-Verwaltung
+      </p>
     </div>
   )
 }
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50">
-      <Suspense fallback={<div className="w-full max-w-sm bg-white rounded-xl shadow p-8 text-center text-zinc-400">Laden…</div>}>
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
+      <Suspense fallback={
+        <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-zinc-100 p-8 text-center text-zinc-400 text-[14px]">
+          Laden…
+        </div>
+      }>
         <LoginForm />
       </Suspense>
     </div>
