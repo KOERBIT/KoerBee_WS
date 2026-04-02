@@ -73,6 +73,16 @@ const navItems = [
     ),
   },
   {
+    label: 'Zucht',
+    href: '/dashboard/breeding',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M6 20v-2a6 6 0 0112 0v2"/>
+      </svg>
+    ),
+  },
+  {
     label: 'NFC-Tags',
     href: '/dashboard/nfc',
     icon: (

@@ -7,16 +7,17 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String
-  name          String?
-  plan          String    @default("hobby")
-  createdAt     DateTime  @default(now())
-  apiaries      Apiary[]
-  tasks         Task[]
-  accounts      Account[]
-  sessions      Session[]
+  id             String         @id @default(cuid())
+  email          String         @unique
+  passwordHash   String
+  name           String?
+  plan           String         @default("hobby")
+  createdAt      DateTime       @default(now())
+  apiaries       Apiary[]
+  tasks          Task[]
+  breedingLines  BreedingLine[]
+  accounts       Account[]
+  sessions       Session[]
 }
 
 model Apiary {
@@ -36,20 +37,21 @@ model Apiary {
 }
 
 model Colony {
-  id              String       @id @default(cuid())
+  id              String          @id @default(cuid())
   name            String
   queenYear       Int?
   queenColor      String?
-  status          String       @default("active")
+  status          String          @default("active")
   statusNote      String?
   statusChangedAt DateTime?
   apiaryId        String
-  apiary          Apiary       @relation(fields: [apiaryId], references: [id], onDelete: Cascade)
+  apiary          Apiary          @relation(fields: [apiaryId], references: [id], onDelete: Cascade)
   inspections     Inspection[]
   treatments      Treatment[]
   nfcTags         NfcTag[]
   tasks           Task[]
-  createdAt       DateTime     @default(now())
+  breedingBatches BreedingBatch[]
+  createdAt       DateTime        @default(now())
 }
 
 model Inspection {
@@ -114,6 +116,40 @@ model Task {
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
+}
+
+model BreedingLine {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batches     BreedingBatch[]
+  createdAt   DateTime        @default(now())
+}
+
+model BreedingBatch {
+  id             String          @id @default(cuid())
+  graftDate      DateTime
+  notes          String?
+  status         String          @default("active")
+  lineId         String
+  line           BreedingLine    @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  motherColonyId String?
+  motherColony   Colony?         @relation(fields: [motherColonyId], references: [id], onDelete: SetNull)
+  events         BreedingEvent[]
+  createdAt      DateTime        @default(now())
+}
+
+model BreedingEvent {
+  id        String        @id @default(cuid())
+  type      String
+  date      DateTime
+  completed Boolean       @default(false)
+  notes     String?
+  batchId   String
+  batch     BreedingBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
 }
 
 // NextAuth required models
