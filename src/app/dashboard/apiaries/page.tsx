@@ -8,7 +8,7 @@ export default async function ApiarysPage() {
   const session = await getServerSession(authOptions)
 
   const apiaries = await prisma.apiary.findMany({
-    where: { userId: session!.user.id },
+    where: { userId: session!.user.id, status: 'active' },
     include: { _count: { select: { colonies: true } } },
     orderBy: { createdAt: 'desc' },
   })

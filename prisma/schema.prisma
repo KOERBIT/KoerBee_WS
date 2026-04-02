@@ -20,30 +20,36 @@ model User {
 }
 
 model Apiary {
-  id        String    @id @default(cuid())
-  name      String
-  lat       Float?
-  lng       Float?
-  notes     String?
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  colonies  Colony[]
-  tasks     Task[]
-  createdAt DateTime  @default(now())
+  id              String    @id @default(cuid())
+  name            String
+  lat             Float?
+  lng             Float?
+  notes           String?
+  status          String    @default("active")
+  statusNote      String?
+  statusChangedAt DateTime?
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  colonies        Colony[]
+  tasks           Task[]
+  createdAt       DateTime  @default(now())
 }
 
 model Colony {
-  id          String       @id @default(cuid())
-  name        String
-  queenYear   Int?
-  queenColor  String?
-  apiaryId    String
-  apiary      Apiary       @relation(fields: [apiaryId], references: [id], onDelete: Cascade)
-  inspections Inspection[]
-  treatments  Treatment[]
-  nfcTags     NfcTag[]
-  tasks       Task[]
-  createdAt   DateTime     @default(now())
+  id              String       @id @default(cuid())
+  name            String
+  queenYear       Int?
+  queenColor      String?
+  status          String       @default("active")
+  statusNote      String?
+  statusChangedAt DateTime?
+  apiaryId        String
+  apiary          Apiary       @relation(fields: [apiaryId], references: [id], onDelete: Cascade)
+  inspections     Inspection[]
+  treatments      Treatment[]
+  nfcTags         NfcTag[]
+  tasks           Task[]
+  createdAt       DateTime     @default(now())
 }
 
 model Inspection {

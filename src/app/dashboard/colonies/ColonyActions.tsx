@@ -65,7 +65,7 @@ function ColonyForm({ initial, apiaries, onSubmit, loading }: {
   )
 }
 
-export function AddColonyButton({ apiaries }: { apiaries: Apiary[] }) {
+export function AddColonyButton({ apiaries, defaultApiaryId }: { apiaries: Apiary[]; defaultApiaryId?: string }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -89,7 +89,7 @@ export function AddColonyButton({ apiaries }: { apiaries: Apiary[] }) {
       </button>
       {open && (
         <Modal title="Neues Volk" onClose={() => setOpen(false)}>
-          <ColonyForm apiaries={apiaries} onSubmit={handleSubmit} loading={loading} />
+          <ColonyForm apiaries={apiaries} onSubmit={handleSubmit} loading={loading} initial={defaultApiaryId ? { apiaryId: defaultApiaryId } : undefined} />
         </Modal>
       )}
     </>

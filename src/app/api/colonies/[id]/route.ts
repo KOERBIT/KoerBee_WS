@@ -14,10 +14,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params
   if (!await ownsColony(id, session.user.id)) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
 
-  const { name, apiaryId, queenYear, queenColor } = await req.json()
+  const body = await req.json()
   const colony = await prisma.colony.update({
     where: { id },
-    data: { name, apiaryId, queenYear: queenYear ?? null, queenColor: queenColor ?? null },
+    data: {
+      ...(body.name !== undefined && { name: body.name }),
+      ...(body.apiaryId !== undefined && { apiaryId: body.apiaryId }),
+      ...(body.queenYear !== undefined && { queenYear: body.queenYear ?? null }),
+      ...(body.queenColor !== undefined && { queenColor: body.queenColor ?? null }),
+      ...(body.status !== undefined && { status: body.status }),
+      ...(body.statusNote !== undefined && { statusNote: body.statusNote ?? null }),
+      ...(body.statusChangedAt !== undefined && { statusChangedAt: body.statusChangedAt ? new Date(body.statusChangedAt) : null }),
+    },
   })
   return NextResponse.json(colony)
 }

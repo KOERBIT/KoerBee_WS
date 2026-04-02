@@ -11,10 +11,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const existing = await prisma.apiary.findFirst({ where: { id, userId: session.user.id } })
   if (!existing) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
 
-  const { name, lat, lng, notes } = await req.json()
+  const body = await req.json()
   const apiary = await prisma.apiary.update({
     where: { id },
-    data: { name, lat: lat ?? null, lng: lng ?? null, notes: notes ?? null },
+    data: {
+      ...(body.name !== undefined && { name: body.name }),
+      ...(body.lat !== undefined && { lat: body.lat ?? null }),
+      ...(body.lng !== undefined && { lng: body.lng ?? null }),
+      ...(body.notes !== undefined && { notes: body.notes ?? null }),
+      ...(body.status !== undefined && { status: body.status }),
+      ...(body.statusNote !== undefined && { statusNote: body.statusNote ?? null }),
+      ...(body.statusChangedAt !== undefined && { statusChangedAt: body.statusChangedAt ? new Date(body.statusChangedAt) : null }),
+    },
   })
   return NextResponse.json(apiary)
 }

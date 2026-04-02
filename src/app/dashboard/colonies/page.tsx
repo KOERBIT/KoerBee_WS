@@ -17,7 +17,7 @@ export default async function ColoniesPage() {
 
   const [colonies, apiaries] = await Promise.all([
     prisma.colony.findMany({
-      where: { apiary: { userId: session!.user.id } },
+      where: { apiary: { userId: session!.user.id }, status: 'active' },
       include: {
         apiary: { select: { id: true, name: true } },
         _count: { select: { inspections: true, treatments: true } },
