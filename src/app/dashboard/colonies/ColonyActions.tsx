@@ -45,7 +45,7 @@ function ColonyForm({ initial, apiaries, onSubmit, loading }: {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Königinnjahr</label>
-          <input value={form.queenYear} onChange={e => setForm(f => ({ ...f, queenYear: e.target.value }))} type="number" placeholder="2024"
+          <input value={form.queenYear} onChange={e => setForm(f => ({ ...f, queenYear: e.target.value }))} type="number" placeholder="2024" min="2000" max={new Date().getFullYear() + 1}
             className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
         </div>
         <div>
