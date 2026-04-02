@@ -27,6 +27,11 @@ const MORE_ITEMS = [
       <circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/>
     </svg>
   )},
+  { label: 'Kassenbuch', href: '/dashboard/kassenbuch', icon: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+    </svg>
+  )},
   { label: 'NFC-Tags', href: '/dashboard/nfc', icon: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6.5 6.5a6 6 0 000 11M9 9a3 3 0 000 6"/>

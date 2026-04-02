@@ -16,6 +16,10 @@ model User {
   apiaries       Apiary[]
   tasks          Task[]
   breedingLines  BreedingLine[]
+  products       Product[]
+  customers      Customer[]
+  sales          Sale[]
+  consignments   Consignment[]
   accounts       Account[]
   sessions       Session[]
 }
@@ -150,6 +154,84 @@ model BreedingEvent {
   batchId   String
   batch     BreedingBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
   createdAt DateTime      @default(now())
+}
+
+// Kassenbuch
+model Product {
+  id               String            @id @default(cuid())
+  name             String
+  unit             String            @default("Stück")
+  price            Float
+  description      String?
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  saleItems        SaleItem[]
+  consignmentItems ConsignmentItem[]
+  createdAt        DateTime          @default(now())
+}
+
+model Customer {
+  id           String        @id @default(cuid())
+  name         String
+  email        String?
+  phone        String?
+  address      String?
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sales        Sale[]
+  consignments Consignment[]
+  createdAt    DateTime      @default(now())
+}
+
+model Sale {
+  id           String     @id @default(cuid())
+  date         DateTime   @default(now())
+  customerName String?
+  customerId   String?
+  customer     Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items        SaleItem[]
+  total        Float      @default(0)
+  notes        String?
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  quantity  Float
+  price     Float
+  total     Float
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Consignment {
+  id           String            @id @default(cuid())
+  date         DateTime          @default(now())
+  locationName String?
+  customerId   String?
+  customer     Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items        ConsignmentItem[]
+  status       String            @default("active")
+  notes        String?
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime          @default(now())
+}
+
+model ConsignmentItem {
+  id               String      @id @default(cuid())
+  quantity         Float
+  price            Float
+  soldQuantity     Float       @default(0)
+  returnedQuantity Float       @default(0)
+  consignmentId    String
+  consignment      Consignment @relation(fields: [consignmentId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 // NextAuth required models
