@@ -396,9 +396,7 @@ export default function BreedingPage() {
               {isOpen && line.batches.length > 0 && (
                 <div className="border-t border-zinc-50 divide-y divide-zinc-50">
                   {line.batches.map(batch => {
-                    const next = nextEvent(batch)
                     const allDone = batch.events.every(e => e.completed)
-                    const daysToNext = next ? daysUntil(next.date) : null
 
                     return (
                       <div key={batch.id} className="px-5 py-4">
@@ -423,14 +421,6 @@ export default function BreedingPage() {
                               <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M9 6V4h6v2"/>
                             </svg>
                           </button>
-                          {next && daysToNext !== null && (
-                            <div className={`text-right ${daysToNext < 0 ? 'text-rose-600' : daysToNext === 0 ? 'text-amber-600' : 'text-zinc-500'}`}>
-                              <p className="text-[12px] font-semibold">
-                                {daysToNext < 0 ? `${Math.abs(daysToNext)} Tage überfällig` : daysToNext === 0 ? 'Heute' : `in ${daysToNext} Tagen`}
-                              </p>
-                              <p className="text-[11px]">{EVENT_LABELS[next.type]?.label}</p>
-                            </div>
-                          )}
                         </div>
 
                         <PhaseTimeline batch={batch} toggleEvent={toggleEvent} />
