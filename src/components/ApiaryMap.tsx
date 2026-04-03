@@ -1,7 +1,6 @@
 // src/components/ApiaryMap.tsx
 'use client'
 
-import { useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -22,10 +21,6 @@ interface ApiaryMapProps {
 }
 
 export function ApiaryMap({ lat, lng, name }: ApiaryMapProps) {
-  useEffect(() => {
-    // Sicherstellen, dass Leaflet-CSS geladen ist
-  }, [])
-
   return (
     <div className="rounded-2xl overflow-hidden shadow-sm mb-6" style={{ height: 200 }}>
       <MapContainer

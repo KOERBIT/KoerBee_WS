@@ -30,6 +30,7 @@ function ApiaryForm({ initial, onSubmit, loading }: {
     lng: initial?.lng ?? '',
     notes: initial?.notes ?? '',
   })
+  const [gpsError, setGpsError] = useState<string | null>(null)
 
   const field = (key: keyof ApiaryFormData) => ({
     value: form[key],
@@ -51,18 +52,19 @@ function ApiaryForm({ initial, onSubmit, loading }: {
             type="button"
             onClick={() => {
               if (!navigator.geolocation) return
+              setGpsError(null)
               navigator.geolocation.getCurrentPosition(
                 pos => setForm(f => ({
                   ...f,
                   lat: pos.coords.latitude.toFixed(6),
                   lng: pos.coords.longitude.toFixed(6),
                 })),
-                () => alert('GPS-Standort konnte nicht ermittelt werden.')
+                () => setGpsError('GPS-Standort konnte nicht ermittelt werden.')
               )
             }}
             className="flex items-center gap-1.5 text-[12px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
               <circle cx="12" cy="12" r="3"/>
               <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
               <circle cx="12" cy="12" r="7" opacity="0.3"/>
@@ -70,6 +72,7 @@ function ApiaryForm({ initial, onSubmit, loading }: {
             GPS jetzt setzen
           </button>
         </div>
+        {gpsError && <p className="text-[12px] text-rose-600 mt-1">{gpsError}</p>}
         <div className="grid grid-cols-2 gap-3">
           <input {...field('lat')} type="number" step="any" placeholder="Breitengrad 48.1351"
             className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
