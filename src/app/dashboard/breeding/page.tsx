@@ -11,57 +11,157 @@ const EVENT_LABELS: Record<string, { label: string; day: number; color: string }
   assessment: { label: 'Beurteilung',  day: 28, color: 'bg-green-100 text-green-700 border-green-200' },
 }
 
-function PhaseIcon({ type, size = 13 }: { type: string; size?: number }) {
+function PhaseIcon({ type, size = 28 }: { type: string; size?: number }) {
   const s = size
   switch (type) {
-    case 'graft': // Larve – kleiner Wurm
+    case 'graft':
       return (
-        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <ellipse cx="7" cy="12" rx="5" ry="4"/>
-          <path d="M12 12c1-3 4-5 7-4"/>
-          <circle cx="20" cy="9" r="1.5" fill="currentColor"/>
+        <svg width={s} height={s} viewBox="0 0 32 32" fill="none">
+          <path d="M16 4 L26 9.5 L26 20.5 L16 26 L6 20.5 L6 9.5 Z" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.12"/>
+          <path d="M11 19 Q11 12 17 12 Q22 12 22 17 Q22 20 19 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/>
+          <circle cx="19.5" cy="21.5" r="1.5" fill="currentColor"/>
         </svg>
       )
-    case 'check': // Lupe – Kontrolle
+    case 'check':
       return (
-        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <svg width={s} height={s} viewBox="0 0 32 32" fill="none">
+          <circle cx="13" cy="14" r="7" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.1"/>
+          <line x1="18.5" y1="19.5" x2="24" y2="25" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M10 16 Q10 12 13 12 Q16 12 16 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+          <circle cx="16" cy="15.5" r="1" fill="currentColor"/>
         </svg>
       )
-    case 'hatch': // Schlupf – Kreis bricht auf
+    case 'hatch':
       return (
-        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2a8 8 0 108 8"/>
-          <path d="M16 2l4 4-4 4"/>
-          <path d="M20 6h-6"/>
+        <svg width={s} height={s} viewBox="0 0 32 32" fill="none">
+          <path d="M16 6 L24 10.5 L24 19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+          <path d="M8 10.5 L8 19 L16 24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+          <ellipse cx="16" cy="14" rx="4" ry="6" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.5"/>
+          <line x1="12.2" y1="13" x2="19.8" y2="13" stroke="currentColor" strokeWidth="1" opacity="0.5"/>
+          <line x1="12" y1="15.5" x2="20" y2="15.5" stroke="currentColor" strokeWidth="1" opacity="0.5"/>
+          <path d="M14 8.5 Q12 6 11 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+          <path d="M18 8.5 Q20 6 21 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
         </svg>
       )
-    case 'mating': // Begattung – Flügel
+    case 'mating':
       return (
-        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 12C8 8 3 9 3 13s4 5 9 3"/>
-          <path d="M12 12c4-4 9-3 9 1s-4 5-9 3"/>
+        <svg width={s} height={s} viewBox="0 0 32 32" fill="none">
+          <ellipse cx="10" cy="13" rx="6" ry="3" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.2" transform="rotate(-20 10 13)"/>
+          <ellipse cx="22" cy="13" rx="6" ry="3" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.2" transform="rotate(20 22 13)"/>
+          <ellipse cx="16" cy="18" rx="3.5" ry="7" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.5"/>
+          <line x1="12.6" y1="15" x2="19.4" y2="15" stroke="currentColor" strokeWidth="1.2" opacity="0.5"/>
+          <line x1="12.4" y1="18" x2="19.6" y2="18" stroke="currentColor" strokeWidth="1.2" opacity="0.5"/>
+          <path d="M13 10 L14.5 7 L16 9 L17.5 7 L19 10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
         </svg>
       )
-    case 'laying': // Eilage – Wabe mit Punkt
+    case 'laying':
       return (
-        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2l4 7H8z"/>
-          <path d="M8 9l-5 4 5 4"/>
-          <path d="M16 9l5 4-5 4"/>
-          <path d="M8 17l4 5 4-5"/>
-          <circle cx="12" cy="13" r="1.5" fill="currentColor"/>
+        <svg width={s} height={s} viewBox="0 0 32 32" fill="none">
+          <path d="M7 10 L12 7 L17 10 L17 16 L12 19 L7 16 Z" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.1"/>
+          <path d="M15 10 L20 7 L25 10 L25 16 L20 19 L15 16 Z" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.1"/>
+          <path d="M11 19 L16 16 L21 19 L21 25 L16 28 L11 25 Z" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.1"/>
+          <ellipse cx="12" cy="13" rx="1.5" ry="2.5" fill="currentColor" transform="rotate(15 12 13)"/>
+          <ellipse cx="20" cy="13" rx="1.5" ry="2.5" fill="currentColor" transform="rotate(15 20 13)"/>
+          <ellipse cx="16" cy="22" rx="1.5" ry="2.5" fill="currentColor" transform="rotate(15 16 22)"/>
         </svg>
       )
-    case 'assessment': // Beurteilung – Stern
+    case 'assessment':
       return (
-        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        <svg width={s} height={s} viewBox="0 0 32 32" fill="none">
+          <ellipse cx="16" cy="20" rx="4" ry="6" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.5"/>
+          <line x1="12.2" y1="18" x2="19.8" y2="18" stroke="currentColor" strokeWidth="1" opacity="0.5"/>
+          <line x1="12" y1="21" x2="20" y2="21" stroke="currentColor" strokeWidth="1" opacity="0.5"/>
+          <ellipse cx="10" cy="16" rx="4" ry="2" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1" transform="rotate(-15 10 16)"/>
+          <ellipse cx="22" cy="16" rx="4" ry="2" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1" transform="rotate(15 22 16)"/>
+          <polygon points="16,3 17.2,6.6 21,6.6 18,8.8 19.2,12.4 16,10.2 12.8,12.4 14,8.8 11,6.6 14.8,6.6" fill="currentColor" fillOpacity="0.8"/>
         </svg>
       )
     default:
       return null
   }
+}
+
+function PhaseTimeline({
+  batch,
+  toggleEvent,
+}: {
+  batch: BreedingBatch
+  toggleEvent: (eventId: string, completed: boolean) => Promise<void>
+}) {
+  const phases = ['graft', 'check', 'hatch', 'mating', 'laying', 'assessment']
+  const next = nextEvent(batch)
+
+  return (
+    <div className="mt-2 mb-1">
+      <div className="flex items-start">
+        {phases.map((phase, idx) => {
+          const event = batch.events.find(e => e.type === phase)
+          const isDone = event?.completed ?? false
+          const isActive = event?.id === next?.id
+          const meta = EVENT_LABELS[phase]
+
+          return (
+            <div key={phase} className="flex items-start flex-1 min-w-0">
+              <div className="flex flex-col items-center flex-shrink-0">
+                <button
+                  onClick={() => event && toggleEvent(event.id, !event.completed)}
+                  disabled={!event}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all ${
+                    isDone
+                      ? 'bg-green-100 text-green-700'
+                      : isActive
+                      ? 'bg-amber-50 text-amber-600 ring-2 ring-amber-400 ring-offset-1'
+                      : 'bg-zinc-100 text-zinc-400'
+                  }`}
+                >
+                  <PhaseIcon type={phase} size={20} />
+                  {isDone && (
+                    <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                      <svg width="7" height="7" viewBox="0 0 10 10" fill="none">
+                        <polyline points="2,5 4,7 8,3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                  )}
+                </button>
+                <span className={`text-[9px] font-semibold mt-1.5 text-center leading-tight max-w-[40px] ${
+                  isDone ? 'text-green-600' : isActive ? 'text-amber-600' : 'text-zinc-400'
+                }`}>
+                  {meta?.label}
+                </span>
+                {event && (
+                  <span className={`text-[8px] mt-0.5 ${isDone ? 'text-green-500' : isActive ? 'text-amber-500' : 'text-zinc-300'}`}>
+                    {new Date(event.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                  </span>
+                )}
+              </div>
+              {idx < phases.length - 1 && (
+                <div className={`h-0.5 flex-1 mt-5 mx-1 rounded-full ${isDone ? 'bg-green-300' : 'bg-zinc-100'}`} />
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {next && (() => {
+        const days = daysUntil(next.date)
+        return (
+          <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold ${
+            days < 0 ? 'bg-rose-50 text-rose-600' : days === 0 ? 'bg-amber-50 text-amber-700' : 'bg-zinc-50 text-zinc-600'
+          }`}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            {days < 0
+              ? `${EVENT_LABELS[next.type]?.label} — ${Math.abs(days)} Tage überfällig`
+              : days === 0
+              ? `${EVENT_LABELS[next.type]?.label} — Heute!`
+              : `${EVENT_LABELS[next.type]?.label} in ${days} Tagen`
+            }
+          </div>
+        )
+      })()}
+    </div>
+  )
 }
 
 interface BreedingEvent {
@@ -333,36 +433,7 @@ export default function BreedingPage() {
                           )}
                         </div>
 
-                        {/* Event timeline */}
-                        <div className="flex flex-wrap gap-2">
-                          {batch.events.map(event => {
-                            const meta = EVENT_LABELS[event.type]
-                            const isNext = next?.id === event.id
-                            return (
-                              <button
-                                key={event.id}
-                                onClick={() => toggleEvent(event.id, !event.completed)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-medium transition-all ${
-                                  event.completed
-                                    ? 'bg-zinc-100 text-zinc-400 border-zinc-100 line-through'
-                                    : isNext
-                                    ? `${meta?.color ?? 'bg-zinc-100 text-zinc-600 border-zinc-200'} ring-2 ring-offset-1 ring-amber-300`
-                                    : meta?.color ?? 'bg-zinc-100 text-zinc-600 border-zinc-200'
-                                }`}
-                              >
-                                {event.completed ? (
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                ) : (
-                                  <PhaseIcon type={event.type} size={12} />
-                                )}
-                                {meta?.label}
-                                <span className="opacity-60">
-                                  {new Date(event.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
-                                </span>
-                              </button>
-                            )
-                          })}
-                        </div>
+                        <PhaseTimeline batch={batch} toggleEvent={toggleEvent} />
                       </div>
                     )
                   })}
