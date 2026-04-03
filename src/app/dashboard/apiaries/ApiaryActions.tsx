@@ -44,15 +44,36 @@ function ApiaryForm({ initial, onSubmit, loading }: {
         <input {...field('name')} required placeholder="z.B. Standort Nord"
           className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Breitengrad</label>
-          <input {...field('lat')} type="number" step="any" placeholder="48.1351"
-            className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-[13px] font-medium text-zinc-700">Koordinaten</label>
+          <button
+            type="button"
+            onClick={() => {
+              if (!navigator.geolocation) return
+              navigator.geolocation.getCurrentPosition(
+                pos => setForm(f => ({
+                  ...f,
+                  lat: pos.coords.latitude.toFixed(6),
+                  lng: pos.coords.longitude.toFixed(6),
+                })),
+                () => alert('GPS-Standort konnte nicht ermittelt werden.')
+              )
+            }}
+            className="flex items-center gap-1.5 text-[12px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+              <circle cx="12" cy="12" r="7" opacity="0.3"/>
+            </svg>
+            GPS jetzt setzen
+          </button>
         </div>
-        <div>
-          <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Längengrad</label>
-          <input {...field('lng')} type="number" step="any" placeholder="8.6821"
+        <div className="grid grid-cols-2 gap-3">
+          <input {...field('lat')} type="number" step="any" placeholder="Breitengrad 48.1351"
+            className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+          <input {...field('lng')} type="number" step="any" placeholder="Längengrad 8.6821"
             className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
         </div>
       </div>
