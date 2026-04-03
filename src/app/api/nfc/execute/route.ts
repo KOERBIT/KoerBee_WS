@@ -3,11 +3,16 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+interface InspectionItemInput {
+  key: string
+  value: string
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { tagId, actionType, amount, unit, notes } = await req.json()
+  const { tagId, actionType, amount, unit, notes, items } = await req.json()
 
   const tag = await prisma.nfcTag.findFirst({
     where: { id: tagId, colony: { apiary: { userId: session.user.id } } },
@@ -24,6 +29,9 @@ export async function POST(req: NextRequest) {
         date: now,
         notes: notes ?? 'Via NFC-Scan',
         createdOffline: false,
+        items: items && items.length > 0
+          ? { create: (items as InspectionItemInput[]).map(i => ({ key: i.key, value: i.value })) }
+          : undefined,
       },
     })
     return NextResponse.json({ ok: true, type: 'inspection', id: inspection.id })
