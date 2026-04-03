@@ -78,7 +78,7 @@ export default async function ApiaryDetailPage({ params }: { params: Promise<{ i
             )}
           </div>
         </div>
-        <ApiaryDetailActions apiary={{ id: apiary.id, name: apiary.name, status: apiary.status }} />
+        <ApiaryDetailActions apiary={{ id: apiary.id, name: apiary.name, status: apiary.status, lat: apiary.lat ?? null, lng: apiary.lng ?? null, notes: apiary.notes ?? null }} />
       </div>
 
       {/* Info */}

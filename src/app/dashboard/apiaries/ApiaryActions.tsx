@@ -3,8 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Modal from '@/components/Modal'
+import dynamic from 'next/dynamic'
 
-interface ApiaryFormData {
+const ApiaryMapPicker = dynamic(
+  () => import('@/components/ApiaryMapPicker').then(m => m.ApiaryMapPicker),
+  { ssr: false, loading: () => <div className="h-[220px] bg-zinc-100 rounded-xl border border-zinc-200 animate-pulse" /> }
+)
+
+export interface ApiaryFormData {
   name: string
   lat: string
   lng: string
@@ -19,7 +25,7 @@ interface Apiary {
   notes: string | null
 }
 
-function ApiaryForm({ initial, onSubmit, loading }: {
+export function ApiaryForm({ initial, onSubmit, loading }: {
   initial?: Partial<ApiaryFormData>
   onSubmit: (data: ApiaryFormData) => void
   loading: boolean
@@ -38,6 +44,9 @@ function ApiaryForm({ initial, onSubmit, loading }: {
       setForm(f => ({ ...f, [key]: e.target.value })),
   })
 
+  const mapLat = form.lat ? parseFloat(form.lat) : undefined
+  const mapLng = form.lng ? parseFloat(form.lng) : undefined
+
   return (
     <form onSubmit={e => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
       <div>
@@ -45,9 +54,10 @@ function ApiaryForm({ initial, onSubmit, loading }: {
         <input {...field('name')} required placeholder="z.B. Standort Nord"
           className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
       </div>
+
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="text-[13px] font-medium text-zinc-700">Koordinaten</label>
+          <label className="text-[13px] font-medium text-zinc-700">Standort auf Karte wählen</label>
           <button
             type="button"
             onClick={() => {
@@ -72,14 +82,20 @@ function ApiaryForm({ initial, onSubmit, loading }: {
             GPS jetzt setzen
           </button>
         </div>
-        {gpsError && <p className="text-[12px] text-rose-600 mt-1">{gpsError}</p>}
-        <div className="grid grid-cols-2 gap-3">
-          <input {...field('lat')} type="number" step="any" placeholder="Breitengrad 48.1351"
+        {gpsError && <p className="text-[12px] text-rose-600 mb-1.5">{gpsError}</p>}
+        <ApiaryMapPicker
+          lat={mapLat}
+          lng={mapLng}
+          onChange={(lat, lng) => setForm(f => ({ ...f, lat: lat.toFixed(6), lng: lng.toFixed(6) }))}
+        />
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <input {...field('lat')} type="number" step="any" placeholder="Breitengrad"
             className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
-          <input {...field('lng')} type="number" step="any" placeholder="Längengrad 8.6821"
+          <input {...field('lng')} type="number" step="any" placeholder="Längengrad"
             className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
         </div>
       </div>
+
       <div>
         <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Notizen</label>
         <textarea {...field('notes')} rows={3} placeholder="Beschreibung, Zufahrt..."
@@ -93,6 +109,11 @@ function ApiaryForm({ initial, onSubmit, loading }: {
   )
 }
 
+function toFloat(val: string): number | null {
+  const f = parseFloat(val)
+  return isNaN(f) ? null : f
+}
+
 export function AddApiaryButton() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -103,7 +124,12 @@ export function AddApiaryButton() {
     await fetch('/api/apiaries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: data.name, lat: data.lat || null, lng: data.lng || null, notes: data.notes || null }),
+      body: JSON.stringify({
+        name: data.name,
+        lat: toFloat(data.lat),
+        lng: toFloat(data.lng),
+        notes: data.notes || null,
+      }),
     })
     setLoading(false)
     setOpen(false)
@@ -138,7 +164,12 @@ export function ApiaryRowActions({ apiary }: { apiary: Apiary }) {
     await fetch(`/api/apiaries/${apiary.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: data.name, lat: data.lat || null, lng: data.lng || null, notes: data.notes || null }),
+      body: JSON.stringify({
+        name: data.name,
+        lat: toFloat(data.lat),
+        lng: toFloat(data.lng),
+        notes: data.notes || null,
+      }),
     })
     setLoading(false)
     setEditing(false)

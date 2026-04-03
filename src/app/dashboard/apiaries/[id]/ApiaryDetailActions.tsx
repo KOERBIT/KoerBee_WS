@@ -3,14 +3,45 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Modal from '@/components/Modal'
+import { ApiaryForm, ApiaryFormData } from '../ApiaryActions'
 
-interface Apiary { id: string; name: string; status: string }
+interface Apiary {
+  id: string
+  name: string
+  status: string
+  lat: number | null
+  lng: number | null
+  notes: string | null
+}
+
+function toFloat(val: string): number | null {
+  const f = parseFloat(val)
+  return isNaN(f) ? null : f
+}
 
 export function ApiaryDetailActions({ apiary }: { apiary: Apiary }) {
   const [showClose, setShowClose] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  async function handleEdit(data: ApiaryFormData) {
+    setLoading(true)
+    await fetch(`/api/apiaries/${apiary.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: data.name,
+        lat: toFloat(data.lat),
+        lng: toFloat(data.lng),
+        notes: data.notes || null,
+      }),
+    })
+    setLoading(false)
+    setShowEdit(false)
+    router.refresh()
+  }
 
   async function handleClose(e: React.FormEvent) {
     e.preventDefault()
@@ -38,15 +69,26 @@ export function ApiaryDetailActions({ apiary }: { apiary: Apiary }) {
   return (
     <>
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => setShowEdit(true)}
+          className="flex items-center gap-2 px-4 py-2 border border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 rounded-xl text-[13px] font-medium transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+          Bearbeiten
+        </button>
+
         {apiary.status === 'active' ? (
           <button
             onClick={() => setShowClose(true)}
             className="flex items-center gap-2 px-4 py-2 border border-zinc-200 text-zinc-600 hover:border-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl text-[13px] font-medium transition-colors"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
             </svg>
-            Standort aufgeben
+            Aufgeben
           </button>
         ) : (
           <button
@@ -57,6 +99,21 @@ export function ApiaryDetailActions({ apiary }: { apiary: Apiary }) {
           </button>
         )}
       </div>
+
+      {showEdit && (
+        <Modal title="Standort bearbeiten" onClose={() => setShowEdit(false)}>
+          <ApiaryForm
+            initial={{
+              name: apiary.name,
+              lat: apiary.lat?.toString() ?? '',
+              lng: apiary.lng?.toString() ?? '',
+              notes: apiary.notes ?? '',
+            }}
+            onSubmit={handleEdit}
+            loading={loading}
+          />
+        </Modal>
+      )}
 
       {showClose && (
         <Modal title={`Standort aufgeben: ${apiary.name}`} onClose={() => setShowClose(false)}>
