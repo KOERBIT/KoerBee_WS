@@ -129,7 +129,7 @@ function DurchschauForm({ value, onChange }: { value: InspectionForm; onChange: 
 }
 
 // ── Füttern-Formular ─────────────────────────────────────────────
-interface FeedingForm { amount: number; unit: string }
+interface FeedingForm { amount: number; foodType: string }
 
 function FuetternForm({ value, onChange }: { value: FeedingForm; onChange: (v: FeedingForm) => void }) {
   const step = 0.5
@@ -159,7 +159,7 @@ function FuetternForm({ value, onChange }: { value: FeedingForm; onChange: (v: F
         <p className="text-[12px] font-semibold text-zinc-500 mb-2">Futtertyp</p>
         <div className="flex gap-3">
           {['Zuckerwasser', 'Futterteig'].map(u => (
-            <TapButton key={u} label={u} selected={value.unit === u} onSelect={() => onChange({ ...value, unit: u })} />
+            <TapButton key={u} label={u} selected={value.foodType === u} onSelect={() => onChange({ ...value, foodType: u })} />
           ))}
         </div>
       </div>
@@ -171,7 +171,7 @@ function FuetternForm({ value, onChange }: { value: FeedingForm; onChange: (v: F
 const EMPTY_INSPECTION: InspectionForm = {
   varroa: '', population: 0, queen_seen: '', temperament: '', brood_pattern: '', swarm_drive: '',
 }
-const EMPTY_FEEDING: FeedingForm = { amount: 1, unit: 'Zuckerwasser' }
+const EMPTY_FEEDING: FeedingForm = { amount: 1, foodType: 'Zuckerwasser' }
 
 export default function NfcScanPage() {
   const [state, setState] = useState<ScanState>('idle')
@@ -212,8 +212,7 @@ export default function NfcScanPage() {
     }
   }
 
-  function buildItems(): { key: string; value: string }[] {
-    const f = inspectionForm
+  function buildItems(f: InspectionForm): { key: string; value: string }[] {
     const items: { key: string; value: string }[] = []
     if (f.varroa)        items.push({ key: 'varroa',        value: f.varroa })
     if (f.population)    items.push({ key: 'population',    value: String(f.population) })
@@ -228,10 +227,11 @@ export default function NfcScanPage() {
     if (!tag || !selectedAction) return
     const body: Record<string, unknown> = { tagId: tag.id, actionType: selectedAction }
     if (selectedAction === 'inspection') {
-      body.items = buildItems()
+      body.items = buildItems(inspectionForm)
     } else if (selectedAction === 'feeding') {
       body.amount = feedingForm.amount
-      body.unit = feedingForm.unit
+      body.unit = 'kg'
+      body.notes = feedingForm.foodType
     }
     const res = await fetch('/api/nfc/execute', {
       method: 'POST',
@@ -323,17 +323,24 @@ export default function NfcScanPage() {
           {/* Aktion wählen */}
           <div>
             <p className="text-[13px] font-medium text-zinc-700 mb-2">Aktion</p>
-            <div className="space-y-2">
-              {tag.actions.map(a => (
-                <button key={a.type} onClick={() => setSelectedAction(a.type)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-colors ${
-                    selectedAction === a.type ? 'border-amber-400 bg-amber-50' : 'border-zinc-100 bg-white hover:border-zinc-200'
-                  }`}>
-                  <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${selectedAction === a.type ? 'border-amber-500 bg-amber-500' : 'border-zinc-300'}`} />
-                  <span className="text-[14px] font-medium text-zinc-900">{ACTION_LABELS[a.type] ?? a.type}</span>
-                </button>
-              ))}
-            </div>
+            {tag.actions.length === 0 ? (
+              <div className="bg-zinc-50 rounded-xl px-4 py-3">
+                <p className="text-[13px] text-zinc-400 mb-1">Keine Aktionen für diesen Tag konfiguriert.</p>
+                <Link href="/dashboard/nfc" className="text-[13px] text-amber-600 font-medium">Tag verwalten →</Link>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {tag.actions.map(a => (
+                  <button key={a.type} onClick={() => setSelectedAction(a.type)}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-colors ${
+                      selectedAction === a.type ? 'border-amber-400 bg-amber-50' : 'border-zinc-100 bg-white hover:border-zinc-200'
+                    }`}>
+                    <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${selectedAction === a.type ? 'border-amber-500 bg-amber-500' : 'border-zinc-300'}`} />
+                    <span className="text-[14px] font-medium text-zinc-900">{ACTION_LABELS[a.type] ?? a.type}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Aktions-spezifisches Formular */}
