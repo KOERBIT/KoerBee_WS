@@ -6,14 +6,14 @@ function wmoGroup(code: number): 'sunny' | 'cloudy' | 'foggy' | 'rainy' | 'snowy
   if (code === 2 || code === 3) return 'cloudy'
   if (code === 45 || code === 48) return 'foggy'
   if (code >= 95) return 'stormy'
-  if (code >= 71 && code <= 77) return 'snowy'
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snowy'
   if (code >= 51 && code <= 82) return 'rainy'
   return 'cloudy'
 }
 
 function SunnyBee({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" aria-hidden="true">
       {/* Sonne */}
       <circle cx="28" cy="28" r="12" fill="#fbbf24" opacity="0.9"/>
       <line x1="28" y1="10" x2="28" y2="15" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"/>
@@ -43,7 +43,7 @@ function SunnyBee({ size }: { size: number }) {
 
 function CloudyBee({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" aria-hidden="true">
       <ellipse cx="42" cy="26" rx="18" ry="12" fill="#d1d5db"/>
       <ellipse cx="28" cy="31" rx="13" ry="10" fill="#d1d5db"/>
       <ellipse cx="52" cy="33" rx="11" ry="9" fill="#e5e7eb"/>
@@ -64,7 +64,7 @@ function CloudyBee({ size }: { size: number }) {
 
 function RainyBee({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" aria-hidden="true">
       <ellipse cx="40" cy="22" rx="17" ry="11" fill="#9ca3af"/>
       <ellipse cx="26" cy="27" rx="12" ry="9" fill="#9ca3af"/>
       <ellipse cx="50" cy="29" rx="11" ry="8" fill="#6b7280"/>
@@ -84,7 +84,7 @@ function RainyBee({ size }: { size: number }) {
 
 function SnowyBee({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" aria-hidden="true">
       <ellipse cx="40" cy="22" rx="17" ry="11" fill="#bfdbfe"/>
       <ellipse cx="26" cy="27" rx="12" ry="9" fill="#bfdbfe"/>
       <ellipse cx="36" cy="33" rx="20" ry="10" fill="#dbeafe"/>
@@ -103,7 +103,7 @@ function SnowyBee({ size }: { size: number }) {
 
 function StormyBee({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" aria-hidden="true">
       <ellipse cx="40" cy="20" rx="18" ry="12" fill="#4b5563"/>
       <ellipse cx="26" cy="26" rx="13" ry="10" fill="#374151"/>
       <ellipse cx="36" cy="32" rx="22" ry="11" fill="#374151"/>
@@ -119,7 +119,7 @@ function StormyBee({ size }: { size: number }) {
 
 function FoggyBee({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" aria-hidden="true">
       <line x1="12" y1="28" x2="58" y2="28" stroke="#d1d5db" strokeWidth="6" strokeLinecap="round"/>
       <line x1="18" y1="40" x2="64" y2="40" stroke="#d1d5db" strokeWidth="6" strokeLinecap="round"/>
       <line x1="12" y1="52" x2="52" y2="52" stroke="#d1d5db" strokeWidth="6" strokeLinecap="round"/>
