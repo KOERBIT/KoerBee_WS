@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
         notes: notes ?? 'Via NFC-Scan',
         createdOffline: false,
         items: items && items.length > 0
-          ? { create: (items as InspectionItemInput[]).map(i => ({ key: i.key, value: i.value })) }
+          ? {
+              create: (items as InspectionItemInput[])
+                .filter(i => i && typeof i.key === 'string' && i.key.length > 0)
+                .map(i => ({ key: i.key, value: String(i.value ?? '') }))
+            }
           : undefined,
       },
     })
