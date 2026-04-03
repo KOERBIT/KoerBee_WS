@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ApiaryDetailActions } from './ApiaryDetailActions'
 import { AddColonyButton } from '@/app/dashboard/colonies/ColonyActions'
 import { WeatherWidget } from '@/components/WeatherWidget'
+import { ApiaryMapClient } from '@/components/ApiaryMapClient'
 
 const QUEEN_COLOR_DOT: Record<string, string> = {
   weiß: 'bg-white border border-zinc-300',
@@ -98,9 +99,12 @@ export default async function ApiaryDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
-      {/* Weather */}
+      {/* Karte + Wetter */}
       {apiary.lat && apiary.lng && (
-        <WeatherWidget lat={apiary.lat} lng={apiary.lng} />
+        <>
+          <ApiaryMapClient lat={apiary.lat} lng={apiary.lng} name={apiary.name} />
+          <WeatherWidget lat={apiary.lat} lng={apiary.lng} />
+        </>
       )}
 
       {/* Stats */}
