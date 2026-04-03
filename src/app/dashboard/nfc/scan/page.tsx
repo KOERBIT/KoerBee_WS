@@ -6,16 +6,10 @@ import Link from 'next/link'
 type ScanState = 'idle' | 'scanning' | 'found' | 'notfound' | 'success' | 'error'
 
 const ACTION_LABELS: Record<string, string> = {
-  inspection:   'Durchsicht',
-  varroa:       'Varroabehandlung',
-  feeding:      'Füttern',
-  honey_harvest:'Honigernte',
-}
-
-const NEEDS_AMOUNT = ['feeding', 'honey_harvest']
-const AMOUNT_UNITS: Record<string, string[]> = {
-  feeding:      ['kg', 'l'],
-  honey_harvest:['kg'],
+  inspection:    'Durchschau',
+  varroa:        'Varroabehandlung',
+  feeding:       'Füttern',
+  honey_harvest: 'Honigernte',
 }
 
 interface NfcAction { id: string; type: string; defaultValues: Record<string, string> | null }
@@ -27,13 +21,164 @@ interface Tag {
   actions: NfcAction[]
 }
 
+// ── Tap-Button Baustein ──────────────────────────────────────────
+function TapButton({ label, selected, onSelect }: { label: string; selected: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`px-4 py-2.5 rounded-xl border-2 text-[13px] font-medium transition-colors ${
+        selected
+          ? 'border-amber-400 bg-amber-50 text-amber-800'
+          : 'border-zinc-100 bg-white text-zinc-700 hover:border-zinc-200'
+      }`}
+    >
+      {label}
+    </button>
+  )
+}
+
+// ── Durchschau-Formular ──────────────────────────────────────────
+interface InspectionForm {
+  varroa: string
+  population: number
+  queen_seen: string
+  temperament: string
+  brood_pattern: string
+  swarm_drive: string
+}
+
+function DurchschauForm({ value, onChange }: { value: InspectionForm; onChange: (v: InspectionForm) => void }) {
+  const set = (key: keyof InspectionForm, val: string | number) =>
+    onChange({ ...value, [key]: val })
+
+  return (
+    <div className="space-y-4">
+      {/* Varroa */}
+      <div>
+        <p className="text-[12px] font-semibold text-zinc-500 mb-2">Varroa-Befall</p>
+        <div className="flex flex-wrap gap-2">
+          {['<1%', '1–3%', '3–5%', '>5%'].map(v => (
+            <TapButton key={v} label={v} selected={value.varroa === v} onSelect={() => set('varroa', v)} />
+          ))}
+        </div>
+      </div>
+
+      {/* Volksstärke */}
+      <div>
+        <p className="text-[12px] font-semibold text-zinc-500 mb-2">Volksstärke</p>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4, 5].map(n => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => set('population', n)}
+              className={`w-10 h-10 rounded-xl border-2 text-[13px] font-bold transition-colors ${
+                value.population >= n
+                  ? 'border-amber-400 bg-amber-400 text-white'
+                  : 'border-zinc-100 bg-zinc-50 text-zinc-400'
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Königin */}
+      <div>
+        <p className="text-[12px] font-semibold text-zinc-500 mb-2">Königin gesehen</p>
+        <div className="flex flex-wrap gap-2">
+          {['Ja', 'Nein', 'Eilage gesehen'].map(v => (
+            <TapButton key={v} label={v} selected={value.queen_seen === v} onSelect={() => set('queen_seen', v)} />
+          ))}
+        </div>
+      </div>
+
+      {/* Temperament */}
+      <div>
+        <p className="text-[12px] font-semibold text-zinc-500 mb-2">Temperament</p>
+        <div className="flex flex-wrap gap-2">
+          {['Ruhig', 'Normal', 'Aggressiv'].map(v => (
+            <TapButton key={v} label={v} selected={value.temperament === v} onSelect={() => set('temperament', v)} />
+          ))}
+        </div>
+      </div>
+
+      {/* Brutnest */}
+      <div>
+        <p className="text-[12px] font-semibold text-zinc-500 mb-2">Brutnest</p>
+        <div className="flex flex-wrap gap-2">
+          {['Gut', 'Lückig', 'Schlecht'].map(v => (
+            <TapButton key={v} label={v} selected={value.brood_pattern === v} onSelect={() => set('brood_pattern', v)} />
+          ))}
+        </div>
+      </div>
+
+      {/* Schwarmstimmung */}
+      <div>
+        <p className="text-[12px] font-semibold text-zinc-500 mb-2">Schwarmstimmung</p>
+        <div className="flex flex-wrap gap-2">
+          {['Keine', 'Weiselzellen', 'Starke Triebe'].map(v => (
+            <TapButton key={v} label={v} selected={value.swarm_drive === v} onSelect={() => set('swarm_drive', v)} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Füttern-Formular ─────────────────────────────────────────────
+interface FeedingForm { amount: number; unit: string }
+
+function FuetternForm({ value, onChange }: { value: FeedingForm; onChange: (v: FeedingForm) => void }) {
+  const step = 0.5
+  const dec = () => onChange({ ...value, amount: Math.max(0, Math.round((value.amount - step) * 10) / 10) })
+  const inc = () => onChange({ ...value, amount: Math.round((value.amount + step) * 10) / 10 })
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-[12px] font-semibold text-zinc-500 mb-3">Futtermenge</p>
+        <div className="flex items-center justify-center gap-6">
+          <button type="button" onClick={dec}
+            className="w-14 h-14 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-3xl font-light text-zinc-700 transition-colors flex items-center justify-center">
+            −
+          </button>
+          <div className="text-center min-w-[72px]">
+            <p className="text-3xl font-bold text-zinc-900">{value.amount.toFixed(1)}</p>
+            <p className="text-[12px] text-zinc-400 font-medium">kg</p>
+          </div>
+          <button type="button" onClick={inc}
+            className="w-14 h-14 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-3xl font-light text-zinc-700 transition-colors flex items-center justify-center">
+            +
+          </button>
+        </div>
+      </div>
+      <div>
+        <p className="text-[12px] font-semibold text-zinc-500 mb-2">Futtertyp</p>
+        <div className="flex gap-3">
+          {['Zuckerwasser', 'Futterteig'].map(u => (
+            <TapButton key={u} label={u} selected={value.unit === u} onSelect={() => onChange({ ...value, unit: u })} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Hauptseite ───────────────────────────────────────────────────
+const EMPTY_INSPECTION: InspectionForm = {
+  varroa: '', population: 0, queen_seen: '', temperament: '', brood_pattern: '', swarm_drive: '',
+}
+const EMPTY_FEEDING: FeedingForm = { amount: 1, unit: 'Zuckerwasser' }
+
 export default function NfcScanPage() {
   const [state, setState] = useState<ScanState>('idle')
   const [tag, setTag] = useState<Tag | null>(null)
   const [selectedAction, setSelectedAction] = useState<string>('')
-  const [amount, setAmount] = useState('')
-  const [unit, setUnit] = useState('kg')
-  const [notes, setNotes] = useState('')
+  const [inspectionForm, setInspectionForm] = useState<InspectionForm>(EMPTY_INSPECTION)
+  const [feedingForm, setFeedingForm] = useState<FeedingForm>(EMPTY_FEEDING)
   const [result, setResult] = useState<string>('')
   const [manualUid, setManualUid] = useState('')
   const [useManual, setUseManual] = useState(false)
@@ -44,10 +189,7 @@ export default function NfcScanPage() {
     const data = await res.json()
     if (data.found) {
       setTag(data.tag)
-      const firstAction = data.tag.actions[0]
-      setSelectedAction(firstAction?.type ?? '')
-      if (firstAction?.defaultValues?.unit) setUnit(firstAction.defaultValues.unit)
-      if (firstAction?.defaultValues?.amount) setAmount(String(firstAction.defaultValues.amount))
+      setSelectedAction(data.tag.actions[0]?.type ?? '')
       setState('found')
     } else {
       setState('notfound')
@@ -55,10 +197,7 @@ export default function NfcScanPage() {
   }, [])
 
   async function startNfcScan() {
-    if (!('NDEFReader' in window)) {
-      setUseManual(true)
-      return
-    }
+    if (!('NDEFReader' in window)) { setUseManual(true); return }
     setState('scanning')
     try {
       const ndef = new (window as any).NDEFReader()
@@ -68,23 +207,36 @@ export default function NfcScanPage() {
       }, { once: true })
     } catch {
       setState('error')
-      setResult('NFC-Scan fehlgeschlagen. Bitte manuell eingeben.')
+      setResult('NFC-Scan fehlgeschlagen.')
       setUseManual(true)
     }
   }
 
+  function buildItems(): { key: string; value: string }[] {
+    const f = inspectionForm
+    const items: { key: string; value: string }[] = []
+    if (f.varroa)        items.push({ key: 'varroa',        value: f.varroa })
+    if (f.population)    items.push({ key: 'population',    value: String(f.population) })
+    if (f.queen_seen)    items.push({ key: 'queen_seen',    value: f.queen_seen })
+    if (f.temperament)   items.push({ key: 'temperament',   value: f.temperament })
+    if (f.brood_pattern) items.push({ key: 'brood_pattern', value: f.brood_pattern })
+    if (f.swarm_drive)   items.push({ key: 'swarm_drive',   value: f.swarm_drive })
+    return items
+  }
+
   async function executeAction() {
     if (!tag || !selectedAction) return
+    const body: Record<string, unknown> = { tagId: tag.id, actionType: selectedAction }
+    if (selectedAction === 'inspection') {
+      body.items = buildItems()
+    } else if (selectedAction === 'feeding') {
+      body.amount = feedingForm.amount
+      body.unit = feedingForm.unit
+    }
     const res = await fetch('/api/nfc/execute', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tagId: tag.id,
-        actionType: selectedAction,
-        amount: NEEDS_AMOUNT.includes(selectedAction) && amount ? parseFloat(amount) : null,
-        unit: NEEDS_AMOUNT.includes(selectedAction) ? unit : null,
-        notes: notes || null,
-      }),
+      body: JSON.stringify(body),
     })
     if (res.ok) {
       setResult(`${ACTION_LABELS[selectedAction] ?? selectedAction} für ${tag.colony.name} gebucht`)
@@ -96,30 +248,16 @@ export default function NfcScanPage() {
   }
 
   function reset() {
-    setState('idle')
-    setTag(null)
-    setSelectedAction('')
-    setAmount('')
-    setNotes('')
-    setResult('')
-    setManualUid('')
+    setState('idle'); setTag(null); setSelectedAction('')
+    setInspectionForm(EMPTY_INSPECTION); setFeedingForm(EMPTY_FEEDING)
+    setResult(''); setManualUid('')
   }
-
-  function selectAction(type: string, defaultValues: Record<string, string> | null) {
-    setSelectedAction(type)
-    if (defaultValues?.unit) setUnit(defaultValues.unit)
-    else setUnit(AMOUNT_UNITS[type]?.[0] ?? 'kg')
-    if (defaultValues?.amount) setAmount(String(defaultValues.amount))
-    else setAmount('')
-  }
-
-  const showAmount = NEEDS_AMOUNT.includes(selectedAction)
-  const units = AMOUNT_UNITS[selectedAction] ?? ['kg', 'l']
 
   return (
     <div className="px-4 py-8 max-w-md mx-auto pb-24 md:pb-8">
       <div className="flex items-center gap-3 mb-8">
-        <Link href="/dashboard/nfc" className="w-8 h-8 flex items-center justify-center rounded-xl bg-zinc-100 hover:bg-zinc-200 transition-colors text-zinc-500">
+        <Link href="/dashboard/nfc"
+          className="w-8 h-8 flex items-center justify-center rounded-xl bg-zinc-100 hover:bg-zinc-200 transition-colors text-zinc-500">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
         </Link>
         <h1 className="text-xl font-semibold tracking-tight text-zinc-900">NFC-Tag scannen</h1>
@@ -143,23 +281,19 @@ export default function NfcScanPage() {
             className="text-[13px] text-zinc-400 hover:text-zinc-600 transition-colors">
             UID manuell eingeben
           </button>
-          <p className="text-[12px] text-zinc-400 mt-6 text-center">
-            Halte dein Telefon an den NFC-Chip am Bienenstock.<br/>
-            Funktioniert auf Android mit Chrome.
-          </p>
         </div>
       )}
 
-      {/* Manual UID input */}
-      {(useManual && state === 'idle') && (
+      {/* Manual */}
+      {useManual && state === 'idle' && (
         <div className="space-y-4">
           <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
-            <p className="text-[13px] text-blue-700">NFC nicht verfügbar auf diesem Gerät — UID manuell eingeben</p>
+            <p className="text-[13px] text-blue-700">NFC nicht verfügbar — UID manuell eingeben</p>
           </div>
           <div>
             <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Tag-UID</label>
             <input value={manualUid} onChange={e => setManualUid(e.target.value)}
-              placeholder="z.B. 04:A1:B2:C3:D4:E5"
+              placeholder="z.B. 04:A1:B2:C3"
               className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
           </div>
           <button onClick={() => lookupTag(manualUid)} disabled={!manualUid.trim()}
@@ -177,7 +311,7 @@ export default function NfcScanPage() {
         </div>
       )}
 
-      {/* Tag found */}
+      {/* Found */}
       {state === 'found' && tag && (
         <div className="space-y-5">
           <div className="bg-green-50 border border-green-100 rounded-2xl px-5 py-4">
@@ -186,53 +320,40 @@ export default function NfcScanPage() {
             <p className="text-[13px] text-zinc-500">{tag.colony.apiary.name}{tag.label ? ` · ${tag.label}` : ''}</p>
           </div>
 
+          {/* Aktion wählen */}
           <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-2">Aktion</label>
+            <p className="text-[13px] font-medium text-zinc-700 mb-2">Aktion</p>
             <div className="space-y-2">
-              {tag.actions.length > 0 ? tag.actions.map(a => (
-                <button key={a.type} onClick={() => selectAction(a.type, a.defaultValues)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-colors ${selectedAction === a.type ? 'border-amber-400 bg-amber-50' : 'border-zinc-100 bg-white hover:border-zinc-200'}`}>
+              {tag.actions.map(a => (
+                <button key={a.type} onClick={() => setSelectedAction(a.type)}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-colors ${
+                    selectedAction === a.type ? 'border-amber-400 bg-amber-50' : 'border-zinc-100 bg-white hover:border-zinc-200'
+                  }`}>
                   <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${selectedAction === a.type ? 'border-amber-500 bg-amber-500' : 'border-zinc-300'}`} />
                   <span className="text-[14px] font-medium text-zinc-900">{ACTION_LABELS[a.type] ?? a.type}</span>
                 </button>
-              )) : (
-                <div className="bg-zinc-50 rounded-xl px-4 py-3">
-                  <p className="text-[13px] text-zinc-400">Keine Aktionen für diesen Tag konfiguriert.</p>
-                  <Link href="/dashboard/nfc" className="text-[13px] text-amber-600 font-medium">Tag verwalten →</Link>
-                </div>
-              )}
+              ))}
             </div>
           </div>
 
-          {showAmount && (
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2">
-                <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">
-                  {selectedAction === 'honey_harvest' ? 'Erntemenge' : 'Futtermenge'}
-                </label>
-                <input type="number" step="0.1" min="0" value={amount} onChange={e => setAmount(e.target.value)}
-                  placeholder="0.0"
-                  className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
-              </div>
-              <div>
-                <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Einheit</label>
-                <select value={unit} onChange={e => setUnit(e.target.value)}
-                  className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent">
-                  {units.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-              </div>
+          {/* Aktions-spezifisches Formular */}
+          {selectedAction === 'inspection' && (
+            <div className="bg-zinc-50 rounded-2xl p-4">
+              <DurchschauForm value={inspectionForm} onChange={setInspectionForm} />
+            </div>
+          )}
+          {selectedAction === 'feeding' && (
+            <div className="bg-zinc-50 rounded-2xl p-4">
+              <FuetternForm value={feedingForm} onChange={setFeedingForm} />
             </div>
           )}
 
-          <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Notiz (optional)</label>
-            <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Zusätzliche Infos..."
-              className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
-          </div>
-
           <button onClick={executeAction} disabled={!selectedAction}
             className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white rounded-xl py-3.5 text-[15px] font-semibold transition-colors">
-            Jetzt buchen
+            {selectedAction === 'inspection'   ? 'Durchschau buchen' :
+             selectedAction === 'feeding'      ? 'Fütterung buchen' :
+             selectedAction === 'honey_harvest'? 'Honigernte buchen' :
+             selectedAction === 'varroa'       ? 'Behandlung buchen' : 'Jetzt buchen'}
           </button>
           <button onClick={reset} className="w-full text-[13px] text-zinc-400 hover:text-zinc-600 py-2 transition-colors">
             Abbrechen
@@ -247,8 +368,8 @@ export default function NfcScanPage() {
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="1.75" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
           </div>
           <p className="text-[15px] font-medium text-zinc-700">Tag nicht registriert</p>
-          <p className="text-[13px] text-zinc-400 text-center">Dieser Tag ist noch keinem Volk zugeordnet.</p>
-          <Link href="/dashboard/nfc" className="w-full bg-zinc-900 hover:bg-zinc-700 text-white rounded-xl py-3 text-[14px] font-semibold transition-colors text-center">
+          <Link href="/dashboard/nfc"
+            className="w-full bg-zinc-900 hover:bg-zinc-700 text-white rounded-xl py-3 text-[14px] font-semibold transition-colors text-center">
             Tag jetzt registrieren
           </Link>
           <button onClick={reset} className="text-[13px] text-zinc-400 hover:text-zinc-600 transition-colors">Erneut scannen</button>
@@ -262,9 +383,6 @@ export default function NfcScanPage() {
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <p className="text-[16px] font-semibold text-zinc-900 text-center">{result}</p>
-          <p className="text-[13px] text-zinc-400">
-            {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
-          </p>
           <button onClick={reset}
             className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-xl py-3 text-[14px] font-semibold transition-colors">
             Nächsten Tag scannen
