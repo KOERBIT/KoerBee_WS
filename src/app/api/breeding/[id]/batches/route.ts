@@ -32,7 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         create: [
           { type: 'graft',       date: graft,              completed: false },
           { type: 'check',       date: addDays(graft, 4),  completed: false },
-          { type: 'hatch',       date: addDays(graft, 11), completed: false },
+          { type: 'hatch',       date: addDays(graft, 12), completed: false },
           { type: 'mating',      date: addDays(graft, 14), completed: false },
           { type: 'laying',      date: addDays(graft, 21), completed: false },
           { type: 'assessment',  date: addDays(graft, 28), completed: false },

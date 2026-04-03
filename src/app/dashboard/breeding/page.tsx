@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 const EVENT_LABELS: Record<string, { label: string; day: number; color: string }> = {
   graft:      { label: 'Umlarven',     day: 0,  color: 'bg-violet-100 text-violet-700 border-violet-200' },
   check:      { label: 'Stiftkontrolle', day: 4, color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  hatch:      { label: 'Schlupf',      day: 11, color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
+  hatch:      { label: 'Schlupf',      day: 12, color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
   mating:     { label: 'Begattung',    day: 14, color: 'bg-amber-100 text-amber-700 border-amber-200' },
   laying:     { label: 'Eilage',       day: 21, color: 'bg-orange-100 text-orange-700 border-orange-200' },
   assessment: { label: 'Beurteilung',  day: 28, color: 'bg-green-100 text-green-700 border-green-200' },
