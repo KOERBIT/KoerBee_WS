@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 type ScanState = 'idle' | 'scanning' | 'reading' | 'found' | 'notfound' | 'success' | 'error'
@@ -202,7 +203,7 @@ const EMPTY_INSPECTION: InspectionForm = {
 const EMPTY_FEEDING: FeedingForm = { amount: 1, foodType: 'Zuckerwasser' }
 const EMPTY_HONIGERNTE: HonigernteFormData = { zargen: 1 }
 
-export default function NfcScanPage() {
+function NfcScanPage() {
   const [state, setState] = useState<ScanState>('idle')
   const [tag, setTag] = useState<Tag | null>(null)
   const [selectedAction, setSelectedAction] = useState<string>('')
@@ -213,6 +214,9 @@ export default function NfcScanPage() {
   const [manualUid, setManualUid] = useState('')
   const [useManual, setUseManual] = useState(false)
   const [nfcAvailable] = useState(() => typeof window !== 'undefined' && 'NDEFReader' in window)
+
+  const searchParams = useSearchParams()
+  const uidParam = searchParams.get('uid')
 
   const lookupTag = useCallback(async (uid: string) => {
     const res = await fetch(`/api/nfc/lookup?uid=${encodeURIComponent(uid)}`)
@@ -225,6 +229,13 @@ export default function NfcScanPage() {
       setState('notfound')
     }
   }, [])
+
+  useEffect(() => {
+    if (uidParam && state === 'idle') {
+      setState('reading')
+      lookupTag(uidParam)
+    }
+  }, [uidParam]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function startNfcScan() {
     setState('scanning')
@@ -500,5 +511,17 @@ export default function NfcScanPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function NfcScanPageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="px-4 py-8 max-w-md mx-auto flex flex-col items-center py-12">
+        <div className="w-16 h-16 rounded-full border-4 border-amber-200 border-t-amber-500 animate-spin" />
+      </div>
+    }>
+      <NfcScanPage />
+    </Suspense>
   )
 }
