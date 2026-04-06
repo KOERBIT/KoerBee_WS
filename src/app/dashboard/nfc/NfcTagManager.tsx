@@ -26,7 +26,23 @@ export function NfcTagManager({ colonies }: { colonies: Colony[] }) {
   const [label, setLabel] = useState('')
   const [colonyId, setColonyId] = useState(colonies[0]?.id ?? '')
   const [actions, setActions] = useState<ActionForm[]>([{ type: 'inspection', amount: '', unit: 'kg' }])
+  const [scanning, setScanning] = useState(false)
+  const [nfcSupported] = useState(() => typeof window !== 'undefined' && 'NDEFReader' in window)
   const router = useRouter()
+
+  async function scanUid() {
+    setScanning(true)
+    try {
+      const ndef = new (window as any).NDEFReader()
+      await ndef.scan()
+      ndef.addEventListener('reading', ({ serialNumber }: { serialNumber: string }) => {
+        setUid(serialNumber)
+        setScanning(false)
+      }, { once: true })
+    } catch {
+      setScanning(false)
+    }
+  }
 
   function addAction() {
     setActions(a => [...a, { type: 'feeding', amount: '', unit: 'kg' }])
@@ -89,9 +105,36 @@ export function NfcTagManager({ colonies }: { colonies: Colony[] }) {
             <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
               <div>
                 <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Tag-UID *</label>
-                <input value={uid} onChange={e => setUid(e.target.value)} required placeholder="z.B. 04:A1:B2:C3:D4:E5"
-                  className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
-                <p className="text-[11px] text-zinc-400 mt-1">UID vom Tag-Aufkleber oder via Scan-Seite auslesen</p>
+                <div className="flex gap-2">
+                  <input
+                    value={uid}
+                    onChange={e => setUid(e.target.value)}
+                    required
+                    placeholder="z.B. 04:A1:B2:C3:D4:E5"
+                    className="flex-1 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                  />
+                  {nfcSupported && (
+                    <button
+                      type="button"
+                      onClick={scanUid}
+                      disabled={scanning}
+                      className="flex items-center gap-1.5 px-3 py-2.5 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 text-amber-700 rounded-xl text-[13px] font-medium transition-colors shrink-0"
+                    >
+                      {scanning ? (
+                        <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M6.5 6.5a6 6 0 000 11M9 9a3 3 0 000 6M17.5 6.5a6 6 0 010 11M15 9a3 3 0 010 6"/>
+                          <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                        </svg>
+                      )}
+                      Scan
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-zinc-400 mt-1">UID vom Tag-Aufkleber oder via Scan-Button auslesen</p>
               </div>
               <div>
                 <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Bezeichnung</label>
