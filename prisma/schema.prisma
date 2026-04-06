@@ -20,6 +20,7 @@ model User {
   customers      Customer[]
   sales          Sale[]
   consignments   Consignment[]
+  expenses       Expense[]
   accounts       Account[]
   sessions       Session[]
 }
@@ -232,6 +233,17 @@ model ConsignmentItem {
   consignment      Consignment @relation(fields: [consignmentId], references: [id], onDelete: Cascade)
   productId        String
   product          Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  amount      Float
+  category    String   @default("Sonstiges")
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
 }
 
 // NextAuth required models
