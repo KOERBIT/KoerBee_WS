@@ -4,8 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const ACTION_TYPES = [
-  { value: 'inspection',    label: 'Durchsicht' },
-  { value: 'varroa',        label: 'Varroabehandlung' },
+  { value: 'inspection',    label: 'Durchschau' },
+  { value: 'varroa',        label: 'Varroa Behandlung' },
   { value: 'feeding',       label: 'Füttern' },
   { value: 'honey_harvest', label: 'Honigernte' },
 ]

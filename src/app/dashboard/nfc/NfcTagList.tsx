@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 const ACTION_LABELS: Record<string, string> = {
-  inspection:    'Durchsicht',
-  varroa:        'Varroabehandlung',
+  inspection:    'Durchschau',
+  varroa:        'Varroa Behandlung',
   feeding:       'Füttern',
   honey_harvest: 'Honigernte',
 }
