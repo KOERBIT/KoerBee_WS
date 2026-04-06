@@ -167,11 +167,40 @@ function FuetternForm({ value, onChange }: { value: FeedingForm; onChange: (v: F
   )
 }
 
+// ── Honigernte-Formular ──────────────────────────────────────────
+interface HonigernteFormData { zargen: number }
+
+function HonigernteFormComp({ value, onChange }: { value: HonigernteFormData; onChange: (v: HonigernteFormData) => void }) {
+  const dec = () => onChange({ zargen: Math.max(1, value.zargen - 1) })
+  const inc = () => onChange({ zargen: value.zargen + 1 })
+
+  return (
+    <div>
+      <p className="text-[12px] font-semibold text-zinc-500 mb-3">Anzahl Zargen</p>
+      <div className="flex items-center justify-center gap-6">
+        <button type="button" onClick={dec}
+          className="w-14 h-14 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-3xl font-light text-zinc-700 transition-colors flex items-center justify-center">
+          −
+        </button>
+        <div className="text-center min-w-[72px]">
+          <p className="text-3xl font-bold text-zinc-900">{value.zargen}</p>
+          <p className="text-[12px] text-zinc-400 font-medium">Zargen</p>
+        </div>
+        <button type="button" onClick={inc}
+          className="w-14 h-14 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-3xl font-light text-zinc-700 transition-colors flex items-center justify-center">
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Hauptseite ───────────────────────────────────────────────────
 const EMPTY_INSPECTION: InspectionForm = {
   varroa: '', population: 0, queen_seen: '', temperament: '', brood_pattern: '', swarm_drive: '',
 }
 const EMPTY_FEEDING: FeedingForm = { amount: 1, foodType: 'Zuckerwasser' }
+const EMPTY_HONIGERNTE: HonigernteFormData = { zargen: 1 }
 
 export default function NfcScanPage() {
   const [state, setState] = useState<ScanState>('idle')
@@ -179,6 +208,7 @@ export default function NfcScanPage() {
   const [selectedAction, setSelectedAction] = useState<string>('')
   const [inspectionForm, setInspectionForm] = useState<InspectionForm>(EMPTY_INSPECTION)
   const [feedingForm, setFeedingForm] = useState<FeedingForm>(EMPTY_FEEDING)
+  const [honigernteForm, setHonigernteForm] = useState<HonigernteFormData>(EMPTY_HONIGERNTE)
   const [result, setResult] = useState<string>('')
   const [manualUid, setManualUid] = useState('')
   const [useManual, setUseManual] = useState(false)
@@ -232,6 +262,9 @@ export default function NfcScanPage() {
       body.amount = feedingForm.amount
       body.unit = 'kg'
       body.notes = feedingForm.foodType
+    } else if (selectedAction === 'honey_harvest') {
+      body.amount = honigernteForm.zargen
+      body.unit = 'Zargen'
     }
     const res = await fetch('/api/nfc/execute', {
       method: 'POST',
@@ -250,6 +283,7 @@ export default function NfcScanPage() {
   function reset() {
     setState('idle'); setTag(null); setSelectedAction('')
     setInspectionForm(EMPTY_INSPECTION); setFeedingForm(EMPTY_FEEDING)
+    setHonigernteForm(EMPTY_HONIGERNTE)
     setResult(''); setManualUid('')
   }
 
@@ -361,6 +395,11 @@ export default function NfcScanPage() {
                 {new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </p>
               <p className="text-[12px] text-zinc-400 mt-1">Datum wird automatisch auf heute gesetzt</p>
+            </div>
+          )}
+          {selectedAction === 'honey_harvest' && (
+            <div className="bg-zinc-50 rounded-2xl p-4">
+              <HonigernteFormComp value={honigernteForm} onChange={setHonigernteForm} />
             </div>
           )}
 
