@@ -2,16 +2,19 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-type Tab = 'verkauf' | 'kommission' | 'artikel'
+type Tab = 'verkauf' | 'kommission' | 'artikel' | 'ausgaben'
 
 interface Product { id: string; name: string; unit: string; price: number; description: string | null }
 interface SaleItem { id: string; product: Product; quantity: number; price: number; total: number }
 interface Sale { id: string; date: string; customerName: string | null; total: number; notes: string | null; items: SaleItem[] }
 interface ConsignmentItem { id: string; product: Product; quantity: number; price: number; soldQuantity: number; returnedQuantity: number }
 interface Consignment { id: string; date: string; locationName: string | null; status: string; notes: string | null; items: ConsignmentItem[] }
+interface Expense { id: string; date: string; amount: number; category: string; description: string | null }
 
 function fmt(n: number) { return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) }
 function fmtDate(d: string) { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
+
+const EXPENSE_CATEGORIES = ['Material', 'Tierarzt', 'Ausrüstung', 'Fahrt', 'Sonstiges']
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   active:   { label: 'Aktiv',       color: 'bg-amber-100 text-amber-700' },
@@ -25,6 +28,20 @@ export default function KassenbuchPage() {
   const [sales, setSales] = useState<Sale[]>([])
   const [consignments, setConsignments] = useState<Consignment[]>([])
   const [loading, setLoading] = useState(true)
+  const [expenses, setExpenses] = useState<Expense[]>([])
+
+  // Expense form
+  const [showExpense, setShowExpense] = useState(false)
+  const [expDate, setExpDate] = useState(new Date().toISOString().slice(0, 10))
+  const [expAmount, setExpAmount] = useState('')
+  const [expCategory, setExpCategory] = useState('Sonstiges')
+  const [expDesc, setExpDesc] = useState('')
+  const [savingExp, setSavingExp] = useState(false)
+
+  // Export modal
+  const [showExport, setShowExport] = useState(false)
+  const [exportMonth, setExportMonth] = useState(new Date().getMonth() + 1)
+  const [exportYear, setExportYear] = useState(new Date().getFullYear())
 
   // Sale form
   const [showSale, setShowSale] = useState(false)
@@ -51,14 +68,16 @@ export default function KassenbuchPage() {
   const [savingProd, setSavingProd] = useState(false)
 
   const load = useCallback(async () => {
-    const [p, s, c] = await Promise.all([
+    const [p, s, c, e] = await Promise.all([
       fetch('/api/kassenbuch/products').then(r => r.json()),
       fetch('/api/kassenbuch/sales').then(r => r.json()),
       fetch('/api/kassenbuch/consignments').then(r => r.json()),
+      fetch('/api/kassenbuch/expenses').then(r => r.json()),
     ])
     setProducts(p)
     setSales(s)
     setConsignments(c)
+    setExpenses(e)
     setLoading(false)
   }, [])
 
@@ -157,6 +176,121 @@ export default function KassenbuchPage() {
     load()
   }
 
+  async function saveExpense(e: React.FormEvent) {
+    e.preventDefault()
+    setSavingExp(true)
+    await fetch('/api/kassenbuch/expenses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: expDate, amount: parseFloat(expAmount), category: expCategory, description: expDesc || null }),
+    })
+    setSavingExp(false)
+    setShowExpense(false)
+    setExpAmount(''); setExpDesc(''); setExpCategory('Sonstiges')
+    load()
+  }
+
+  async function deleteExpense(id: string) {
+    if (!confirm('Ausgabe löschen?')) return
+    await fetch(`/api/kassenbuch/expenses/${id}`, { method: 'DELETE' })
+    load()
+  }
+
+  function getExportData() {
+    const start = new Date(exportYear, exportMonth - 1, 1)
+    const end = new Date(exportYear, exportMonth, 0, 23, 59, 59)
+    const filteredSales = sales.filter(s => { const d = new Date(s.date); return d >= start && d <= end })
+    const filteredExpenses = expenses.filter(e => { const d = new Date(e.date); return d >= start && d <= end })
+    const totalIncome = filteredSales.reduce((s, sale) => s + sale.total, 0)
+    const totalExpenses = filteredExpenses.reduce((s, exp) => s + exp.amount, 0)
+    return { filteredSales, filteredExpenses, totalIncome, totalExpenses, saldo: totalIncome - totalExpenses }
+  }
+
+  function downloadCsv() {
+    const { filteredSales, filteredExpenses, totalIncome, totalExpenses, saldo } = getExportData()
+    const monthName = new Date(exportYear, exportMonth - 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+    const rows: string[] = [
+      'Datum;Typ;Beschreibung;Betrag',
+      ...filteredSales.map(s =>
+        `${new Date(s.date).toLocaleDateString('de-DE')};Einnahme;${s.notes ?? s.customerName ?? 'Direktverkauf'};${s.total.toFixed(2)}`
+      ),
+      ...filteredExpenses.map(e =>
+        `${new Date(e.date).toLocaleDateString('de-DE')};Ausgabe;${e.category}${e.description ? ' — ' + e.description : ''};-${e.amount.toFixed(2)}`
+      ),
+      ';;',
+      `;;Einnahmen gesamt;${totalIncome.toFixed(2)}`,
+      `;;Ausgaben gesamt;-${totalExpenses.toFixed(2)}`,
+      `;;Saldo;${saldo.toFixed(2)}`,
+    ]
+    const csv = rows.join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `Kassenbuch-${monthName}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function downloadPdf() {
+    const { filteredSales, filteredExpenses, totalIncome, totalExpenses, saldo } = getExportData()
+    const monthName = new Date(exportYear, exportMonth - 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+    const { default: jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+    const doc = new jsPDF()
+
+    doc.setFontSize(16)
+    doc.text(`Kassenbuch — ${monthName}`, 14, 18)
+
+    doc.setFontSize(11)
+    doc.text('Einnahmen', 14, 30)
+    autoTable(doc, {
+      startY: 33,
+      head: [['Datum', 'Beschreibung', 'Betrag']],
+      body: filteredSales.map(s => [
+        new Date(s.date).toLocaleDateString('de-DE'),
+        s.notes ?? s.customerName ?? 'Direktverkauf',
+        `${s.total.toFixed(2)} €`,
+      ]),
+      foot: [['', 'Gesamt', `${totalIncome.toFixed(2)} €`]],
+      theme: 'striped',
+      headStyles: { fillColor: [251, 191, 36] },
+    })
+
+    // @ts-ignore
+    const afterSales = (doc as any).lastAutoTable.finalY + 10
+    doc.setFontSize(11)
+    doc.text('Ausgaben', 14, afterSales)
+    autoTable(doc, {
+      startY: afterSales + 3,
+      head: [['Datum', 'Kategorie', 'Beschreibung', 'Betrag']],
+      body: filteredExpenses.map(e => [
+        new Date(e.date).toLocaleDateString('de-DE'),
+        e.category,
+        e.description ?? '',
+        `${e.amount.toFixed(2)} €`,
+      ]),
+      foot: [['', '', 'Gesamt', `${totalExpenses.toFixed(2)} €`]],
+      theme: 'striped',
+      headStyles: { fillColor: [244, 63, 94] },
+    })
+
+    // @ts-ignore
+    const afterExp = (doc as any).lastAutoTable.finalY + 10
+    autoTable(doc, {
+      startY: afterExp,
+      body: [
+        ['Einnahmen', `${totalIncome.toFixed(2)} €`],
+        ['Ausgaben', `-${totalExpenses.toFixed(2)} €`],
+        ['Saldo', `${saldo.toFixed(2)} €`],
+      ],
+      theme: 'plain',
+      styles: { fontStyle: 'bold' },
+    })
+
+    doc.save(`Kassenbuch-${monthName}.pdf`)
+  }
+
   // Stats
   const totalSales = sales.reduce((s, sale) => s + sale.total, 0)
   const thisMonth = sales.filter(s => new Date(s.date).getMonth() === new Date().getMonth() && new Date(s.date).getFullYear() === new Date().getFullYear())
@@ -178,10 +312,15 @@ export default function KassenbuchPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Kassenbuch</h1>
           <p className="text-zinc-500 text-[14px] mt-1">Honigverkauf & Kommission</p>
         </div>
+        <button onClick={() => setShowExport(true)}
+          className="flex items-center gap-2 px-4 py-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl text-[13px] font-medium transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider mb-1">Diesen Monat</p>
           <p className="text-xl font-semibold text-zinc-900">{fmt(monthTotal)}</p>
@@ -195,14 +334,18 @@ export default function KassenbuchPage() {
           <p className="text-xl font-semibold text-zinc-900">{fmt(consignmentValue)}</p>
           <p className="text-[11px] text-zinc-400">{activeConsignments.length} aktiv</p>
         </div>
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider mb-1">Ausgaben (Monat)</p>
+          <p className="text-xl font-semibold text-zinc-900">{fmt(expenses.filter(e => new Date(e.date).getMonth() === new Date().getMonth() && new Date(e.date).getFullYear() === new Date().getFullYear()).reduce((s, e) => s + e.amount, 0))}</p>
+        </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 mb-6">
-        {(['verkauf', 'kommission', 'artikel'] as Tab[]).map(t => (
+        {(['verkauf', 'kommission', 'artikel', 'ausgaben'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`flex-1 py-2 rounded-lg text-[13px] font-medium transition-colors capitalize ${tab === t ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
-            {t === 'verkauf' ? 'Verkäufe' : t === 'kommission' ? 'Kommission' : 'Artikel'}
+            {t === 'verkauf' ? 'Verkäufe' : t === 'kommission' ? 'Kommission' : t === 'artikel' ? 'Artikel' : 'Ausgaben'}
           </button>
         ))}
       </div>
@@ -367,6 +510,91 @@ export default function KassenbuchPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* AUSGABEN */}
+      {tab === 'ausgaben' && (
+        <div>
+          <div className="flex justify-end mb-4">
+            <button onClick={() => setShowExpense(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[13px] font-semibold transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Ausgabe erfassen
+            </button>
+          </div>
+
+          {showExpense && (
+            <form onSubmit={saveExpense} className="bg-white rounded-2xl shadow-sm p-5 mb-4 space-y-3">
+              <p className="text-[14px] font-semibold text-zinc-900">Neue Ausgabe</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Datum</label>
+                  <input type="date" value={expDate} onChange={e => setExpDate(e.target.value)} required
+                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Betrag (€)</label>
+                  <input type="number" step="0.01" min="0.01" value={expAmount} onChange={e => setExpAmount(e.target.value)} required placeholder="0.00"
+                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Kategorie</label>
+                <select value={expCategory} onChange={e => setExpCategory(e.target.value)}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                  {EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Beschreibung (optional)</label>
+                <input value={expDesc} onChange={e => setExpDesc(e.target.value)} placeholder="z.B. Bienenwachs, 2kg"
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+              <div className="flex gap-2">
+                <button type="submit" disabled={savingExp}
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-2 text-[13px] font-semibold transition-colors">
+                  {savingExp ? 'Wird gespeichert…' : 'Speichern'}
+                </button>
+                <button type="button" onClick={() => setShowExpense(false)}
+                  className="px-4 border border-zinc-200 rounded-xl text-[13px] text-zinc-500 hover:bg-zinc-50 transition-colors">
+                  Abbrechen
+                </button>
+              </div>
+            </form>
+          )}
+
+          {expenses.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm py-16 text-center">
+              <p className="text-[15px] font-medium text-zinc-900">Noch keine Ausgaben</p>
+              <p className="text-[13px] text-zinc-400 mt-1">Erfasse deine erste Ausgabe</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {expenses.map(exp => (
+                <div key={exp.id} className="bg-white rounded-2xl shadow-sm px-5 py-3 flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-medium bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full">{exp.category}</span>
+                      {exp.description && <span className="text-[13px] text-zinc-700">{exp.description}</span>}
+                    </div>
+                    <p className="text-[12px] text-zinc-400 mt-0.5">{fmtDate(exp.date)}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <p className="text-[15px] font-semibold text-rose-600">−{fmt(exp.amount)}</p>
+                    <button onClick={() => deleteExpense(exp.id)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-rose-50 text-zinc-300 hover:text-rose-500 transition-colors">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div className="bg-zinc-50 rounded-2xl px-5 py-3 flex justify-between items-center">
+                <span className="text-[13px] font-medium text-zinc-500">Gesamt</span>
+                <span className="text-[15px] font-semibold text-rose-600">−{fmt(expenses.reduce((s, e) => s + e.amount, 0))}</span>
+              </div>
             </div>
           )}
         </div>
@@ -566,6 +794,50 @@ export default function KassenbuchPage() {
                 {savingProd ? 'Wird gespeichert…' : 'Artikel speichern'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Export-Modal */}
+      {showExport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-[15px] font-semibold text-zinc-900">Kassenbuch exportieren</h2>
+              <button onClick={() => setShowExport(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Monat</label>
+                <select value={exportMonth} onChange={e => setExportMonth(Number(e.target.value))}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                    <option key={m} value={m}>{new Date(2000, m - 1).toLocaleDateString('de-DE', { month: 'long' })}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Jahr</label>
+                <select value={exportYear} onChange={e => setExportYear(Number(e.target.value))}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                  {[exportYear - 1, exportYear, exportYear + 1].map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={downloadCsv}
+                className="flex-1 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl py-2.5 text-[13px] font-medium transition-colors">
+                CSV
+              </button>
+              <button onClick={downloadPdf}
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white rounded-xl py-2.5 text-[13px] font-semibold transition-colors">
+                PDF
+              </button>
+            </div>
           </div>
         </div>
       )}
