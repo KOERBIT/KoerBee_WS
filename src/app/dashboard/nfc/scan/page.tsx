@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
 
-type ScanState = 'idle' | 'scanning' | 'found' | 'notfound' | 'success' | 'error'
+type ScanState = 'idle' | 'scanning' | 'reading' | 'found' | 'notfound' | 'success' | 'error'
 
 const ACTION_LABELS: Record<string, string> = {
   inspection:    'Durchschau',
@@ -212,9 +212,9 @@ export default function NfcScanPage() {
   const [result, setResult] = useState<string>('')
   const [manualUid, setManualUid] = useState('')
   const [useManual, setUseManual] = useState(false)
+  const [nfcAvailable] = useState(() => typeof window !== 'undefined' && 'NDEFReader' in window)
 
   const lookupTag = useCallback(async (uid: string) => {
-    setState('scanning')
     const res = await fetch(`/api/nfc/lookup?uid=${encodeURIComponent(uid)}`)
     const data = await res.json()
     if (data.found) {
@@ -227,18 +227,18 @@ export default function NfcScanPage() {
   }, [])
 
   async function startNfcScan() {
-    if (!('NDEFReader' in window)) { setUseManual(true); return }
     setState('scanning')
+    if (!('NDEFReader' in window)) return
     try {
       const ndef = new (window as any).NDEFReader()
       await ndef.scan()
       ndef.addEventListener('reading', ({ serialNumber }: { serialNumber: string }) => {
+        setState('reading')
         lookupTag(serialNumber)
       }, { once: true })
     } catch {
       setState('error')
       setResult('NFC-Scan fehlgeschlagen.')
-      setUseManual(true)
     }
   }
 
@@ -284,7 +284,7 @@ export default function NfcScanPage() {
     setState('idle'); setTag(null); setSelectedAction('')
     setInspectionForm(EMPTY_INSPECTION); setFeedingForm(EMPTY_FEEDING)
     setHonigernteForm(EMPTY_HONIGERNTE)
-    setResult(''); setManualUid('')
+    setResult(''); setManualUid(''); setUseManual(false)
   }
 
   return (
@@ -330,7 +330,7 @@ export default function NfcScanPage() {
               placeholder="z.B. 04:A1:B2:C3"
               className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
           </div>
-          <button onClick={() => lookupTag(manualUid)} disabled={!manualUid.trim()}
+          <button onClick={() => { setState('scanning'); lookupTag(manualUid) }} disabled={!manualUid.trim()}
             className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white rounded-xl py-3 text-[14px] font-semibold transition-colors">
             Nachschlagen
           </button>
@@ -339,9 +339,52 @@ export default function NfcScanPage() {
 
       {/* Scanning */}
       {state === 'scanning' && (
+        <div className="flex flex-col items-center py-8">
+          <div className="relative w-44 h-44 flex items-center justify-center mb-8">
+            <div className="absolute inset-0 rounded-full bg-amber-100 animate-ping opacity-30" />
+            <div className="absolute inset-6 rounded-full bg-amber-100 animate-ping opacity-40" style={{ animationDelay: '0.4s' }} />
+            <div className="relative w-24 h-24 rounded-full bg-amber-50 border-4 border-amber-200 flex items-center justify-center">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6.5 6.5a6 6 0 000 11M9 9a3 3 0 000 6"/>
+                <path d="M17.5 6.5a6 6 0 010 11M15 9a3 3 0 010 6"/>
+                <circle cx="12" cy="12" r="1" fill="#d97706"/>
+              </svg>
+            </div>
+          </div>
+          <p className="text-[18px] font-semibold text-zinc-900 mb-1">Halte Gerät an den Tag</p>
+          <p className="text-[13px] text-zinc-400 text-center mb-8">Tag an die Rückseite des Geräts halten</p>
+          {!nfcAvailable && (
+            <div className="w-full space-y-3">
+              <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 flex gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.75" strokeLinecap="round" className="shrink-0 mt-0.5">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <p className="text-[13px] text-amber-700">NFC-Scan wird auf diesem Gerät nicht unterstützt (z.B. iPhone). Bitte UID manuell eingeben.</p>
+              </div>
+              <button onClick={() => { setUseManual(true); setState('idle') }}
+                className="w-full bg-zinc-900 hover:bg-zinc-700 text-white rounded-xl py-3 text-[14px] font-semibold transition-colors">
+                UID manuell eingeben
+              </button>
+            </div>
+          )}
+          {nfcAvailable && (
+            <button onClick={reset} className="text-[13px] text-zinc-400 hover:text-zinc-600 transition-colors">Abbrechen</button>
+          )}
+        </div>
+      )}
+
+      {/* Reading — Tag erkannt, Lookup läuft */}
+      {state === 'reading' && (
         <div className="flex flex-col items-center py-12">
-          <div className="w-20 h-20 rounded-full border-4 border-amber-200 border-t-amber-500 animate-spin mb-6" />
-          <p className="text-[15px] font-medium text-zinc-700">Warte auf Tag…</p>
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mb-5 animate-pulse">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6.5 6.5a6 6 0 000 11M9 9a3 3 0 000 6"/>
+              <path d="M17.5 6.5a6 6 0 010 11M15 9a3 3 0 010 6"/>
+              <circle cx="12" cy="12" r="1" fill="#d97706"/>
+            </svg>
+          </div>
+          <p className="text-[16px] font-semibold text-zinc-900 mb-1">Tag erkannt</p>
+          <p className="text-[13px] text-zinc-400">Wird geladen…</p>
         </div>
       )}
 
