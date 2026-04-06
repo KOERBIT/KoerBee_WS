@@ -7,7 +7,7 @@ type ScanState = 'idle' | 'scanning' | 'found' | 'notfound' | 'success' | 'error
 
 const ACTION_LABELS: Record<string, string> = {
   inspection:    'Durchschau',
-  varroa:        'Varroabehandlung',
+  varroa:        'Varroa Behandlung',
   feeding:       'Füttern',
   honey_harvest: 'Honigernte',
 }
@@ -352,6 +352,15 @@ export default function NfcScanPage() {
           {selectedAction === 'feeding' && (
             <div className="bg-zinc-50 rounded-2xl p-4">
               <FuetternForm value={feedingForm} onChange={setFeedingForm} />
+            </div>
+          )}
+          {selectedAction === 'varroa' && (
+            <div className="bg-zinc-50 rounded-2xl px-5 py-4">
+              <p className="text-[12px] font-semibold text-zinc-500 mb-1">Behandlungsdatum</p>
+              <p className="text-[15px] font-semibold text-zinc-900">
+                {new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+              </p>
+              <p className="text-[12px] text-zinc-400 mt-1">Datum wird automatisch auf heute gesetzt</p>
             </div>
           )}
 
