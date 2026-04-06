@@ -10,10 +10,9 @@ const ACTION_TYPES = [
   { value: 'honey_harvest', label: 'Honigernte' },
 ]
 
-const NEEDS_AMOUNT = ['feeding', 'honey_harvest']
+const NEEDS_AMOUNT = ['feeding']
 const UNITS: Record<string, string[]> = {
-  feeding:      ['kg', 'l'],
-  honey_harvest:['kg'],
+  feeding: ['kg', 'l'],
 }
 
 interface Colony { id: string; name: string; apiary: { name: string } }
