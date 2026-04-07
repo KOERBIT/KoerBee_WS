@@ -8,9 +8,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { quantity } = await req.json()
 
-  if (!quantity || typeof quantity !== 'number' || quantity <= 0 || !Number.isInteger(quantity)) {
+  let quantity: unknown
+  try {
+    const body = await req.json()
+    quantity = body.quantity
+  } catch {
+    return NextResponse.json({ error: 'Ungültiger Request-Body' }, { status: 400 })
+  }
+
+  if (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity < 1) {
     return NextResponse.json({ error: 'Menge muss eine positive ganze Zahl sein' }, { status: 400 })
   }
 
