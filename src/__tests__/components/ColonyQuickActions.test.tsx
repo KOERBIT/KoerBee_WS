@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { ColonyQuickActions } from '@/app/dashboard/colonies/[id]/ColonyQuickActions'
 
 // Mock next/navigation
@@ -29,6 +29,8 @@ describe('ColonyQuickActions', () => {
     render(<ColonyQuickActions colonyId="col-1" />)
     expect(screen.queryByText('Fütterung buchen')).not.toBeInTheDocument()
     expect(screen.queryByText('Durchsicht buchen')).not.toBeInTheDocument()
+    expect(screen.queryByText('Behandlung buchen')).not.toBeInTheDocument()
+    expect(screen.queryByText('Honigernte buchen')).not.toBeInTheDocument()
   })
 
   it('opens feeding form when Füttern is clicked', () => {
@@ -62,9 +64,11 @@ describe('ColonyQuickActions', () => {
       '/api/treatments',
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('"type":"feeding"'),
       })
     )
+    const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
+    expect(body.colonyId).toBe('col-1')
+    expect(body.type).toBe('feeding')
   })
 
   it('POSTs to /api/treatments for Varroa', async () => {
@@ -76,9 +80,11 @@ describe('ColonyQuickActions', () => {
       '/api/treatments',
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('"type":"varroa"'),
       })
     )
+    const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
+    expect(body.colonyId).toBe('col-1')
+    expect(body.type).toBe('varroa')
   })
 
   it('POSTs to /api/inspections for Durchsicht', async () => {
@@ -90,6 +96,9 @@ describe('ColonyQuickActions', () => {
       '/api/inspections',
       expect.objectContaining({ method: 'POST' })
     )
+    const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
+    expect(body.colonyId).toBe('col-1')
+    expect(Array.isArray(body.items)).toBe(true)
   })
 
   it('closes the form after successful submit', async () => {
@@ -103,11 +112,25 @@ describe('ColonyQuickActions', () => {
     render(<ColonyQuickActions colonyId="col-1" />)
     fireEvent.click(screen.getByText('Honigernte'))
     // increment zargen once (default 1 → 2)
-    fireEvent.click(screen.getAllByText('+')[0])
+    const form = screen.getByText('Anzahl Zargen').closest('div')!
+    fireEvent.click(within(form).getByText('+'))
     fireEvent.click(screen.getByText('Honigernte buchen'))
     await waitFor(() => expect(mockRefresh).toHaveBeenCalledTimes(1))
     const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
     expect(body.amount).toBe(2)
     expect(body.unit).toBe('Zargen')
+  })
+
+  it('shows error message when API fails and does not refresh', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false })
+    render(<ColonyQuickActions colonyId="col-1" />)
+    fireEvent.click(screen.getByText('Füttern'))
+    fireEvent.click(screen.getByText('Fütterung buchen'))
+    await waitFor(() =>
+      expect(screen.getByText('Fehler beim Buchen. Bitte erneut versuchen.')).toBeInTheDocument()
+    )
+    expect(mockRefresh).not.toHaveBeenCalled()
+    // form stays open
+    expect(screen.getByText('Fütterung buchen')).toBeInTheDocument()
   })
 })
