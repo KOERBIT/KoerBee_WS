@@ -79,6 +79,9 @@ describe('POST /api/kassenbuch/products/[id]/stock', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.stockQuantity).toBe(15)
+    expect(mockProduct.findFirst).toHaveBeenCalledWith({
+      where: { id: 'p-1', userId: 'user-1' },
+    })
     expect(mockProduct.update).toHaveBeenCalledWith({
       where: { id: 'p-1' },
       data: { stockQuantity: { increment: 5 } },
@@ -103,6 +106,9 @@ describe('POST /api/kassenbuch/sales — stock check', () => {
     expect(body.items[0].productId).toBe('p-1')
     expect(body.items[0].requested).toBe(5)
     expect(body.items[0].available).toBe(2)
+    expect(mockProduct.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['p-1'] }, userId: 'user-1' },
+    })
   })
 
   it('creates sale and deducts stock when stock is sufficient', async () => {
