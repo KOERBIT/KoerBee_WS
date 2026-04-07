@@ -212,7 +212,7 @@ export default function KassenbuchPage() {
   async function saveProduct(e: React.FormEvent) {
     e.preventDefault()
     setSavingProd(true)
-    await fetch('/api/kassenbuch/products', {
+    const res = await fetch('/api/kassenbuch/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -225,6 +225,11 @@ export default function KassenbuchPage() {
       }),
     })
     setSavingProd(false)
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      alert(`Fehler beim Speichern: ${body.error ?? res.status}`)
+      return
+    }
     setShowProduct(false)
     setProdName(''); setProdPrice(''); setProdDesc(''); setProdFillAmount(''); setProdFillUnit('g')
     load()
