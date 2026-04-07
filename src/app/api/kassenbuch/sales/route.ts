@@ -20,26 +20,63 @@ export async function POST(req: NextRequest) {
   const { customerName, customerId, date, notes, items } = await req.json()
   if (!items || items.length === 0) return NextResponse.json({ error: 'Keine Positionen' }, { status: 400 })
 
-  const total = items.reduce((sum: number, i: { quantity: number; price: number }) => sum + i.quantity * i.price, 0)
-
-  const sale = await prisma.sale.create({
-    data: {
-      customerName: customerName || null,
-      customerId: customerId || null,
-      date: date ? new Date(date) : new Date(),
-      notes: notes || null,
-      total,
-      userId: session.user.id,
-      items: {
-        create: items.map((i: { productId: string; quantity: number; price: number }) => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          price: i.price,
-          total: i.quantity * i.price,
-        })),
-      },
-    },
-    include: { items: { include: { product: true } }, customer: true },
+  // Lagerprüfung
+  const productIds = items.map((i: { productId: string }) => i.productId)
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds }, userId: session.user.id },
   })
+
+  const stockErrors: { productId: string; productName: string; requested: number; available: number }[] = []
+  for (const item of items as { productId: string; quantity: number; price: number }[]) {
+    const product = products.find(p => p.id === item.productId)
+    if (!product) continue
+    if (item.quantity > product.stockQuantity) {
+      stockErrors.push({
+        productId: product.id,
+        productName: product.name,
+        requested: item.quantity,
+        available: product.stockQuantity,
+      })
+    }
+  }
+
+  if (stockErrors.length > 0) {
+    return NextResponse.json({ error: 'insufficient_stock', items: stockErrors }, { status: 409 })
+  }
+
+  // Atomare Transaktion: Sale erstellen + Lager abziehen
+  const total = (items as { quantity: number; price: number }[]).reduce((sum, i) => sum + i.quantity * i.price, 0)
+
+  const sale = await prisma.$transaction(async (tx) => {
+    const created = await tx.sale.create({
+      data: {
+        customerName: customerName || null,
+        customerId: customerId || null,
+        date: date ? new Date(date) : new Date(),
+        notes: notes || null,
+        total,
+        userId: session.user.id,
+        items: {
+          create: (items as { productId: string; quantity: number; price: number }[]).map(i => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            price: i.price,
+            total: i.quantity * i.price,
+          })),
+        },
+      },
+      include: { items: { include: { product: true } }, customer: true },
+    })
+
+    for (const item of items as { productId: string; quantity: number }[]) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stockQuantity: { decrement: item.quantity } },
+      })
+    }
+
+    return created
+  })
+
   return NextResponse.json(sale, { status: 201 })
 }
