@@ -73,9 +73,9 @@ export default function KassenbuchPage() {
   const [stockAmount, setStockAmount] = useState(1)
   const [savingStock, setSavingStock] = useState(false)
 
-  // Produkt Füllmenge (wird in Task 9 korrekt angepasst)
-  const [editFillAmount, setEditFillAmount] = useState('')
-  const [editFillUnit, setEditFillUnit] = useState('g')
+  // Produkt Füllmenge
+  const [prodFillAmount, setProdFillAmount] = useState('')
+  const [prodFillUnit, setProdFillUnit] = useState('g')
 
   const load = useCallback(async () => {
     const [p, s, c, e] = await Promise.all([
@@ -184,13 +184,13 @@ export default function KassenbuchPage() {
         unit: prodUnit,
         price: parseFloat(prodPrice),
         description: prodDesc,
-        fillAmount: editFillAmount ? parseFloat(editFillAmount) : null,
-        fillUnit: editFillAmount ? editFillUnit : null,
+        fillAmount: prodFillAmount ? parseFloat(prodFillAmount) : null,
+        fillUnit: prodFillAmount ? prodFillUnit : null,
       }),
     })
     setSavingProd(false)
     setShowProduct(false)
-    setProdName(''); setProdPrice(''); setProdDesc(''); setEditFillAmount(''); setEditFillUnit('g')
+    setProdName(''); setProdPrice(''); setProdDesc(''); setProdFillAmount(''); setProdFillUnit('g')
     load()
   }
 
@@ -897,6 +897,23 @@ export default function KassenbuchPage() {
                   <label className="block text-[12px] font-medium text-zinc-500 mb-1">Preis (€) *</label>
                   <input type="number" min="0" step="0.01" value={prodPrice} onChange={e => setProdPrice(e.target.value)} required placeholder="0.00"
                     className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Füllmenge (optional)</label>
+                  <input type="number" min="0" step="any" value={prodFillAmount} onChange={e => setProdFillAmount(e.target.value)}
+                    placeholder="z.B. 500"
+                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Einheit</label>
+                  <select value={prodFillUnit} onChange={e => setProdFillUnit(e.target.value)}
+                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent">
+                    <option value="g">g</option>
+                    <option value="ml">ml</option>
+                    <option value="kg">kg</option>
+                  </select>
                 </div>
               </div>
               <div>
