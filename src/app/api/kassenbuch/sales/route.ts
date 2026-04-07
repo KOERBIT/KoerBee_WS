@@ -26,10 +26,15 @@ export async function POST(req: NextRequest) {
     where: { id: { in: productIds }, userId: session.user.id },
   })
 
+  type SaleItem = { productId: string; quantity: number; price: number }
+  const typedItems = items as SaleItem[]
+
   const stockErrors: { productId: string; productName: string; requested: number; available: number }[] = []
-  for (const item of items as { productId: string; quantity: number; price: number }[]) {
+  for (const item of typedItems) {
     const product = products.find(p => p.id === item.productId)
-    if (!product) continue
+    if (!product) {
+      return NextResponse.json({ error: 'product_not_found', productId: item.productId }, { status: 422 })
+    }
     if (item.quantity > product.stockQuantity) {
       stockErrors.push({
         productId: product.id,
@@ -45,8 +50,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Atomare Transaktion: Sale erstellen + Lager abziehen
-  const total = (items as { quantity: number; price: number }[]).reduce((sum, i) => sum + i.quantity * i.price, 0)
+  const total = typedItems.reduce((sum, i) => sum + i.quantity * i.price, 0)
 
+  try {
   const sale = await prisma.$transaction(async (tx) => {
     const created = await tx.sale.create({
       data: {
@@ -68,7 +74,7 @@ export async function POST(req: NextRequest) {
       include: { items: { include: { product: true } }, customer: true },
     })
 
-    for (const item of items as { productId: string; quantity: number }[]) {
+    for (const item of typedItems) {
       await tx.product.update({
         where: { id: item.productId },
         data: { stockQuantity: { decrement: item.quantity } },
@@ -79,4 +85,7 @@ export async function POST(req: NextRequest) {
   })
 
   return NextResponse.json(sale, { status: 201 })
+  } catch {
+    return NextResponse.json({ error: 'Fehler beim Speichern des Verkaufs' }, { status: 500 })
+  }
 }
