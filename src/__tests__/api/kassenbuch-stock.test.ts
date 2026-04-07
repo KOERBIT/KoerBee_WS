@@ -73,8 +73,8 @@ describe('POST /api/kassenbuch/products/[id]/stock', () => {
   })
 
   it('increments stockQuantity and returns new value', async () => {
-    mockProduct.findFirst.mockResolvedValueOnce({ id: 'p-1', stockQuantity: 10 })
-    mockProduct.update.mockResolvedValueOnce({ id: 'p-1', stockQuantity: 15 })
+    mockProduct.findFirst.mockResolvedValueOnce({ id: 'p-1', stockQuantity: 10 } as any)
+    mockProduct.update.mockResolvedValueOnce({ id: 'p-1', stockQuantity: 15 } as any)
     const res = await POST(makeReq({ quantity: 5 }), { params: Promise.resolve({ id: 'p-1' }) })
     expect(res.status).toBe(200)
     const body = await res.json()
@@ -95,7 +95,7 @@ describe('POST /api/kassenbuch/sales — stock check', () => {
 
   it('returns 409 with insufficient_stock when quantity exceeds stock', async () => {
     mockProduct.findMany.mockResolvedValueOnce([
-      { id: 'p-1', name: 'Honig 500g', stockQuantity: 2 },
+      { id: 'p-1', name: 'Honig 500g', stockQuantity: 2 } as any,
     ])
     const res = await POST(makeReq({
       items: [{ productId: 'p-1', quantity: 5, price: 8.5 }],
@@ -113,12 +113,12 @@ describe('POST /api/kassenbuch/sales — stock check', () => {
 
   it('creates sale and deducts stock when stock is sufficient', async () => {
     mockProduct.findMany.mockResolvedValueOnce([
-      { id: 'p-1', name: 'Honig 500g', stockQuantity: 10 },
+      { id: 'p-1', name: 'Honig 500g', stockQuantity: 10 } as any,
     ])
     const fakeSale = { id: 's-1', total: 42.5, items: [], customer: null }
     mockTx.mockImplementationOnce(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma as any))
-    mockSale.create.mockResolvedValueOnce(fakeSale)
-    mockProduct.update.mockResolvedValue({ id: 'p-1', stockQuantity: 5 })
+    mockSale.create.mockResolvedValueOnce(fakeSale as any)
+    mockProduct.update.mockResolvedValue({ id: 'p-1', stockQuantity: 5 } as any)
 
     const res = await POST(makeReq({
       items: [{ productId: 'p-1', quantity: 5, price: 8.5 }],
@@ -137,13 +137,13 @@ describe('DELETE /api/kassenbuch/products/[id] — stock guard', () => {
   const { DELETE } = require('@/app/api/kassenbuch/products/[id]/route')
 
   it('returns 409 when stockQuantity > 0', async () => {
-    mockProduct.findFirst.mockResolvedValueOnce({ id: 'p-1', stockQuantity: 5 })
+    mockProduct.findFirst.mockResolvedValueOnce({ id: 'p-1', stockQuantity: 5 } as any)
     const res = await DELETE(makeReq({}), { params: Promise.resolve({ id: 'p-1' }) })
     expect(res.status).toBe(409)
   })
 
   it('deletes when stockQuantity === 0', async () => {
-    mockProduct.findFirst.mockResolvedValueOnce({ id: 'p-1', stockQuantity: 0 })
+    mockProduct.findFirst.mockResolvedValueOnce({ id: 'p-1', stockQuantity: 0 } as any)
     ;(prisma.product.delete as jest.Mock).mockResolvedValueOnce({ id: 'p-1' })
     const res = await DELETE(makeReq({}), { params: Promise.resolve({ id: 'p-1' }) })
     expect(res.status).toBe(200)
