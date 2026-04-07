@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ColonyDetailActions } from './ColonyDetailActions'
+import { ColonyQuickActions } from './ColonyQuickActions'
 
 const QUEEN_COLOR_DOT: Record<string, string> = {
   weiß: 'bg-white border-2 border-zinc-300',
@@ -165,6 +166,8 @@ export default async function ColonyDetailPage({ params }: { params: Promise<{ i
           <p className="text-[13px] text-zinc-500 mt-1">{colony.statusNote}</p>
         </div>
       )}
+
+      <ColonyQuickActions colonyId={colony.id} />
 
       {/* Chronik – unified timeline */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
