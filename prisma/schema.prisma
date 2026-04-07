@@ -164,6 +164,9 @@ model Product {
   unit             String            @default("Stück")
   price            Float
   description      String?
+  fillAmount       Float?
+  fillUnit         String?
+  stockQuantity    Int               @default(0)
   userId           String
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   saleItems        SaleItem[]
