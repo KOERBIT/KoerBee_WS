@@ -50,6 +50,7 @@ export default function KassenbuchPage() {
   const [saleNotes, setSaleNotes] = useState('')
   const [saleItems, setSaleItems] = useState([{ productId: '', quantity: 1, price: 0 }])
   const [savingSale, setSavingSale] = useState(false)
+  const [saleStockError, setSaleStockError] = useState<{ productName: string; requested: number; available: number }[]>([])
 
   // Consignment form
   const [showConsignment, setShowConsignment] = useState(false)
@@ -119,13 +120,20 @@ export default function KassenbuchPage() {
   async function saveSale(e: React.FormEvent) {
     e.preventDefault()
     setSavingSale(true)
-    await fetch('/api/kassenbuch/sales', {
+    setSaleStockError([])
+    const res = await fetch('/api/kassenbuch/sales', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ customerName: saleCustomer, date: saleDate, notes: saleNotes, items: saleItems }),
     })
     setSavingSale(false)
+    if (res.status === 409) {
+      const body = await res.json()
+      setSaleStockError(body.items ?? [])
+      return
+    }
     setShowSale(false)
+    setSaleStockError([])
     setSaleCustomer(''); setSaleNotes(''); setSaleItems([{ productId: '', quantity: 1, price: 0 }])
     load()
   }
@@ -733,6 +741,21 @@ export default function KassenbuchPage() {
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         </button>
                       )}
+                      {item.productId && (() => {
+                        const prod = products.find(p => p.id === item.productId)
+                        if (!prod) return null
+                        const ok = item.quantity <= prod.stockQuantity
+                        return (
+                          <div className={`col-span-12 flex items-center gap-1.5 mt-1 ${ok ? 'text-green-600' : 'text-rose-600'}`}>
+                            <div className={`w-2 h-2 rounded-full ${ok ? 'bg-green-500' : 'bg-rose-500'}`} />
+                            <span className="text-[11px] font-medium">
+                              {ok
+                                ? `Lager: ${prod.stockQuantity} verfügbar`
+                                : `Nur ${prod.stockQuantity} im Lager`}
+                            </span>
+                          </div>
+                        )
+                      })()}
                     </div>
                   ))}
                 </div>
@@ -749,7 +772,19 @@ export default function KassenbuchPage() {
                   className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
               </div>
 
-              <button type="submit" disabled={savingSale || saleItems.some(i => !i.productId)}
+              {saleStockError.length > 0 && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
+                  {saleStockError.map(e => (
+                    <p key={e.productName} className="text-[12px] text-rose-700 font-medium">
+                      ⚠ {e.productName}: nur {e.available} im Lager, {e.requested} angefragt
+                    </p>
+                  ))}
+                </div>
+              )}
+              <button type="submit" disabled={savingSale || saleItems.some(item => {
+                const prod = products.find(p => p.id === item.productId)
+                return prod ? item.quantity > prod.stockQuantity : false
+              })}
                 className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-[14px] font-semibold transition-colors">
                 {savingSale ? 'Wird gespeichert…' : 'Verkauf speichern'}
               </button>
