@@ -59,6 +59,10 @@ export default function KassenbuchPage() {
   const [consNotes, setConsNotes] = useState('')
   const [consItems, setConsItems] = useState([{ productId: '', quantity: 1, price: 0 }])
   const [savingCons, setSavingCons] = useState(false)
+  const [settleConsignment, setSettleConsignment] = useState<Consignment | null>(null)
+  const [settleSoldQtys, setSettleSoldQtys] = useState<Record<string, number>>({})
+  const [settlingCons, setSettlingCons] = useState(false)
+  const [settleStockError, setSettleStockError] = useState<{ productName: string; requested: number; available: number }[]>([])
 
   // Product form
   const [showProduct, setShowProduct] = useState(false)
@@ -170,6 +174,38 @@ export default function KassenbuchPage() {
   async function deleteConsignment(id: string) {
     if (!confirm('Kommission löschen?')) return
     await fetch(`/api/kassenbuch/consignments/${id}`, { method: 'DELETE' })
+    load()
+  }
+
+  function openSettle(c: Consignment) {
+    const initial: Record<string, number> = {}
+    c.items.forEach(item => { initial[item.id] = item.soldQuantity })
+    setSettleSoldQtys(initial)
+    setSettleStockError([])
+    setSettleConsignment(c)
+  }
+
+  async function confirmSettle() {
+    if (!settleConsignment) return
+    setSettlingCons(true)
+    setSettleStockError([])
+    const items = settleConsignment.items.map(item => ({
+      id: item.id,
+      soldQuantity: settleSoldQtys[item.id] ?? 0,
+      returnedQuantity: item.quantity - (settleSoldQtys[item.id] ?? 0),
+    }))
+    const res = await fetch(`/api/kassenbuch/consignments/${settleConsignment.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'settled', items }),
+    })
+    setSettlingCons(false)
+    if (res.status === 409) {
+      const body = await res.json()
+      setSettleStockError(body.items ?? [])
+      return
+    }
+    setSettleConsignment(null)
     load()
   }
 
@@ -483,9 +519,9 @@ export default function KassenbuchPage() {
                         {c.notes && <p className="text-[12px] text-zinc-400 mt-1">{c.notes}</p>}
                         {c.status === 'active' && (
                           <div className="flex gap-2 mt-3">
-                            <button onClick={() => updateConsignmentStatus(c.id, 'settled')}
+                            <button onClick={() => openSettle(c)}
                               className="text-[12px] font-medium text-green-600 hover:text-green-700 px-3 py-1 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
-                              Abgerechnet
+                              Abrechnen
                             </button>
                             <button onClick={() => updateConsignmentStatus(c.id, 'returned')}
                               className="text-[12px] font-medium text-zinc-600 hover:text-zinc-700 px-3 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
@@ -969,6 +1005,86 @@ export default function KassenbuchPage() {
                 className="flex-1 bg-amber-500 hover:bg-amber-600 text-white rounded-xl py-2.5 text-[13px] font-semibold transition-colors">
                 PDF
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Kommission abrechnen */}
+      {settleConsignment && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 backdrop-blur-sm px-4 py-8 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md my-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <div>
+                <h2 className="text-[15px] font-semibold text-zinc-900">Kommission abrechnen</h2>
+                <p className="text-[12px] text-zinc-400 mt-0.5">{settleConsignment.locationName}</p>
+              </div>
+              <button onClick={() => setSettleConsignment(null)} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              {settleConsignment.items.map(item => {
+                const sold = settleSoldQtys[item.id] ?? 0
+                const prod = products.find(p => p.id === item.product.id)
+                const stockOk = !prod || sold <= prod.stockQuantity
+                return (
+                  <div key={item.id} className={`rounded-xl border p-4 ${stockOk ? 'border-zinc-200' : 'border-rose-200 bg-rose-50'}`}>
+                    <div className="flex justify-between mb-2">
+                      <div>
+                        <p className="text-[13px] font-semibold text-zinc-900">{item.product.name}</p>
+                        <p className="text-[11px] text-zinc-400">Platziert: {item.quantity} · {fmt(item.price)}</p>
+                      </div>
+                      <p className="text-[13px] font-semibold text-green-700">{fmt(sold * item.price)}</p>
+                    </div>
+                    <p className="text-[11px] font-semibold text-zinc-500 uppercase mb-2">Wie viele verkauft?</p>
+                    <div className="flex items-center gap-3">
+                      <button type="button"
+                        onClick={() => setSettleSoldQtys(q => ({ ...q, [item.id]: Math.max(0, (q[item.id] ?? 0) - 1) }))}
+                        className="w-9 h-9 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-zinc-700 text-lg transition-colors">−</button>
+                      <span className="text-xl font-bold text-zinc-900 min-w-[32px] text-center">{sold}</span>
+                      <button type="button"
+                        onClick={() => setSettleSoldQtys(q => ({ ...q, [item.id]: Math.min(item.quantity, (q[item.id] ?? 0) + 1) }))}
+                        className="w-9 h-9 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-zinc-700 text-lg transition-colors">+</button>
+                      {!stockOk && prod && (
+                        <span className="text-[11px] text-rose-600 font-medium">Nur {prod.stockQuantity} im Lager</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* Erlös-Zusammenfassung */}
+              <div className="bg-green-50 rounded-xl p-4">
+                <div className="flex justify-between">
+                  <p className="text-[13px] font-semibold text-zinc-700">Erlös gesamt</p>
+                  <p className="text-[15px] font-bold text-green-700">
+                    {fmt(settleConsignment.items.reduce((s, item) => s + (settleSoldQtys[item.id] ?? 0) * item.price, 0))}
+                  </p>
+                </div>
+                <p className="text-[11px] text-zinc-400 mt-1">Erstellt Verkauf + bucht Lager ab</p>
+              </div>
+
+              {settleStockError.length > 0 && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
+                  {settleStockError.map(e => (
+                    <p key={e.productName} className="text-[12px] text-rose-700 font-medium">
+                      ⚠ {e.productName}: nur {e.available} im Lager
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button onClick={confirmSettle} disabled={settlingCons}
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-3 text-[13px] font-semibold transition-colors">
+                  {settlingCons ? 'Wird gebucht…' : 'Abrechnen & Verkauf buchen'}
+                </button>
+                <button onClick={() => setSettleConsignment(null)}
+                  className="px-4 border border-zinc-200 rounded-xl text-[13px] text-zinc-500 hover:bg-zinc-50 transition-colors">
+                  Abbrechen
+                </button>
+              </div>
             </div>
           </div>
         </div>
