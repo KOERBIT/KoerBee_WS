@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 
 type Tab = 'verkauf' | 'kommission' | 'artikel' | 'ausgaben'
 
-interface Product { id: string; name: string; unit: string; price: number; description: string | null }
+interface Product { id: string; name: string; unit: string; price: number; description: string | null; fillAmount: number | null; fillUnit: string | null; stockQuantity: number }
 interface SaleItem { id: string; product: Product; quantity: number; price: number; total: number }
 interface Sale { id: string; date: string; customerName: string | null; total: number; notes: string | null; items: SaleItem[] }
 interface ConsignmentItem { id: string; product: Product; quantity: number; price: number; soldQuantity: number; returnedQuantity: number }
@@ -66,6 +66,15 @@ export default function KassenbuchPage() {
   const [prodPrice, setProdPrice] = useState('')
   const [prodDesc, setProdDesc] = useState('')
   const [savingProd, setSavingProd] = useState(false)
+
+  // Einbuchen
+  const [stockProductId, setStockProductId] = useState<string | null>(null)
+  const [stockAmount, setStockAmount] = useState(1)
+  const [savingStock, setSavingStock] = useState(false)
+
+  // Produkt Füllmenge (wird in Task 9 korrekt angepasst)
+  const [editFillAmount, setEditFillAmount] = useState('')
+  const [editFillUnit, setEditFillUnit] = useState('g')
 
   const load = useCallback(async () => {
     const [p, s, c, e] = await Promise.all([
@@ -162,17 +171,37 @@ export default function KassenbuchPage() {
     await fetch('/api/kassenbuch/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: prodName, unit: prodUnit, price: parseFloat(prodPrice), description: prodDesc }),
+      body: JSON.stringify({
+        name: prodName,
+        unit: prodUnit,
+        price: parseFloat(prodPrice),
+        description: prodDesc,
+        fillAmount: editFillAmount ? parseFloat(editFillAmount) : null,
+        fillUnit: editFillAmount ? editFillUnit : null,
+      }),
     })
     setSavingProd(false)
     setShowProduct(false)
-    setProdName(''); setProdPrice(''); setProdDesc('')
+    setProdName(''); setProdPrice(''); setProdDesc(''); setEditFillAmount(''); setEditFillUnit('g')
     load()
   }
 
   async function deleteProduct(id: string) {
     if (!confirm('Artikel löschen?')) return
     await fetch(`/api/kassenbuch/products/${id}`, { method: 'DELETE' })
+    load()
+  }
+
+  async function stockIn(productId: string) {
+    setSavingStock(true)
+    await fetch(`/api/kassenbuch/products/${productId}/stock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity: stockAmount }),
+    })
+    setSavingStock(false)
+    setStockProductId(null)
+    setStockAmount(1)
     load()
   }
 
@@ -492,24 +521,75 @@ export default function KassenbuchPage() {
               <p className="text-[13px] text-zinc-400 mt-1">Leg zuerst deine Produkte an (z.B. Blütenhonig 500g)</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {products.map(p => (
-                <div key={p.id} className="bg-white rounded-2xl shadow-sm px-5 py-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-[14px] font-semibold text-zinc-900">{p.name}</p>
-                    <p className="text-[12px] text-zinc-400">{p.unit}{p.description ? ` · ${p.description}` : ''}</p>
+            <div className="space-y-3">
+              {products.map(p => {
+                const stockColor = p.stockQuantity === 0
+                  ? 'bg-rose-50 border-rose-200 text-rose-600'
+                  : p.stockQuantity <= 5
+                    ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
+                    : 'bg-green-50 border-green-200 text-green-700'
+                const isExpanded = stockProductId === p.id
+                return (
+                  <div key={p.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    <div className="px-5 py-4 flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-[14px] font-semibold text-zinc-900">{p.name}</p>
+                        <p className="text-[12px] text-zinc-400">
+                          {p.fillAmount && p.fillUnit ? `${p.fillAmount} ${p.fillUnit} · ` : ''}{fmt(p.price)}
+                          {p.description ? ` · ${p.description}` : ''}
+                        </p>
+                      </div>
+                      <div className={`border rounded-xl px-3 py-2 text-center min-w-[64px] ${stockColor}`}>
+                        <p className="text-[18px] font-bold leading-none">{p.stockQuantity}</p>
+                        <p className="text-[10px] font-medium mt-0.5">im Lager</p>
+                      </div>
+                    </div>
+                    <div className="px-5 pb-4 flex gap-2">
+                      <button
+                        onClick={() => { setStockProductId(isExpanded ? null : p.id); setStockAmount(1) }}
+                        className="flex-1 text-[12px] font-semibold text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg py-2 transition-colors"
+                      >
+                        + Einbuchen
+                      </button>
+                      <button
+                        onClick={() => deleteProduct(p.id)}
+                        className="text-[12px] text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg px-3 py-2 transition-colors"
+                      >
+                        Löschen
+                      </button>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="border-t border-green-100 bg-green-50 px-5 py-4">
+                        <p className="text-[12px] font-semibold text-green-800 mb-3">Einbuchen: {p.name}</p>
+                        <div className="flex items-center gap-4 mb-3">
+                          <button type="button"
+                            onClick={() => setStockAmount(a => Math.max(1, a - 1))}
+                            className="w-10 h-10 bg-white border border-green-200 rounded-xl text-zinc-700 text-xl font-light hover:bg-green-100 transition-colors">
+                            −
+                          </button>
+                          <div className="text-center min-w-[48px]">
+                            <p className="text-2xl font-bold text-zinc-900">{stockAmount}</p>
+                          </div>
+                          <button type="button"
+                            onClick={() => setStockAmount(a => a + 1)}
+                            className="w-10 h-10 bg-white border border-green-200 rounded-xl text-zinc-700 text-xl font-light hover:bg-green-100 transition-colors">
+                            +
+                          </button>
+                          <p className="text-[12px] text-zinc-500">→ Neuer Bestand: <span className="font-bold text-green-700">{p.stockQuantity + stockAmount}</span></p>
+                        </div>
+                        <button
+                          onClick={() => stockIn(p.id)}
+                          disabled={savingStock}
+                          className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl py-2.5 text-[13px] font-semibold transition-colors"
+                        >
+                          {savingStock ? 'Wird eingebucht…' : 'Einbuchen bestätigen'}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[15px] font-semibold text-zinc-900">{fmt(p.price)}</span>
-                    <button onClick={() => deleteProduct(p.id)}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-rose-50 text-zinc-300 hover:text-rose-500 transition-colors">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M9 6V4h6v2"/>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
