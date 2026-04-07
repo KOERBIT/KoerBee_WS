@@ -69,7 +69,7 @@ export function ColonyQuickActions({ colonyId }: Props) {
     setLoading(true)
     setError(null)
     try {
-      let res: Response
+      let res!: Response
       if (activeAction === 'inspection') {
         res = await fetch('/api/inspections', {
           method: 'POST',
