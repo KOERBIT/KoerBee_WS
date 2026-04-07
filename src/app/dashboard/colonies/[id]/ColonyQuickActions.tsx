@@ -33,6 +33,24 @@ const EMPTY_INSPECTION: InspectionForm = {
 const EMPTY_FEEDING: FeedingForm = { amount: 1, foodType: 'Zuckerwasser' }
 const EMPTY_HONIGERNTE: HonigernteForm = { zargen: 1 }
 
+const SUBMIT_LABELS: Record<ActionType, string> = {
+  inspection:    'Durchsicht buchen',
+  feeding:       'Fütterung buchen',
+  varroa:        'Behandlung buchen',
+  honey_harvest: 'Honigernte buchen',
+}
+
+function buildItems(f: InspectionForm): { key: string; value: string }[] {
+  const items: { key: string; value: string }[] = []
+  if (f.varroa)        items.push({ key: 'varroa',        value: f.varroa })
+  if (f.population)    items.push({ key: 'population',    value: String(f.population) })
+  if (f.queen_seen)    items.push({ key: 'queen_seen',    value: f.queen_seen })
+  if (f.temperament)   items.push({ key: 'temperament',   value: f.temperament })
+  if (f.brood_pattern) items.push({ key: 'brood_pattern', value: f.brood_pattern })
+  if (f.swarm_drive)   items.push({ key: 'swarm_drive',   value: f.swarm_drive })
+  return items
+}
+
 export function ColonyQuickActions({ colonyId }: Props) {
   const router = useRouter()
   const [activeAction, setActiveAction] = useState<ActionType | null>(null)
@@ -40,6 +58,7 @@ export function ColonyQuickActions({ colonyId }: Props) {
   const [feedingForm, setFeedingForm] = useState<FeedingForm>(EMPTY_FEEDING)
   const [honigernteForm, setHonigernteForm] = useState<HonigernteForm>(EMPTY_HONIGERNTE)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   function toggleAction(action: ActionType) {
     setActiveAction(prev => prev === action ? null : action)
@@ -48,23 +67,17 @@ export function ColonyQuickActions({ colonyId }: Props) {
   async function submit() {
     if (!activeAction) return
     setLoading(true)
+    setError(null)
     try {
+      let res: Response
       if (activeAction === 'inspection') {
-        const items = [
-          inspectionForm.varroa        && { key: 'varroa',        value: inspectionForm.varroa },
-          inspectionForm.population    && { key: 'population',    value: String(inspectionForm.population) },
-          inspectionForm.queen_seen    && { key: 'queen_seen',    value: inspectionForm.queen_seen },
-          inspectionForm.temperament   && { key: 'temperament',   value: inspectionForm.temperament },
-          inspectionForm.brood_pattern && { key: 'brood_pattern', value: inspectionForm.brood_pattern },
-          inspectionForm.swarm_drive   && { key: 'swarm_drive',   value: inspectionForm.swarm_drive },
-        ].filter(Boolean)
-        await fetch('/api/inspections', {
+        res = await fetch('/api/inspections', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ colonyId, items }),
+          body: JSON.stringify({ colonyId, items: buildItems(inspectionForm) }),
         })
       } else if (activeAction === 'feeding') {
-        await fetch('/api/treatments', {
+        res = await fetch('/api/treatments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -73,13 +86,13 @@ export function ColonyQuickActions({ colonyId }: Props) {
           }),
         })
       } else if (activeAction === 'varroa') {
-        await fetch('/api/treatments', {
+        res = await fetch('/api/treatments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ colonyId, type: 'varroa' }),
         })
-      } else if (activeAction === 'honey_harvest') {
-        await fetch('/api/treatments', {
+      } else {
+        res = await fetch('/api/treatments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -87,6 +100,10 @@ export function ColonyQuickActions({ colonyId }: Props) {
             amount: honigernteForm.zargen, unit: 'Zargen',
           }),
         })
+      }
+      if (!res.ok) {
+        setError('Fehler beim Buchen. Bitte erneut versuchen.')
+        return
       }
       setActiveAction(null)
       setInspectionForm(EMPTY_INSPECTION)
@@ -163,24 +180,22 @@ export function ColonyQuickActions({ colonyId }: Props) {
         )}
 
         {activeAction && (
-          <button
-            onClick={submit}
-            disabled={loading}
-            className="w-full mt-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-3 text-[14px] font-semibold transition-colors"
-          >
-            {loading ? 'Wird gebucht…' : SUBMIT_LABELS[activeAction]}
-          </button>
+          <>
+            <button
+              onClick={submit}
+              disabled={loading}
+              className="w-full mt-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-3 text-[14px] font-semibold transition-colors"
+            >
+              {loading ? 'Wird gebucht…' : SUBMIT_LABELS[activeAction]}
+            </button>
+            {error && (
+              <p className="mt-2 text-[13px] text-rose-600 text-center">{error}</p>
+            )}
+          </>
         )}
       </div>
     </div>
   )
-}
-
-const SUBMIT_LABELS: Record<ActionType, string> = {
-  inspection:    'Durchsicht buchen',
-  feeding:       'Fütterung buchen',
-  varroa:        'Behandlung buchen',
-  honey_harvest: 'Honigernte buchen',
 }
 
 // ── ActionButton ─────────────────────────────────────────────────
@@ -199,6 +214,7 @@ function ActionButton({
   return (
     <button
       type="button"
+      aria-pressed={active}
       onClick={() => onToggle(action)}
       className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-colors text-left ${colorClass} ${
         active ? activeColor : 'border-transparent'
@@ -297,7 +313,7 @@ function InspectionFormUI({ value, onChange }: { value: InspectionForm; onChange
 
 // ── FeedingFormUI ────────────────────────────────────────────────
 function FeedingFormUI({ value, onChange }: { value: FeedingForm; onChange: (v: FeedingForm) => void }) {
-  const dec = () => onChange({ ...value, amount: Math.max(0, Math.round((value.amount - 0.5) * 10) / 10) })
+  const dec = () => onChange({ ...value, amount: Math.max(0.5, Math.round((value.amount - 0.5) * 10) / 10) })
   const inc = () => onChange({ ...value, amount: Math.round((value.amount + 0.5) * 10) / 10 })
   return (
     <div className="space-y-4 border-t border-zinc-100 pt-4">
