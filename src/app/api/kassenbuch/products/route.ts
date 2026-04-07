@@ -16,10 +16,18 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { name, unit, price, description } = await req.json()
+  const { name, unit, price, description, fillAmount, fillUnit } = await req.json()
   if (!name || price == null) return NextResponse.json({ error: 'Name und Preis fehlen' }, { status: 400 })
   const product = await prisma.product.create({
-    data: { name, unit: unit || 'Stück', price: parseFloat(price), description: description || null, userId: session.user.id },
+    data: {
+      name,
+      unit: unit || 'Stück',
+      price: parseFloat(price),
+      description: description || null,
+      fillAmount: fillAmount ? parseFloat(fillAmount) : null,
+      fillUnit: fillUnit || null,
+      userId: session.user.id,
+    },
   })
   return NextResponse.json(product, { status: 201 })
 }
