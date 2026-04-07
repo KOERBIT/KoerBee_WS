@@ -37,7 +37,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  const updated = await prisma.$transaction(async (tx) => {
+  let updated: Awaited<ReturnType<typeof prisma.consignment.update>>
+  try {
+  updated = await prisma.$transaction(async (tx) => {
     const cons = await tx.consignment.update({
       where: { id },
       data: {
@@ -61,6 +63,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (status === 'settled' && consignment.status !== 'settled') {
       const soldItems = cons.items.filter(i => i.soldQuantity > 0)
       if (soldItems.length > 0) {
+        // Re-check stock inside transaction to prevent TOCTOU race
+        const productIds = soldItems.map(i => i.productId)
+        const freshProducts = await tx.product.findMany({ where: { id: { in: productIds } } })
+        for (const i of soldItems) {
+          const fp = freshProducts.find(p => p.id === i.productId)
+          const soldQty = Math.round(i.soldQuantity) // soldQuantity is Float — round to Int for stock
+          if (!fp || soldQty > fp.stockQuantity) {
+            throw new Error(`insufficient_stock:${i.productId}`)
+          }
+        }
+
         const total = soldItems.reduce((sum, i) => sum + i.soldQuantity * i.price, 0)
         await tx.sale.create({
           data: {
@@ -68,7 +81,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             date: new Date(),
             customerName: cons.locationName,
             customerId: cons.customerId,
-            notes: `Via Kommission: ${cons.locationName ?? ''}`.trim().replace(/:\s*$/, ''),
+            notes: cons.locationName ? `Via Kommission: ${cons.locationName}` : 'Via Kommission',
             total,
             items: {
               create: soldItems.map(i => ({
@@ -81,17 +94,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           },
         })
 
-        for (const i of soldItems) {
-          await tx.product.update({
+        await Promise.all(soldItems.map(i =>
+          tx.product.update({
             where: { id: i.productId },
-            data: { stockQuantity: { decrement: i.soldQuantity } },
+            data: { stockQuantity: { decrement: Math.round(i.soldQuantity) } },
           })
-        }
+        ))
       }
     }
 
     return cons
   })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : ''
+    if (msg.startsWith('insufficient_stock:')) {
+      return NextResponse.json({ error: 'insufficient_stock', productId: msg.split(':')[1] }, { status: 409 })
+    }
+    return NextResponse.json({ error: 'Fehler beim Abrechnen' }, { status: 500 })
+  }
 
   return NextResponse.json(updated)
 }
