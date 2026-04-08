@@ -9,7 +9,7 @@ interface Product { id: string; name: string; unit: string; price: number; descr
 interface SaleItem { id: string; product: Product; quantity: number; price: number; total: number }
 interface Sale { id: string; date: string; customerName: string | null; total: number; notes: string | null; items: SaleItem[] }
 interface ConsignmentItem { id: string; product: Product; quantity: number; price: number; soldQuantity: number; returnedQuantity: number }
-interface Consignment { id: string; date: string; locationName: string | null; status: string; notes: string | null; items: ConsignmentItem[] }
+interface Consignment { id: string; date: string; locationName: string | null; status: string; notes: string | null; items: ConsignmentItem[]; commissionStore?: CommissionStore | null }
 interface Expense { id: string; date: string; amount: number; category: string; description: string | null }
 
 function fmt(n: number) { return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) }
@@ -31,6 +31,8 @@ export default function KassenbuchPage() {
   const [commissionStores, setCommissionStores] = useState<CommissionStore[]>([])
   const [loading, setLoading] = useState(true)
   const [expenses, setExpenses] = useState<Expense[]>([])
+  const [newStoreName, setNewStoreName] = useState('')
+  const [savingStore, setSavingStore] = useState(false)
 
   // Expense form
   const [showExpense, setShowExpense] = useState(false)
@@ -278,6 +280,43 @@ export default function KassenbuchPage() {
     load()
   }
 
+  const saveStore = async () => {
+    if (!newStoreName.trim()) return
+    setSavingStore(true)
+    try {
+      const res = await fetch('/api/kassenbuch/commission-stores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newStoreName }),
+      })
+      if (!res.ok) {
+        alert((await res.json()).error || 'Fehler beim Erstellen des Ladens')
+        return
+      }
+      setNewStoreName('')
+      load()
+    } catch (err) {
+      console.error(err)
+      alert('Fehler beim Erstellen des Ladens')
+    } finally {
+      setSavingStore(false)
+    }
+  }
+
+  const deleteStore = async (storeId: string) => {
+    if (!confirm('Sicher, dass du diesen Laden löschen möchtest?')) return
+    try {
+      const res = await fetch(`/api/kassenbuch/commission-stores/${storeId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Delete failed')
+      load()
+    } catch (err) {
+      console.error(err)
+      alert('Fehler beim Löschen des Ladens')
+    }
+  }
+
   function getExportData() {
     const start = new Date(exportYear, exportMonth - 1, 1)
     const end = new Date(exportYear, exportMonth, 0, 23, 59, 59)
@@ -423,11 +462,11 @@ export default function KassenbuchPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 mb-6">
-        {(['verkauf', 'kommission', 'artikel', 'ausgaben'] as Tab[]).map(t => (
+      <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 mb-6 overflow-x-auto">
+        {(['verkauf', 'kommission', 'artikel', 'ausgaben', 'laeden', 'uebersicht'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 py-2 rounded-lg text-[13px] font-medium transition-colors capitalize ${tab === t ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
-            {t === 'verkauf' ? 'Verkäufe' : t === 'kommission' ? 'Kommission' : t === 'artikel' ? 'Artikel' : 'Ausgaben'}
+            className={`flex-1 py-2 rounded-lg text-[13px] font-medium transition-colors capitalize whitespace-nowrap ${tab === t ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
+            {t === 'verkauf' ? 'Verkäufe' : t === 'kommission' ? 'Kommission' : t === 'artikel' ? 'Artikel' : t === 'ausgaben' ? 'Ausgaben' : t === 'laeden' ? 'Läden' : 'Übersicht'}
           </button>
         ))}
       </div>
@@ -730,6 +769,111 @@ export default function KassenbuchPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* LÄDEN */}
+      {tab === 'laeden' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="text-[17px] font-semibold text-zinc-900 mb-4">Kommissionsläden</h2>
+            <div className="space-y-2 mb-4">
+              {commissionStores.map(store => (
+                <div key={store.id} className="flex items-center justify-between px-4 py-3 bg-zinc-50 rounded-lg">
+                  <span className="text-[14px] text-zinc-900">{store.name}</span>
+                  <button
+                    onClick={() => deleteStore(store.id)}
+                    className="text-[12px] text-rose-600 hover:text-rose-700 font-medium"
+                  >
+                    Löschen
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newStoreName}
+                onChange={(e) => setNewStoreName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && saveStore()}
+                placeholder="Neuer Laden (z.B. Bäckerei Müller)"
+                className="flex-1 px-3 py-2 border border-zinc-200 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-amber-500"
+                disabled={savingStore}
+              />
+              <button
+                onClick={saveStore}
+                disabled={!newStoreName.trim() || savingStore}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg text-[14px] font-medium transition-colors"
+              >
+                {savingStore ? 'Wird erstellt...' : 'Hinzufügen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ÜBERSICHT */}
+      {tab === 'uebersicht' && (
+        <div className="space-y-4">
+          {/* Kommission nach Laden */}
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="text-[17px] font-semibold text-zinc-900 mb-4">Kommission nach Laden</h2>
+            {(() => {
+              const storeMap: Record<string, { name: string; count: number; total: number }> = {}
+              consignments
+                .filter(c => c.status === 'settled')
+                .forEach(c => {
+                  const name = c.commissionStore?.name || c.locationName || '—'
+                  if (!storeMap[name]) storeMap[name] = { name, count: 0, total: 0 }
+                  storeMap[name].count += 1
+                  storeMap[name].total += c.items.reduce((sum, item) => sum + item.soldQuantity * item.price, 0)
+                })
+              return Object.values(storeMap).length === 0 ? (
+                <p className="text-[13px] text-zinc-400">Keine abgerechneten Kommissionen</p>
+              ) : (
+                <div className="space-y-2">
+                  {Object.values(storeMap).map(entry => (
+                    <div key={entry.name} className="flex items-center justify-between px-4 py-3 bg-zinc-50 rounded-lg">
+                      <div>
+                        <p className="text-[14px] font-medium text-zinc-900">{entry.name}</p>
+                        <p className="text-[12px] text-zinc-400">{entry.count} Kommissionen</p>
+                      </div>
+                      <p className="text-[14px] font-semibold text-zinc-900">{fmt(entry.total)}</p>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
+
+          {/* Einzelverkäufe nach Kunde */}
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="text-[17px] font-semibold text-zinc-900 mb-4">Einzelverkäufe nach Kunde</h2>
+            {(() => {
+              const customerMap: Record<string, { name: string; count: number; total: number }> = {}
+              sales.forEach(s => {
+                const name = s.customerName || 'Laufkundschaft'
+                if (!customerMap[name]) customerMap[name] = { name, count: 0, total: 0 }
+                customerMap[name].count += 1
+                customerMap[name].total += s.total
+              })
+              return Object.values(customerMap).length === 0 ? (
+                <p className="text-[13px] text-zinc-400">Keine Verkäufe</p>
+              ) : (
+                <div className="space-y-2">
+                  {Object.values(customerMap).map(entry => (
+                    <div key={entry.name} className="flex items-center justify-between px-4 py-3 bg-zinc-50 rounded-lg">
+                      <div>
+                        <p className="text-[14px] font-medium text-zinc-900">{entry.name}</p>
+                        <p className="text-[12px] text-zinc-400">{entry.count} Verkäufe</p>
+                      </div>
+                      <p className="text-[14px] font-semibold text-zinc-900">{fmt(entry.total)}</p>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
         </div>
       )}
 
