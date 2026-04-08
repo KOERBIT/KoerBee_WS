@@ -9,32 +9,37 @@ export async function POST(request: NextRequest) {
 
   if (!session || !session.user?.id) {
     return NextResponse.json(
-      { success: false, error: 'Nicht autorisiert' },
+      { ok: false, error: 'Nicht autorisiert' },
       { status: 401 }
     )
   }
 
   try {
-    const { currentPassword, newPassword, confirmPassword } = await request.json()
+    const body = (await request.json()) as Record<string, unknown>
+    const { currentPassword, newPassword, confirmPassword } = body as {
+      currentPassword: unknown
+      newPassword: unknown
+      confirmPassword: unknown
+    }
 
     // Validation
     if (!currentPassword || !newPassword || !confirmPassword) {
       return NextResponse.json(
-        { success: false, error: 'Alle Felder erforderlich' },
+        { ok: false, error: 'Alle Felder erforderlich' },
         { status: 400 }
       )
     }
 
     if (newPassword !== confirmPassword) {
       return NextResponse.json(
-        { success: false, error: 'Passwörter stimmen nicht überein' },
+        { ok: false, error: 'Passwörter stimmen nicht überein' },
         { status: 400 }
       )
     }
 
     if (newPassword.length < 8) {
       return NextResponse.json(
-        { success: false, error: 'Mindestens 8 Zeichen' },
+        { ok: false, error: 'Mindestens 8 Zeichen' },
         { status: 400 }
       )
     }
@@ -46,8 +51,8 @@ export async function POST(request: NextRequest) {
 
     if (!user || !user.passwordHash) {
       return NextResponse.json(
-        { success: false, error: 'Benutzer nicht gefunden' },
-        { status: 404 }
+        { ok: false, error: 'Aktuelles Passwort falsch' },
+        { status: 401 }
       )
     }
 
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
     const passwordMatch = await bcrypt.compare(currentPassword, user.passwordHash)
     if (!passwordMatch) {
       return NextResponse.json(
-        { success: false, error: 'Aktuelles Passwort falsch' },
+        { ok: false, error: 'Aktuelles Passwort falsch' },
         { status: 401 }
       )
     }
@@ -68,13 +73,13 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      success: true,
+      ok: true,
       message: 'Passwort geändert',
     })
   } catch (error) {
     console.error('Error changing password:', error)
     return NextResponse.json(
-      { success: false, error: 'Fehler beim Ändern des Passworts' },
+      { ok: false, error: 'Fehler beim Ändern des Passworts' },
       { status: 500 }
     )
   }
