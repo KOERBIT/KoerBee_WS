@@ -323,18 +323,30 @@ export default function KassenbuchPage() {
     const end = new Date(exportYear, exportMonth, 0, 23, 59, 59)
     const filteredSales = sales.filter(s => { const d = new Date(s.date); return d >= start && d <= end })
     const filteredExpenses = expenses.filter(e => { const d = new Date(e.date); return d >= start && d <= end })
-    const totalIncome = filteredSales.reduce((s, sale) => s + sale.total, 0)
+    const filteredConsignments = consignments.filter(c => { const d = new Date(c.date); return d >= start && d <= end })
+    const salesIncome = filteredSales.reduce((s, sale) => s + sale.total, 0)
+    const commissionIncome = filteredConsignments
+      .filter(c => c.status === 'settled')
+      .reduce((s, c) => s + c.items.reduce((si, i) => si + i.soldQuantity * i.price, 0), 0)
+    const totalIncome = salesIncome + commissionIncome
     const totalExpenses = filteredExpenses.reduce((s, exp) => s + exp.amount, 0)
-    return { filteredSales, filteredExpenses, totalIncome, totalExpenses, saldo: totalIncome - totalExpenses }
+    return { filteredSales, filteredConsignments, filteredExpenses, totalIncome, totalExpenses, saldo: totalIncome - totalExpenses }
   }
 
   function downloadCsv() {
-    const { filteredSales, filteredExpenses, totalIncome, totalExpenses, saldo } = getExportData()
+    const { filteredSales, filteredConsignments, filteredExpenses, totalIncome, totalExpenses, saldo } = getExportData()
     const monthName = new Date(exportYear, exportMonth - 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
     const rows: string[] = [
       'Datum;Typ;Beschreibung;Betrag',
+      ...filteredConsignments
+        .filter(c => c.status === 'settled')
+        .map(c => {
+          const total = c.items.reduce((sum, item) => sum + item.soldQuantity * item.price, 0)
+          const beschreibung = c.commissionStore?.name || c.locationName || '—'
+          return `${new Date(c.date).toLocaleDateString('de-DE')};Kommission;${beschreibung};${total.toFixed(2)}`
+        }),
       ...filteredSales.map(s =>
-        `${new Date(s.date).toLocaleDateString('de-DE')};Einnahme;${s.notes ?? s.customerName ?? 'Direktverkauf'};${s.total.toFixed(2)}`
+        `${new Date(s.date).toLocaleDateString('de-DE')};Verkauf;${s.customerName || 'Laufkundschaft'};${s.total.toFixed(2)}`
       ),
       ...filteredExpenses.map(e =>
         `${new Date(e.date).toLocaleDateString('de-DE')};Ausgabe;${e.category}${e.description ? ' — ' + e.description : ''};-${e.amount.toFixed(2)}`
@@ -355,7 +367,7 @@ export default function KassenbuchPage() {
   }
 
   async function downloadPdf() {
-    const { filteredSales, filteredExpenses, totalIncome, totalExpenses, saldo } = getExportData()
+    const { filteredSales, filteredConsignments, filteredExpenses, totalIncome, totalExpenses, saldo } = getExportData()
     const monthName = new Date(exportYear, exportMonth - 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
     const { default: jsPDF } = await import('jspdf')
     const { default: autoTable } = await import('jspdf-autotable')
@@ -366,15 +378,34 @@ export default function KassenbuchPage() {
 
     doc.setFontSize(11)
     doc.text('Einnahmen', 14, 30)
-    autoTable(doc, {
-      startY: 33,
-      head: [['Datum', 'Beschreibung', 'Betrag']],
-      body: filteredSales.map(s => [
+
+    // Kommissionen + Verkäufe combined
+    const einnahmenData = [
+      ...filteredConsignments
+        .filter(c => c.status === 'settled')
+        .map(c => {
+          const total = c.items.reduce((sum, item) => sum + item.soldQuantity * item.price, 0)
+          const name = c.commissionStore?.name || c.locationName || '—'
+          return [
+            new Date(c.date).toLocaleDateString('de-DE'),
+            'Kommission',
+            name,
+            `${total.toFixed(2)} €`,
+          ]
+        }),
+      ...filteredSales.map(s => [
         new Date(s.date).toLocaleDateString('de-DE'),
-        s.notes ?? s.customerName ?? 'Direktverkauf',
+        'Verkauf',
+        s.customerName || 'Laufkundschaft',
         `${s.total.toFixed(2)} €`,
       ]),
-      foot: [['', 'Gesamt', `${totalIncome.toFixed(2)} €`]],
+    ]
+
+    autoTable(doc, {
+      startY: 33,
+      head: [['Datum', 'Typ', 'Name', 'Betrag']],
+      body: einnahmenData,
+      foot: [['', '', 'Gesamt', `${totalIncome.toFixed(2)} €`]],
       theme: 'striped',
       headStyles: { fillColor: [251, 191, 36] },
     })
