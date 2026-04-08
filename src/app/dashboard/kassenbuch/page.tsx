@@ -63,6 +63,7 @@ export default function KassenbuchPage() {
   const [consNotes, setConsNotes] = useState('')
   const [consItems, setConsItems] = useState([{ productId: '', quantity: 1, price: 0 }])
   const [savingCons, setSavingCons] = useState(false)
+  const [consStoreId, setConsStoreId] = useState<string | null>(null)
   const [settleConsignment, setSettleConsignment] = useState<Consignment | null>(null)
   const [settleSoldQtys, setSettleSoldQtys] = useState<Record<string, number>>({})
   const [settlingCons, setSettlingCons] = useState(false)
@@ -160,11 +161,11 @@ export default function KassenbuchPage() {
     await fetch('/api/kassenbuch/consignments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locationName: consLocation, date: consDate, notes: consNotes, items: consItems }),
+      body: JSON.stringify({ locationName: consLocation || null, commissionStoreId: consStoreId || null, date: consDate, notes: consNotes, items: consItems }),
     })
     setSavingCons(false)
     setShowConsignment(false)
-    setConsLocation(''); setConsNotes(''); setConsItems([{ productId: '', quantity: 1, price: 0 }])
+    setConsLocation(''); setConsNotes(''); setConsItems([{ productId: '', quantity: 1, price: 0 }]); setConsStoreId(null)
     load()
   }
 
@@ -988,22 +989,39 @@ export default function KassenbuchPage() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md my-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
               <h2 className="text-[15px] font-semibold text-zinc-900">Kommission anlegen</h2>
-              <button onClick={() => setShowConsignment(false)} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
+              <button onClick={() => { setShowConsignment(false); setConsStoreId(null) }} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
             <form onSubmit={saveConsignment} className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Ort / Person *</label>
-                  <input value={consLocation} onChange={e => setConsLocation(e.target.value)} required placeholder="z.B. Bäckerei Müller"
-                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Datum</label>
-                  <input type="date" value={consDate} onChange={e => setConsDate(e.target.value)}
-                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
-                </div>
+              <div className="space-y-2">
+                <label className="block text-[12px] font-medium text-zinc-500">Laden *</label>
+                <select
+                  value={consStoreId || ''}
+                  onChange={(e) => setConsStoreId(e.target.value || null)}
+                  disabled={savingCons}
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent disabled:opacity-50"
+                >
+                  <option value="">-- Laden auswählen --</option>
+                  {commissionStores.map(store => (
+                    <option key={store.id} value={store.id}>{store.name}</option>
+                  ))}
+                </select>
+                <label className="block text-[12px] text-zinc-600 mt-2">oder freier Text:</label>
+                <input
+                  type="text"
+                  value={consLocation}
+                  onChange={(e) => setConsLocation(e.target.value)}
+                  disabled={savingCons}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent disabled:opacity-50"
+                  placeholder="z.B. Marktstand"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Datum</label>
+                <input type="date" value={consDate} onChange={e => setConsDate(e.target.value)}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
               </div>
 
               <div>
