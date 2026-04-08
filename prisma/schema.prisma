@@ -7,22 +7,23 @@ datasource db {
 }
 
 model User {
-  id             String         @id @default(cuid())
-  email          String         @unique
-  passwordHash   String
-  name           String?
-  plan           String         @default("hobby")
-  createdAt      DateTime       @default(now())
-  apiaries       Apiary[]
-  tasks          Task[]
-  breedingLines  BreedingLine[]
-  products       Product[]
-  customers      Customer[]
-  sales          Sale[]
-  consignments   Consignment[]
-  expenses       Expense[]
-  accounts       Account[]
-  sessions       Session[]
+  id               String              @id @default(cuid())
+  email            String              @unique
+  passwordHash     String
+  name             String?
+  plan             String              @default("hobby")
+  createdAt        DateTime            @default(now())
+  apiaries         Apiary[]
+  tasks            Task[]
+  breedingLines    BreedingLine[]
+  products         Product[]
+  customers        Customer[]
+  sales            Sale[]
+  consignments     Consignment[]
+  commissionStores CommissionStore[]
+  expenses         Expense[]
+  accounts         Account[]
+  sessions         Session[]
 }
 
 model Apiary {
@@ -187,6 +188,15 @@ model Customer {
   createdAt    DateTime      @default(now())
 }
 
+model CommissionStore {
+  id           String        @id @default(cuid())
+  name         String
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consignments Consignment[]
+  createdAt    DateTime      @default(now())
+}
+
 model Sale {
   id           String     @id @default(cuid())
   date         DateTime   @default(now())
@@ -213,17 +223,19 @@ model SaleItem {
 }
 
 model Consignment {
-  id           String            @id @default(cuid())
-  date         DateTime          @default(now())
-  locationName String?
-  customerId   String?
-  customer     Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  items        ConsignmentItem[]
-  status       String            @default("active")
-  notes        String?
-  userId       String
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt    DateTime          @default(now())
+  id               String            @id @default(cuid())
+  date             DateTime          @default(now())
+  locationName     String?
+  customerId       String?
+  customer         Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  commissionStoreId String?
+  commissionStore  CommissionStore?  @relation(fields: [commissionStoreId], references: [id], onDelete: SetNull)
+  items            ConsignmentItem[]
+  status           String            @default("active")
+  notes            String?
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
 }
 
 model ConsignmentItem {
