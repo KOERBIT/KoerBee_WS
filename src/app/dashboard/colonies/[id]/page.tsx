@@ -157,6 +157,25 @@ export default async function ColonyDetailPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
+      {/* Volk-Informationen */}
+      {(colony.foundedAt || colony.notes) && (
+        <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 space-y-4">
+          <h3 className="text-[15px] font-semibold text-zinc-900">Volk-Informationen</h3>
+          {colony.foundedAt && (
+            <div>
+              <p className="text-[12px] font-medium text-zinc-400 uppercase tracking-wider mb-1">Gründungsdatum</p>
+              <p className="text-[14px] text-zinc-700">{new Date(colony.foundedAt).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            </div>
+          )}
+          {colony.notes && (
+            <div>
+              <p className="text-[12px] font-medium text-zinc-400 uppercase tracking-wider mb-1">Notizen</p>
+              <p className="text-[14px] text-zinc-700 whitespace-pre-wrap">{colony.notes}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Dissolution note */}
       {colony.status !== 'active' && colony.statusNote && (
         <div className="bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-4 mb-6">

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Modal from '@/components/Modal'
 
 interface Apiary { id: string; name: string }
-interface Colony { id: string; name: string; queenYear: number | null; queenColor: string | null; apiaryId: string }
+interface Colony { id: string; name: string; queenYear: number | null; queenColor: string | null; apiaryId: string; foundedAt?: string | null; notes?: string | null }
 
 const QUEEN_COLORS = [
   { value: 'weiß', label: 'Weiß (2021, 2026)', dot: 'bg-white border border-zinc-300' },
@@ -26,10 +26,12 @@ function ColonyForm({ initial, apiaries, onSubmit, loading }: {
     apiaryId: initial?.apiaryId ?? (apiaries[0]?.id ?? ''),
     queenYear: initial?.queenYear?.toString() ?? '',
     queenColor: initial?.queenColor ?? '',
+    foundedAt: initial?.foundedAt ? new Date(initial.foundedAt).toISOString().split('T')[0] : '',
+    notes: initial?.notes ?? '',
   })
 
   return (
-    <form onSubmit={e => { e.preventDefault(); onSubmit({ name: form.name, apiaryId: form.apiaryId, queenYear: form.queenYear ? parseInt(form.queenYear) : null, queenColor: form.queenColor || null }) }} className="space-y-4">
+    <form onSubmit={e => { e.preventDefault(); onSubmit({ name: form.name, apiaryId: form.apiaryId, queenYear: form.queenYear ? parseInt(form.queenYear) : null, queenColor: form.queenColor || null, foundedAt: form.foundedAt ? new Date(form.foundedAt).toISOString() : null, notes: form.notes || null }) }} className="space-y-4">
       <div>
         <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Name *</label>
         <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required placeholder="z.B. Volk 1"
@@ -56,6 +58,16 @@ function ColonyForm({ initial, apiaries, onSubmit, loading }: {
             {QUEEN_COLORS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </div>
+      </div>
+      <div>
+        <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Gründungsdatum</label>
+        <input value={form.foundedAt} onChange={e => setForm(f => ({ ...f, foundedAt: e.target.value }))} type="date"
+          className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+      </div>
+      <div>
+        <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Notizen</label>
+        <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notizen und Infos zum Volk..."
+          className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent min-h-[100px] resize-none" />
       </div>
       <button type="submit" disabled={loading}
         className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-[14px] font-semibold transition-colors">
