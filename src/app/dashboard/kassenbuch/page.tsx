@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-type Tab = 'verkauf' | 'kommission' | 'artikel' | 'ausgaben' | 'laeden' | 'uebersicht'
+type Tab = 'verkauf' | 'kommission' | 'artikel' | 'ausgaben' | 'laeden' | 'uebersicht' | 'lagerkorrektionen'
 
 interface CommissionStore { id: string; name: string; createdAt: string }
 interface Product { id: string; name: string; unit: string; price: number; description: string | null; fillAmount: number | null; fillUnit: string | null; stockQuantity: number }
@@ -11,6 +11,7 @@ interface Sale { id: string; date: string; customerName: string | null; total: n
 interface ConsignmentItem { id: string; product: Product; quantity: number; price: number; soldQuantity: number; returnedQuantity: number }
 interface Consignment { id: string; date: string; locationName: string | null; status: string; notes: string | null; items: ConsignmentItem[]; commissionStore?: CommissionStore | null }
 interface Expense { id: string; date: string; amount: number; category: string; description: string | null }
+interface StockCorrection { id: string; productId: string; quantity: number; reason: string; batchNumber: string | null; expiryDate: string | null; createdAt: string }
 
 function fmt(n: number) { return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) }
 function fmtDate(d: string) { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
@@ -86,6 +87,16 @@ export default function KassenbuchPage() {
   const [prodFillAmount, setProdFillAmount] = useState('')
   const [prodFillUnit, setProdFillUnit] = useState('g')
 
+  // Stock Corrections
+  const [stockCorrections, setStockCorrections] = useState<StockCorrection[]>([])
+  const [showStockCorrection, setShowStockCorrection] = useState(false)
+  const [corrProductId, setCorrProductId] = useState<string | null>(null)
+  const [corrQuantity, setCorrQuantity] = useState('')
+  const [corrReason, setCorrReason] = useState('')
+  const [corrBatch, setCorrBatch] = useState('')
+  const [corrExpiry, setCorrExpiry] = useState('')
+  const [savingCorr, setSavingCorr] = useState(false)
+
   const load = useCallback(async () => {
     const [p, s, c, e, stores] = await Promise.all([
       fetch('/api/kassenbuch/products').then(r => r.json()),
@@ -103,6 +114,25 @@ export default function KassenbuchPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const loadStockCorrections = useCallback(async () => {
+    const allCorrections: StockCorrection[] = []
+    for (const product of products) {
+      try {
+        const corr = await fetch(`/api/kassenbuch/products/${product.id}/stock-correction`).then(r => r.json())
+        allCorrections.push(...(Array.isArray(corr) ? corr : []))
+      } catch {
+        // Silently skip
+      }
+    }
+    setStockCorrections(allCorrections.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+  }, [products])
+
+  useEffect(() => {
+    if (tab === 'lagerkorrektionen') {
+      loadStockCorrections()
+    }
+  }, [tab, loadStockCorrections])
 
   // Auto-fill price when product selected
   function updateSaleItem(i: number, key: string, value: string | number) {
@@ -273,6 +303,47 @@ export default function KassenbuchPage() {
     setShowExpense(false)
     setExpAmount(''); setExpDesc(''); setExpCategory('Sonstiges')
     load()
+  }
+
+  const saveStockCorrection = async () => {
+    if (!corrProductId || !corrQuantity || !corrReason.trim()) {
+      alert('Artikel, Menge und Grund erforderlich')
+      return
+    }
+
+    setSavingCorr(true)
+    try {
+      const response = await fetch(`/api/kassenbuch/products/${corrProductId}/stock-correction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quantity: parseInt(corrQuantity),
+          reason: corrReason.trim(),
+          batchNumber: corrBatch.trim() || null,
+          expiryDate: corrExpiry || null,
+        }),
+      })
+
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || 'Fehler beim Speichern')
+      }
+
+      // Clear form and reload
+      setCorrProductId(null)
+      setCorrQuantity('')
+      setCorrReason('')
+      setCorrBatch('')
+      setCorrExpiry('')
+      setShowStockCorrection(false)
+
+      // Reload products to update stock quantities and corrections
+      load()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Fehler')
+    } finally {
+      setSavingCorr(false)
+    }
   }
 
   async function deleteExpense(id: string) {
@@ -498,7 +569,7 @@ export default function KassenbuchPage() {
         {(['verkauf', 'kommission', 'artikel', 'ausgaben', 'laeden', 'uebersicht'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`flex-1 py-2 rounded-lg text-[13px] font-medium transition-colors capitalize whitespace-nowrap ${tab === t ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
-            {t === 'verkauf' ? 'Verkäufe' : t === 'kommission' ? 'Kommission' : t === 'artikel' ? 'Artikel' : t === 'ausgaben' ? 'Ausgaben' : t === 'laeden' ? 'Läden' : 'Übersicht'}
+            {t === 'verkauf' ? 'Verkäufe' : t === 'kommission' ? 'Kommission' : t === 'artikel' ? 'Artikel' : t === 'ausgaben' ? 'Ausgaben' : t === 'laeden' ? 'Läden' : t === 'lagerkorrektionen' ? 'Lagerkorrektionen' : 'Übersicht'}
           </button>
         ))}
       </div>
@@ -841,6 +912,61 @@ export default function KassenbuchPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* LAGERKORREKTIONEN */}
+      {tab === 'lagerkorrektionen' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold text-zinc-900">Lagerkorrektionen</h3>
+            <button
+              onClick={() => setShowStockCorrection(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-[13px] font-semibold transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              + Neue Korrektur
+            </button>
+          </div>
+
+          {stockCorrections.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm py-16 text-center">
+              <p className="text-[15px] font-medium text-zinc-900">Noch keine Korrektionen</p>
+              <p className="text-[13px] text-zinc-400 mt-1">Erfasse deine erste Lagerkorrektur</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-zinc-50 border-b border-zinc-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-[12px] font-medium text-zinc-600 uppercase tracking-wider">Produkt</th>
+                    <th className="px-4 py-3 text-right text-[12px] font-medium text-zinc-600 uppercase tracking-wider">Menge</th>
+                    <th className="px-4 py-3 text-left text-[12px] font-medium text-zinc-600 uppercase tracking-wider">Grund</th>
+                    <th className="px-4 py-3 text-left text-[12px] font-medium text-zinc-600 uppercase tracking-wider">Charge</th>
+                    <th className="px-4 py-3 text-left text-[12px] font-medium text-zinc-600 uppercase tracking-wider">MHD</th>
+                    <th className="px-4 py-3 text-left text-[12px] font-medium text-zinc-600 uppercase tracking-wider">Datum</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockCorrections.map(corr => {
+                    const prod = products.find(p => p.id === corr.productId)
+                    return (
+                      <tr key={corr.id} className="border-b border-zinc-100 hover:bg-zinc-50 transition-colors">
+                        <td className="px-4 py-3 text-[13px] text-zinc-900 font-medium">{prod?.name || 'Unbekannt'}</td>
+                        <td className={`px-4 py-3 text-right text-[13px] font-semibold ${corr.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {corr.quantity > 0 ? '+' : ''}{corr.quantity}
+                        </td>
+                        <td className="px-4 py-3 text-[13px] text-zinc-600">{corr.reason}</td>
+                        <td className="px-4 py-3 text-[13px] text-zinc-600">{corr.batchNumber || '—'}</td>
+                        <td className="px-4 py-3 text-[13px] text-zinc-600">{corr.expiryDate ? fmtDate(corr.expiryDate) : '—'}</td>
+                        <td className="px-4 py-3 text-[13px] text-zinc-600">{fmtDate(corr.createdAt)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -1284,6 +1410,96 @@ export default function KassenbuchPage() {
                 </button>
                 <button onClick={() => setSettleConsignment(null)}
                   className="px-4 border border-zinc-200 rounded-xl text-[13px] text-zinc-500 hover:bg-zinc-50 transition-colors">
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Neue Lagerkorrektur */}
+      {showStockCorrection && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 backdrop-blur-sm px-4 py-8 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md my-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <h2 className="text-[15px] font-semibold text-zinc-900">Neue Lagerkorrektur</h2>
+              <button onClick={() => setShowStockCorrection(false)} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Artikel</label>
+                <select
+                  value={corrProductId || ''}
+                  onChange={e => setCorrProductId(e.target.value || null)}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                >
+                  <option value="">-- Wählen --</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.unit}) - Bestand: {p.stockQuantity}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Menge</label>
+                <input
+                  type="number"
+                  value={corrQuantity}
+                  onChange={e => setCorrQuantity(e.target.value)}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                  placeholder="z.B. 5 oder -3"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Grund</label>
+                <input
+                  type="text"
+                  value={corrReason}
+                  onChange={e => setCorrReason(e.target.value)}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                  placeholder="z.B. Abweichung Inventur"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Chargennummer (optional)</label>
+                <input
+                  type="text"
+                  value={corrBatch}
+                  onChange={e => setCorrBatch(e.target.value)}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                  placeholder="z.B. 2025-HONIG-003"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Mindesthaltbarkeitsdatum (optional)</label>
+                <input
+                  type="date"
+                  value={corrExpiry}
+                  onChange={e => setCorrExpiry(e.target.value)}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={saveStockCorrection}
+                  disabled={savingCorr}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl py-3 text-[13px] font-semibold transition-colors"
+                >
+                  {savingCorr ? 'Speichern...' : 'Speichern'}
+                </button>
+                <button
+                  onClick={() => setShowStockCorrection(false)}
+                  className="px-4 border border-zinc-200 rounded-xl text-[13px] text-zinc-500 hover:bg-zinc-50 transition-colors"
+                >
                   Abbrechen
                 </button>
               </div>
