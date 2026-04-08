@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-type Tab = 'verkauf' | 'kommission' | 'artikel' | 'ausgaben'
+type Tab = 'verkauf' | 'kommission' | 'artikel' | 'ausgaben' | 'laeden' | 'uebersicht'
 
+interface CommissionStore { id: string; name: string; createdAt: string }
 interface Product { id: string; name: string; unit: string; price: number; description: string | null; fillAmount: number | null; fillUnit: string | null; stockQuantity: number }
 interface SaleItem { id: string; product: Product; quantity: number; price: number; total: number }
 interface Sale { id: string; date: string; customerName: string | null; total: number; notes: string | null; items: SaleItem[] }
@@ -27,6 +28,7 @@ export default function KassenbuchPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [sales, setSales] = useState<Sale[]>([])
   const [consignments, setConsignments] = useState<Consignment[]>([])
+  const [commissionStores, setCommissionStores] = useState<CommissionStore[]>([])
   const [loading, setLoading] = useState(true)
   const [expenses, setExpenses] = useState<Expense[]>([])
 
@@ -82,16 +84,18 @@ export default function KassenbuchPage() {
   const [prodFillUnit, setProdFillUnit] = useState('g')
 
   const load = useCallback(async () => {
-    const [p, s, c, e] = await Promise.all([
+    const [p, s, c, e, stores] = await Promise.all([
       fetch('/api/kassenbuch/products').then(r => r.json()),
       fetch('/api/kassenbuch/sales').then(r => r.json()),
       fetch('/api/kassenbuch/consignments').then(r => r.json()),
       fetch('/api/kassenbuch/expenses').then(r => r.json()),
+      fetch('/api/kassenbuch/commission-stores').then(r => r.json()),
     ])
     setProducts(p)
     setSales(s)
     setConsignments(c)
     setExpenses(e)
+    setCommissionStores(stores)
     setLoading(false)
   }, [])
 
