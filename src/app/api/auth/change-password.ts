@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Passwort erfolgreich geändert',
+      message: 'Passwort geändert',
     })
   } catch (error) {
     console.error('Error changing password:', error)
