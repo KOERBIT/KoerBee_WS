@@ -8,7 +8,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const consignments = await prisma.consignment.findMany({
     where: { userId: session.user.id },
-    include: { items: { include: { product: true } }, customer: true },
+    include: { items: { include: { product: true } }, customer: true, commissionStore: true },
     orderBy: { date: 'desc' },
   })
   return NextResponse.json(consignments)
@@ -17,7 +17,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { locationName, customerId, date, notes, items } = await req.json()
+  const { locationName, customerId, date, notes, items, commissionStoreId } = await req.json()
   if (!items || items.length === 0) return NextResponse.json({ error: 'Keine Positionen' }, { status: 400 })
 
   const consignment = await prisma.consignment.create({
@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       date: date ? new Date(date) : new Date(),
       notes: notes || null,
       userId: session.user.id,
+      commissionStoreId: commissionStoreId || null,
       items: {
         create: items.map((i: { productId: string; quantity: number; price: number }) => ({
           productId: i.productId,
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
         })),
       },
     },
-    include: { items: { include: { product: true } }, customer: true },
+    include: { items: { include: { product: true } }, customer: true, commissionStore: true },
   })
   return NextResponse.json(consignment, { status: 201 })
 }

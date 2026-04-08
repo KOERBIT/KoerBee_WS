@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params
   const consignment = await prisma.consignment.findFirst({
     where: { id, userId: session.user.id },
-    include: { items: { include: { product: true } } },
+    include: { items: { include: { product: true } }, commissionStore: true },
   })
   if (!consignment) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
   const { status, items } = await req.json()
@@ -56,7 +56,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           },
         }),
       },
-      include: { items: { include: { product: true } }, customer: true },
+      include: { items: { include: { product: true } }, customer: true, commissionStore: true },
     })
 
     // Auto-Sale + Lagerabzug beim Abrechnen
@@ -79,7 +79,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           data: {
             userId: session.user.id,
             date: new Date(),
-            customerName: cons.locationName,
+            customerName: cons.commissionStore?.name || cons.locationName,
             customerId: cons.customerId,
             notes: cons.locationName ? `Via Kommission: ${cons.locationName}` : 'Via Kommission',
             total,
