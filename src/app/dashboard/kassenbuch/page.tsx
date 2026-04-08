@@ -566,7 +566,7 @@ export default function KassenbuchPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 mb-6 overflow-x-auto">
-        {(['verkauf', 'kommission', 'artikel', 'ausgaben', 'laeden', 'uebersicht'] as Tab[]).map(t => (
+        {(['verkauf', 'kommission', 'artikel', 'ausgaben', 'laeden', 'lagerkorrektionen', 'uebersicht'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`flex-1 py-2 rounded-lg text-[13px] font-medium transition-colors capitalize whitespace-nowrap ${tab === t ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
             {t === 'verkauf' ? 'Verkäufe' : t === 'kommission' ? 'Kommission' : t === 'artikel' ? 'Artikel' : t === 'ausgaben' ? 'Ausgaben' : t === 'laeden' ? 'Läden' : t === 'lagerkorrektionen' ? 'Lagerkorrektionen' : 'Übersicht'}
