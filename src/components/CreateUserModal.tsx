@@ -25,7 +25,7 @@ export default function CreateUserModal({
     setLoading(true)
 
     try {
-      const response = await fetch('/api/auth/create-user', {
+      const response = await fetch('/api/account/create-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

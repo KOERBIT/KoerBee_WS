@@ -18,7 +18,7 @@ export default function SettingsPageClient({
 
   const handleUserCreated = async () => {
     // Reload users list
-    const response = await fetch('/api/auth/list-users')
+    const response = await fetch('/api/account/list-users')
     const data = await response.json()
     if (data.success) {
       setUsersList(data.users)
