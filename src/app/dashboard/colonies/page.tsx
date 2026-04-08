@@ -15,18 +15,26 @@ const QUEEN_COLOR_DOT: Record<string, string> = {
 export default async function ColoniesPage() {
   const session = await getServerSession(authOptions)
 
-  const [colonies, apiaries] = await Promise.all([
-    prisma.colony.findMany({
-      where: { apiary: { userId: session!.user.id }, status: 'active' },
-      include: {
-        apiary: { select: { id: true, name: true } },
-        _count: { select: { inspections: true, treatments: true } },
-        inspections: { orderBy: { date: 'desc' }, take: 1 },
-      },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.apiary.findMany({ where: { userId: session!.user.id }, select: { id: true, name: true } }),
-  ])
+  const coloniesRaw = await prisma.colony.findMany({
+    where: { apiary: { userId: session!.user.id }, status: 'active' },
+    include: {
+      apiary: { select: { id: true, name: true } },
+      _count: { select: { inspections: true, treatments: true } },
+      inspections: { orderBy: { date: 'desc' }, take: 1 },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  const colonies = coloniesRaw.map(c => ({
+    ...c,
+    foundedAt: c.foundedAt ? c.foundedAt.toISOString() : null,
+    inspections: c.inspections.map(i => ({
+      ...i,
+      date: i.date instanceof Date ? i.date : new Date(i.date),
+    })),
+  }))
+
+  const apiaries = await prisma.apiary.findMany({ where: { userId: session!.user.id }, select: { id: true, name: true } })
 
   return (
     <div className="px-8 py-8 max-w-5xl">
