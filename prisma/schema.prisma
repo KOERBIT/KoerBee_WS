@@ -59,6 +59,8 @@ model Colony {
   tasks           Task[]
   breedingBatches BreedingBatch[]
   createdAt       DateTime        @default(now())
+  foundedAt       DateTime?
+  notes           String?
 }
 
 model Inspection {
