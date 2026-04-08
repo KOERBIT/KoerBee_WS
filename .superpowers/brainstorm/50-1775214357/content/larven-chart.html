@@ -1,0 +1,256 @@
+<h2>Larvenstadium-Grafik im Zuchtkalender</h2>
+<p class="subtitle">Welche Darstellung gefällt dir für den Fortschritt eines Zuchtgangs (Tag 0–28)?</p>
+
+<style>
+.phone-mock {
+  background: white;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 18px;
+  font-family: system-ui, sans-serif;
+}
+.mock-title { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 12px; }
+.mock-sub { font-size: 11px; color: #6b7280; margin-bottom: 2px; }
+
+/* Option A: Horizontaler Fortschrittsbalken */
+.progress-track {
+  position: relative;
+  height: 8px;
+  background: #f3f4f6;
+  border-radius: 99px;
+  margin: 8px 0 4px;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #a78bfa, #f59e0b);
+}
+.progress-dot {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px currentColor;
+}
+.phase-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+.phase-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+/* Option B: Wabenförmige Zeitleiste */
+.hex-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.hex-phase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.hex-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+.hex-label {
+  font-size: 9px;
+  color: #6b7280;
+  text-align: center;
+  line-height: 1.2;
+  max-width: 40px;
+}
+.hex-day {
+  font-size: 9px;
+  color: #9ca3af;
+  font-weight: 600;
+}
+.connector {
+  width: 12px;
+  height: 2px;
+  background: #e5e7eb;
+  align-self: center;
+  margin-bottom: 16px;
+}
+.connector.done { background: #f59e0b; }
+
+/* Option C: Kalenderstreifen */
+.cal-strip {
+  display: flex;
+  gap: 2px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+.cal-day {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #9ca3af;
+  font-weight: 600;
+}
+.cal-day.done { background: #fde68a; color: #92400e; }
+.cal-day.today { background: #f59e0b; color: white; border-radius: 4px; }
+.cal-day.event { background: #a78bfa; color: white; }
+.cal-day.future-event { background: #ede9fe; color: #7c3aed; }
+.cal-row-labels {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+.cal-row-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 8px;
+  color: #d1d5db;
+  text-align: center;
+}
+</style>
+
+<div class="options">
+  <div class="option" data-choice="progressbar" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Fortschrittsbalken mit Phasen</h3>
+      <p style="font-size:12px;color:#6b7280;margin-bottom:10px">Gradient-Balken von Tag 0–28, Meilensteine als Punkte</p>
+      <div class="phone-mock">
+        <div class="mock-title">Carnica 2024 · Batch 15.03.</div>
+        <div class="mock-sub">Tag 14 von 28 — Begattungsphase</div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:50%"></div>
+          <div class="progress-dot" style="left:0%;color:#a78bfa"></div>
+          <div class="progress-dot" style="left:14%;color:#60a5fa"></div>
+          <div class="progress-dot" style="left:39%;color:#22d3ee"></div>
+          <div class="progress-dot" style="left:50%;color:#f59e0b"></div>
+          <div class="progress-dot" style="left:75%;color:#fb923c"></div>
+          <div class="progress-dot" style="left:100%;color:#22c55e"></div>
+        </div>
+        <div class="phase-labels">
+          <span>Umlarven</span><span>Stift</span><span>Schlupf</span><span>Begattung</span><span>Eilage</span><span>Beurteil.</span>
+        </div>
+        <span class="phase-chip" style="background:#fef3c7;color:#92400e">Nächstes: Eilage in 7 Tagen</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="hexline" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Phasen-Icons in einer Reihe</h3>
+      <p style="font-size:12px;color:#6b7280;margin-bottom:10px">6 Icons verbunden, erledigte grün, aktuelle gold, offene grau</p>
+      <div class="phone-mock">
+        <div class="mock-title">Carnica 2024 · Batch 15.03.</div>
+        <div style="display:flex;align-items:center;flex-wrap:nowrap;gap:0;margin:8px 0">
+          <div class="hex-phase">
+            <div class="hex-circle" style="background:#d1fae5;color:#065f46">✓</div>
+            <div class="hex-label">Umlarven</div>
+            <div class="hex-day">T0</div>
+          </div>
+          <div class="connector done"></div>
+          <div class="hex-phase">
+            <div class="hex-circle" style="background:#d1fae5;color:#065f46">✓</div>
+            <div class="hex-label">Stift­kontrolle</div>
+            <div class="hex-day">T4</div>
+          </div>
+          <div class="connector done"></div>
+          <div class="hex-phase">
+            <div class="hex-circle" style="background:#d1fae5;color:#065f46">✓</div>
+            <div class="hex-label">Schlupf</div>
+            <div class="hex-day">T11</div>
+          </div>
+          <div class="connector done"></div>
+          <div class="hex-phase">
+            <div class="hex-circle" style="background:#fef3c7;color:#92400e;box-shadow:0 0 0 2px #f59e0b">●</div>
+            <div class="hex-label" style="color:#92400e;font-weight:700">Begattung</div>
+            <div class="hex-day" style="color:#f59e0b">Heute</div>
+          </div>
+          <div class="connector"></div>
+          <div class="hex-phase">
+            <div class="hex-circle" style="background:#f3f4f6;color:#9ca3af">●</div>
+            <div class="hex-label">Eilage</div>
+            <div class="hex-day">T21</div>
+          </div>
+          <div class="connector"></div>
+          <div class="hex-phase">
+            <div class="hex-circle" style="background:#f3f4f6;color:#9ca3af">★</div>
+            <div class="hex-label">Beurteilung</div>
+            <div class="hex-day">T28</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="calstrip" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Tages-Kalenderstreifen</h3>
+      <p style="font-size:12px;color:#6b7280;margin-bottom:10px">28 Tage als Streifen — vergangene Tage gelb, Meilensteine lila, heute orange</p>
+      <div class="phone-mock">
+        <div class="mock-title">Carnica 2024 · Batch 15.03.</div>
+        <div class="cal-row-labels">
+          <div class="cal-row-label">T0</div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label">T4</div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label">T7</div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label">T11</div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label">T14</div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label">T21</div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label"></div>
+          <div class="cal-row-label">T28</div>
+        </div>
+        <div class="cal-strip">
+          <div class="cal-day event">U</div>
+          <div class="cal-day done"></div><div class="cal-day done"></div><div class="cal-day done"></div>
+          <div class="cal-day event">S</div>
+          <div class="cal-day done"></div><div class="cal-day done"></div><div class="cal-day done"></div><div class="cal-day done"></div><div class="cal-day done"></div><div class="cal-day done"></div>
+          <div class="cal-day event">Sch</div>
+          <div class="cal-day done"></div><div class="cal-day done"></div>
+          <div class="cal-day today">B</div>
+          <div class="cal-day"></div><div class="cal-day"></div><div class="cal-day"></div><div class="cal-day"></div><div class="cal-day"></div><div class="cal-day"></div>
+          <div class="cal-day future-event">E</div>
+          <div class="cal-day"></div><div class="cal-day"></div><div class="cal-day"></div><div class="cal-day"></div><div class="cal-day"></div><div class="cal-day"></div>
+          <div class="cal-day future-event">★</div>
+        </div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:4px">U=Umlarven · S=Stift · Sch=Schlupf · B=Begattung · E=Eilage · ★=Beurteilung</div>
+      </div>
+    </div>
+  </div>
+</div>

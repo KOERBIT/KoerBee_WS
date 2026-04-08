@@ -1,0 +1,173 @@
+<h2>Wetter auf dem Dashboard</h2>
+<p class="subtitle">Du hast mehrere Standorte — wie soll das Wetter angezeigt werden?</p>
+
+<style>
+.dash-mock {
+  background: #f4f4f5;
+  border-radius: 20px;
+  padding: 16px;
+  font-family: system-ui, sans-serif;
+  max-width: 480px;
+}
+.weather-card {
+  background: white;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.wc-header {
+  font-size: 10px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 10px;
+}
+.wc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wc-icon { font-size: 28px; }
+.wc-temp { font-size: 22px; font-weight: 700; color: #111; }
+.wc-desc { font-size: 12px; color: #6b7280; }
+.wc-loc { font-size: 11px; font-weight: 600; color: #f59e0b; margin-top: 2px; }
+.forecast-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.fc-day {
+  flex: 1;
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 8px 4px;
+  text-align: center;
+  font-size: 10px;
+}
+.fc-day .emoji { font-size: 16px; display: block; margin: 3px 0; }
+.fc-day .max { font-weight: 700; color: #111; }
+.fc-day .min { color: #9ca3af; }
+.tab-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.tab {
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: default;
+}
+.tab.active { background: #fef3c7; color: #92400e; }
+.tab.inactive { background: #f3f4f6; color: #6b7280; }
+
+.multi-row { display: flex; gap: 8px; }
+.mini-weather {
+  flex: 1;
+  background: white;
+  border-radius: 14px;
+  padding: 12px 10px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.mini-weather .stand { font-size: 10px; font-weight: 700; color: #f59e0b; margin-bottom: 4px; }
+.mini-weather .emoji { font-size: 22px; }
+.mini-weather .temp { font-size: 18px; font-weight: 700; color: #111; margin-top: 2px; }
+.mini-weather .desc { font-size: 10px; color: #9ca3af; }
+</style>
+
+<div class="options">
+  <div class="option" data-choice="single-tabs" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Tabs — Standort wechseln</h3>
+      <p style="font-size:12px;color:#6b7280;margin-bottom:10px">Ein großes Wetter-Widget mit Tabs für jeden Standort</p>
+      <div class="dash-mock">
+        <div class="weather-card">
+          <div class="wc-header">Wetter am Bienenstand</div>
+          <div class="tab-row">
+            <div class="tab active">Hausgarten</div>
+            <div class="tab inactive">Waldrand</div>
+            <div class="tab inactive">Obstwiese</div>
+          </div>
+          <div class="wc-row">
+            <div class="wc-icon">⛅</div>
+            <div>
+              <div class="wc-temp">14°C</div>
+              <div class="wc-desc">Teilweise bewölkt</div>
+              <div class="wc-loc">Hausgarten · 48.123°N</div>
+            </div>
+          </div>
+          <div class="forecast-row">
+            <div class="fc-day"><div>Mo</div><div class="emoji">🌧️</div><div class="max">11°</div><div class="min">6°</div></div>
+            <div class="fc-day"><div>Di</div><div class="emoji">☀️</div><div class="max">17°</div><div class="min">8°</div></div>
+            <div class="fc-day"><div>Mi</div><div class="emoji">⛅</div><div class="max">15°</div><div class="min">9°</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="multi-mini" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Alle Standorte nebeneinander</h3>
+      <p style="font-size:12px;color:#6b7280;margin-bottom:10px">Kleine Wetterbox pro Standort — auf einen Blick alle Stände</p>
+      <div class="dash-mock">
+        <div class="wc-header" style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Wetter an deinen Ständen</div>
+        <div class="multi-row">
+          <div class="mini-weather">
+            <div class="stand">Hausgarten</div>
+            <div class="emoji">⛅</div>
+            <div class="temp">14°C</div>
+            <div class="desc">Teilweise bewölkt</div>
+          </div>
+          <div class="mini-weather">
+            <div class="stand">Waldrand</div>
+            <div class="emoji">🌧️</div>
+            <div class="temp">11°C</div>
+            <div class="desc">Regen</div>
+          </div>
+          <div class="mini-weather">
+            <div class="stand">Obstwiese</div>
+            <div class="emoji">☀️</div>
+            <div class="temp">16°C</div>
+            <div class="desc">Klarer Himmel</div>
+          </div>
+        </div>
+        <p style="font-size:10px;color:#d1d5db;margin-top:8px;text-align:center">Tippen → Detailvorhersage für den Stand</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="nearest" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Nächster Standort automatisch</h3>
+      <p style="font-size:12px;color:#6b7280;margin-bottom:10px">GPS erkennt automatisch den nächsten Stand und zeigt dessen Wetter</p>
+      <div class="dash-mock">
+        <div class="weather-card">
+          <div class="wc-header">Wetter · Nächster Stand</div>
+          <div class="wc-row">
+            <div class="wc-icon">☀️</div>
+            <div>
+              <div class="wc-temp">16°C</div>
+              <div class="wc-desc">Klarer Himmel</div>
+              <div class="wc-loc">Obstwiese · 1,2 km entfernt</div>
+            </div>
+          </div>
+          <div class="forecast-row">
+            <div class="fc-day"><div>Mo</div><div class="emoji">⛅</div><div class="max">14°</div><div class="min">7°</div></div>
+            <div class="fc-day"><div>Di</div><div class="emoji">☀️</div><div class="max">18°</div><div class="min">9°</div></div>
+            <div class="fc-day"><div>Mi</div><div class="emoji">🌦️</div><div class="max">13°</div><div class="min">8°</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:8px">Und: Wie gibst du die Koordinaten für einen Stand ein? Aktuell muss man lat/lng manuell eingeben — soll das künftig per Karte oder per GPS-Knopf gehen?</p>

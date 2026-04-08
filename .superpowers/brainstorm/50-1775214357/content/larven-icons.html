@@ -1,0 +1,246 @@
+<h2>Larvenstadium-Grafik mit Bienen-Icons</html>
+<p class="subtitle">So könnte die Phasendarstellung mit eigenen Icons aussehen</p>
+
+<style>
+.phone-mock {
+  background: white;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 20px;
+  max-width: 560px;
+  margin: 0 auto;
+  font-family: system-ui, sans-serif;
+}
+.mock-title { font-size: 14px; font-weight: 700; color: #111; margin-bottom: 4px; }
+.mock-sub { font-size: 12px; color: #6b7280; margin-bottom: 16px; }
+
+.phase-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin: 8px 0 16px;
+  overflow-x: auto;
+}
+.phase-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 72px;
+}
+.phase-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.phase-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.3;
+  max-width: 68px;
+}
+.phase-day {
+  font-size: 10px;
+  font-weight: 700;
+}
+.connector-wrap {
+  display: flex;
+  align-items: center;
+  padding-top: 24px;
+  flex: 0 0 16px;
+}
+.connector-line {
+  height: 2px;
+  width: 16px;
+  border-radius: 2px;
+}
+
+/* States */
+.done   .phase-icon-wrap { background: #d1fae5; }
+.done   .phase-label     { color: #065f46; }
+.done   .phase-day       { color: #059669; }
+.active .phase-icon-wrap { background: #fef3c7; box-shadow: 0 0 0 2.5px #f59e0b; }
+.active .phase-label     { color: #92400e; font-weight: 800; }
+.active .phase-day       { color: #d97706; }
+.future .phase-icon-wrap { background: #f3f4f6; }
+.future .phase-label     { color: #9ca3af; }
+.future .phase-day       { color: #d1d5db; }
+.done   .connector-line  { background: #6ee7b7; }
+.active .connector-line  { background: #fde68a; }
+.future .connector-line  { background: #e5e7eb; }
+
+.next-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #fef3c7; color: #92400e;
+  padding: 7px 14px; border-radius: 99px;
+  font-size: 12px; font-weight: 600;
+}
+
+/* Checkmark overlay for done */
+.check-badge {
+  position: absolute;
+  bottom: -4px; right: -4px;
+  width: 16px; height: 16px;
+  background: #059669;
+  border-radius: 50%;
+  border: 2px solid white;
+  display: flex; align-items: center; justify-content: center;
+}
+</style>
+
+<div class="mockup">
+  <div class="mockup-header">Zuchtkalender · Zuchtreihe "Carnica 2024"</div>
+  <div class="mockup-body">
+    <div class="phone-mock">
+      <div class="mock-title">Batch vom 15. März</div>
+      <div class="mock-sub">Tag 14 von 28 · Begattungsphase läuft</div>
+
+      <div class="phase-row">
+
+        <!-- T0 Umlarven – DONE -->
+        <div class="phase-node done">
+          <div class="phase-icon-wrap">
+            <!-- Larve im Wabenboden -->
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <!-- Wabenzelle Umriss -->
+              <path d="M16 4 L26 9.5 L26 20.5 L16 26 L6 20.5 L6 9.5 Z" stroke="#059669" stroke-width="1.5" fill="#ecfdf5"/>
+              <!-- Larve (kleines C-förmiges Grub) -->
+              <path d="M11 19 Q11 12 17 12 Q22 12 22 17 Q22 20 19 21" stroke="#059669" stroke-width="2" stroke-linecap="round" fill="none"/>
+              <circle cx="19.5" cy="21.5" r="1.5" fill="#059669"/>
+            </svg>
+            <div class="check-badge">
+              <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><polyline points="2,5 4,7 8,3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          <div class="phase-label">Umlarven</div>
+          <div class="phase-day">T 0</div>
+        </div>
+        <div class="connector-wrap done"><div class="connector-line" style="background:#6ee7b7"></div></div>
+
+        <!-- T4 Stiftkontrolle – DONE -->
+        <div class="phase-node done">
+          <div class="phase-icon-wrap">
+            <!-- Lupe über Larve -->
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <circle cx="13" cy="14" r="7" stroke="#059669" stroke-width="1.5" fill="#ecfdf5"/>
+              <line x1="18.5" y1="19.5" x2="24" y2="25" stroke="#059669" stroke-width="2" stroke-linecap="round"/>
+              <!-- Larve mini -->
+              <path d="M10 16 Q10 12 13 12 Q16 12 16 15" stroke="#059669" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+              <circle cx="16" cy="15.5" r="1" fill="#059669"/>
+            </svg>
+            <div class="check-badge">
+              <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><polyline points="2,5 4,7 8,3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          <div class="phase-label">Stift­kontrolle</div>
+          <div class="phase-day">T 4</div>
+        </div>
+        <div class="connector-wrap done"><div class="connector-line" style="background:#6ee7b7"></div></div>
+
+        <!-- T11 Schlupf – DONE -->
+        <div class="phase-node done">
+          <div class="phase-icon-wrap">
+            <!-- Biene schlüpft aus Wabe -->
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <!-- Zelle aufgebrochen -->
+              <path d="M16 6 L24 10.5 L24 19" stroke="#059669" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+              <path d="M8 10.5 L8 19 L16 24" stroke="#059669" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+              <!-- Bienenkörper oben herausragend -->
+              <ellipse cx="16" cy="14" rx="4" ry="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+              <!-- Streifen -->
+              <line x1="12.2" y1="13" x2="19.8" y2="13" stroke="#059669" stroke-width="1" opacity="0.5"/>
+              <line x1="12" y1="15.5" x2="20" y2="15.5" stroke="#059669" stroke-width="1" opacity="0.5"/>
+              <!-- Fühler -->
+              <path d="M14 8.5 Q12 6 11 5" stroke="#059669" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+              <path d="M18 8.5 Q20 6 21 5" stroke="#059669" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+            </svg>
+            <div class="check-badge">
+              <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><polyline points="2,5 4,7 8,3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          <div class="phase-label">Schlupf</div>
+          <div class="phase-day">T 11</div>
+        </div>
+        <div class="connector-wrap done"><div class="connector-line" style="background:#6ee7b7"></div></div>
+
+        <!-- T14 Begattung – ACTIVE -->
+        <div class="phase-node active">
+          <div class="phase-icon-wrap">
+            <!-- Königin im Flug (Begattungsflug) -->
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <!-- Flügel links -->
+              <ellipse cx="10" cy="12" rx="6" ry="3" fill="#fef9c3" stroke="#d97706" stroke-width="1.2" transform="rotate(-20 10 12)"/>
+              <!-- Flügel rechts -->
+              <ellipse cx="22" cy="12" rx="6" ry="3" fill="#fef9c3" stroke="#d97706" stroke-width="1.2" transform="rotate(20 22 12)"/>
+              <!-- Körper (Königin – länger) -->
+              <ellipse cx="16" cy="17" rx="3.5" ry="7" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+              <!-- Streifen -->
+              <line x1="12.6" y1="14" x2="19.4" y2="14" stroke="#d97706" stroke-width="1.2" opacity="0.6"/>
+              <line x1="12.4" y1="17" x2="19.6" y2="17" stroke="#d97706" stroke-width="1.2" opacity="0.6"/>
+              <line x1="12.6" y1="20" x2="19.4" y2="20" stroke="#d97706" stroke-width="1.2" opacity="0.6"/>
+              <!-- Krone -->
+              <path d="M13 9 L14.5 6 L16 8 L17.5 6 L19 9" stroke="#d97706" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+          </div>
+          <div class="phase-label">Begattung</div>
+          <div class="phase-day">T 14</div>
+        </div>
+        <div class="connector-wrap future"><div class="connector-line"></div></div>
+
+        <!-- T21 Eilage – FUTURE -->
+        <div class="phase-node future">
+          <div class="phase-icon-wrap">
+            <!-- Wabe mit Eiern (Punkte in Zellen) -->
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <!-- 3 Wabenzellen -->
+              <path d="M7 10 L12 7 L17 10 L17 16 L12 19 L7 16 Z" stroke="#d1d5db" stroke-width="1.2" fill="#f9fafb"/>
+              <path d="M15 10 L20 7 L25 10 L25 16 L20 19 L15 16 Z" stroke="#d1d5db" stroke-width="1.2" fill="#f9fafb"/>
+              <path d="M11 19 L16 16 L21 19 L21 25 L16 28 L11 25 Z" stroke="#d1d5db" stroke-width="1.2" fill="#f9fafb"/>
+              <!-- Eier (kleine ovale) -->
+              <ellipse cx="12" cy="13" rx="1.5" ry="2.5" fill="#d1d5db" transform="rotate(15 12 13)"/>
+              <ellipse cx="20" cy="13" rx="1.5" ry="2.5" fill="#d1d5db" transform="rotate(15 20 13)"/>
+              <ellipse cx="16" cy="22" rx="1.5" ry="2.5" fill="#d1d5db" transform="rotate(15 16 22)"/>
+            </svg>
+          </div>
+          <div class="phase-label">Eilage</div>
+          <div class="phase-day">T 21</div>
+        </div>
+        <div class="connector-wrap future"><div class="connector-line"></div></div>
+
+        <!-- T28 Beurteilung – FUTURE -->
+        <div class="phase-node future">
+          <div class="phase-icon-wrap">
+            <!-- Biene mit Stern / Bewertung -->
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <!-- Bienenkörper -->
+              <ellipse cx="16" cy="19" rx="4" ry="6" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+              <line x1="12.2" y1="17" x2="19.8" y2="17" stroke="#d1d5db" stroke-width="1" opacity="0.6"/>
+              <line x1="12" y1="20" x2="20" y2="20" stroke="#d1d5db" stroke-width="1" opacity="0.6"/>
+              <!-- Flügel mini -->
+              <ellipse cx="10" cy="15" rx="4" ry="2" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1" transform="rotate(-15 10 15)"/>
+              <ellipse cx="22" cy="15" rx="4" ry="2" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1" transform="rotate(15 22 15)"/>
+              <!-- Stern oben -->
+              <polygon points="16,4 17.2,7.6 21,7.6 18,9.8 19.2,13.4 16,11.2 12.8,13.4 14,9.8 11,7.6 14.8,7.6" fill="#e5e7eb" stroke="none"/>
+            </svg>
+          </div>
+          <div class="phase-label">Beurteilung</div>
+          <div class="phase-day">T 28</div>
+        </div>
+
+      </div>
+
+      <div class="next-chip">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Eilage prüfen in 7 Tagen (22. April)
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">Erledigte Phasen = grün mit Haken · Aktuelle Phase = gold umrandet · Zukünftige = grau</p>

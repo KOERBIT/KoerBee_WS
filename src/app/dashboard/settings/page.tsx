@@ -19,7 +19,7 @@ export default async function SettingsPage() {
   return (
     <SettingsPageClient
       users={users}
-      currentUserEmail={session?.user?.email}
+      currentUserEmail={session?.user?.email || undefined}
     />
   )
 }

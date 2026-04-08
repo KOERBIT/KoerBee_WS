@@ -1,0 +1,121 @@
+<h2>Design: Verkauf + Kommissions-Abrechnung</h2>
+<p class="subtitle">Links: Verkauf mit Lagerprüfung — Rechts: Kommission abrechnen mit Mengenangabe</p>
+
+<div class="split">
+
+  <!-- LEFT: Verkauf Modal -->
+  <div class="mockup">
+    <div class="mockup-header">Neuer Verkauf — Lagerprüfung</div>
+    <div class="mockup-body">
+      <div style="background:#fafaf9;padding:14px;border-radius:8px;font-family:sans-serif;">
+
+        <!-- Sale form -->
+        <div style="font-size:12px;font-weight:700;color:#18181b;margin-bottom:10px;">Verkauf erfassen</div>
+
+        <!-- Line item 1: OK -->
+        <div style="background:white;border-radius:10px;padding:10px;margin-bottom:8px;border:1.5px solid #e4e4e7;">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+            <div style="flex:1;background:#f4f4f5;border-radius:6px;padding:6px 8px;font-size:11px;color:#18181b;">Honig 500g</div>
+            <div style="width:48px;background:#f4f4f5;border-radius:6px;padding:6px 8px;font-size:11px;text-align:center;color:#18181b;">5</div>
+            <div style="width:56px;background:#f4f4f5;border-radius:6px;padding:6px 8px;font-size:11px;text-align:right;color:#18181b;">8,50 €</div>
+          </div>
+          <!-- Stock OK indicator -->
+          <div style="display:flex;align-items:center;gap:5px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:#16a34a;"></div>
+            <div style="font-size:10px;color:#16a34a;font-weight:500;">Lager: 24 verfügbar</div>
+          </div>
+        </div>
+
+        <!-- Line item 2: NOT ENOUGH STOCK -->
+        <div style="background:white;border-radius:10px;padding:10px;margin-bottom:8px;border:1.5px solid #fca5a5;">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+            <div style="flex:1;background:#f4f4f5;border-radius:6px;padding:6px 8px;font-size:11px;color:#18181b;">Wabenhonig 1kg</div>
+            <div style="width:48px;background:#fff1f2;border-radius:6px;padding:6px 8px;font-size:11px;text-align:center;color:#e11d48;font-weight:700;">3</div>
+            <div style="width:56px;background:#f4f4f5;border-radius:6px;padding:6px 8px;font-size:11px;text-align:right;color:#18181b;">18,00 €</div>
+          </div>
+          <!-- Stock ERROR indicator -->
+          <div style="display:flex;align-items:center;gap:5px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:#e11d48;"></div>
+            <div style="font-size:10px;color:#e11d48;font-weight:600;">Nur 0 im Lager — Bitte erst einbuchen</div>
+          </div>
+        </div>
+
+        <!-- Total -->
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid #f4f4f5;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:600;color:#71717a;">Gesamt</div>
+          <div style="font-size:14px;font-weight:800;color:#18181b;">42,50 €</div>
+        </div>
+
+        <!-- Blocked button -->
+        <div style="background:#e4e4e7;color:#a1a1aa;border-radius:8px;padding:9px;text-align:center;font-size:12px;font-weight:600;cursor:not-allowed;">
+          Verkauf buchen (Lager prüfen)
+        </div>
+        <div style="font-size:10px;color:#e11d48;text-align:center;margin-top:6px;">⚠ Nicht genug Lagerbestand für Wabenhonig</div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Kommission abrechnen -->
+  <div class="mockup">
+    <div class="mockup-header">Kommission abrechnen</div>
+    <div class="mockup-body">
+      <div style="background:#fafaf9;padding:14px;border-radius:8px;font-family:sans-serif;">
+
+        <div style="font-size:11px;font-weight:600;color:#71717a;margin-bottom:4px;">Standort</div>
+        <div style="font-size:14px;font-weight:700;color:#18181b;margin-bottom:12px;">Hofladen Müller</div>
+
+        <!-- Item 1 -->
+        <div style="background:white;border-radius:10px;padding:10px;margin-bottom:8px;border:1.5px solid #e4e4e7;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#18181b;">Honig 500g</div>
+              <div style="font-size:10px;color:#a1a1aa;">Platziert: 10 · Preis: 8,50 €</div>
+            </div>
+          </div>
+          <div style="font-size:10px;font-weight:600;color:#71717a;text-transform:uppercase;margin-bottom:5px;">Wie viele verkauft?</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:28px;height:28px;background:#f4f4f5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#52525b;">−</div>
+            <div style="font-size:20px;font-weight:800;color:#18181b;min-width:32px;text-align:center;">7</div>
+            <div style="width:28px;height:28px;background:#f4f4f5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#52525b;">+</div>
+            <div style="font-size:11px;color:#71717a;margin-left:4px;">→ <b style="color:#16a34a;">59,50 €</b></div>
+          </div>
+        </div>
+
+        <!-- Item 2 -->
+        <div style="background:white;border-radius:10px;padding:10px;margin-bottom:10px;border:1.5px solid #e4e4e7;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#18181b;">Wabenhonig 1kg</div>
+              <div style="font-size:10px;color:#a1a1aa;">Platziert: 4 · Preis: 18,00 €</div>
+            </div>
+          </div>
+          <div style="font-size:10px;font-weight:600;color:#71717a;text-transform:uppercase;margin-bottom:5px;">Wie viele verkauft?</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:28px;height:28px;background:#f4f4f5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#52525b;">−</div>
+            <div style="font-size:20px;font-weight:800;color:#18181b;min-width:32px;text-align:center;">2</div>
+            <div style="width:28px;height:28px;background:#f4f4f5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#52525b;">+</div>
+            <div style="font-size:11px;color:#71717a;margin-left:4px;">→ <b style="color:#16a34a;">36,00 €</b></div>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div style="background:#f0fdf4;border-radius:10px;padding:10px;margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <div style="font-size:11px;color:#71717a;">Erlös gesamt</div>
+            <div style="font-size:13px;font-weight:800;color:#16a34a;">95,50 €</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <div style="font-size:10px;color:#a1a1aa;">Erstellt Verkauf + bucht Lager ab</div>
+          </div>
+        </div>
+
+        <div style="background:#f59e0b;color:white;border-radius:8px;padding:9px;text-align:center;font-size:12px;font-weight:700;">Abrechnen & Verkauf buchen</div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:20px;">Verkauf: blockiert wenn Lager leer, zeigt Meldung pro Artikel. Kommission: Stepper pro Artikel, Gesamterlös live. Passt das?</p>

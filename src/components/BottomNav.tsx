@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { signOut } from 'next-auth/react'
 
 const MORE_ITEMS = [
   { label: 'Standorte', href: '/dashboard/apiaries', icon: (
@@ -43,6 +44,11 @@ const MORE_ITEMS = [
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/>
       <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+    </svg>
+  )},
+  { label: 'Abmelden', href: null, isLogout: true, icon: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
     </svg>
   )},
 ]
@@ -113,7 +119,7 @@ export default function BottomNav() {
   const pathname = usePathname()
   const [showMore, setShowMore] = useState(false)
 
-  const isMoreActive = MORE_ITEMS.some(i => pathname.startsWith(i.href))
+  const isMoreActive = MORE_ITEMS.some(i => i.href && pathname.startsWith(i.href))
 
   return (
     <>
@@ -126,9 +132,25 @@ export default function BottomNav() {
             <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto mb-4" />
             <div className="grid grid-cols-3 gap-2">
               {MORE_ITEMS.map(item => {
-                const active = pathname.startsWith(item.href)
+                const active = item.href ? pathname.startsWith(item.href) : false
+                const isLogout = (item as any).isLogout
+
+                if (isLogout) {
+                  return (
+                    <button key="logout"
+                      onClick={() => {
+                        setShowMore(false)
+                        signOut({ callbackUrl: '/login' })
+                      }}
+                      className="flex flex-col items-center gap-2 px-3 py-3 rounded-2xl transition-colors text-zinc-500 hover:bg-zinc-50">
+                      {item.icon}
+                      <span className="text-[11px] font-medium">{item.label}</span>
+                    </button>
+                  )
+                }
+
                 return (
-                  <Link key={item.href} href={item.href}
+                  <Link key={item.href} href={item.href!}
                     onClick={() => setShowMore(false)}
                     className={`flex flex-col items-center gap-2 px-3 py-3 rounded-2xl transition-colors ${active ? 'bg-amber-50 text-amber-600' : 'text-zinc-500 hover:bg-zinc-50'}`}>
                     {item.icon}

@@ -24,7 +24,15 @@
       "Bash(ls .env*)",
       "Bash(find C:/Users/koerbe/PycharmProjects/Bee/node_modules/next/dist/docs -name *proxy* -o -name *middleware*)",
       "Bash(ls /c/Users/koerbe/PycharmProjects/Bee/.env*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(bash:*)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; [print\\(k,v\\) for k in ['leaflet','react-leaflet','next','react'] if k in deps]\")",
+      "Read(//tmp/**)",
+      "Bash(npm list:*)",
+      "Bash(grep -E \"\\\\.\\(ts|js|tsx|jsx\\)$\")",
+      "Bash(netstat -ano)",
+      "Bash(curl -s -I http://localhost:3000/)",
+      "Bash(pkill -f \"next dev\")"
     ]
   }
 }
