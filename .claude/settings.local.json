@@ -32,7 +32,12 @@
       "Bash(grep -E \"\\\\.\\(ts|js|tsx|jsx\\)$\")",
       "Bash(netstat -ano)",
       "Bash(curl -s -I http://localhost:3000/)",
-      "Bash(pkill -f \"next dev\")"
+      "Bash(pkill -f \"next dev\")",
+      "Bash(taskkill /PID 18728 /F)",
+      "Bash(curl -s http://localhost:3000/api/inspections)",
+      "Bash(grep -n \"import.*InspectionForm\\\\|import.*EditInspection\\\\|import.*DeleteInspection\\\\|import.*InspectionRowMenu\" src/app/dashboard/inspections/*.tsx)",
+      "Bash(gh pr create --title 'feat: add edit and delete functionality for inspections' --body ':*)",
+      "Bash(curl -s http://localhost:3000/api/breeding)"
     ]
   }
 }
