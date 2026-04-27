@@ -148,6 +148,12 @@ model BreedingBatch {
   motherColony   Colony?         @relation(fields: [motherColonyId], references: [id], onDelete: SetNull)
   events         BreedingEvent[]
   createdAt      DateTime        @default(now())
+
+  // Tracking fields
+  larvaeGrafted  Int?
+  larvaeAccepted Int?
+  queensHatched  Int?
+  queensMated    Int?
 }
 
 model BreedingEvent {
@@ -159,6 +165,10 @@ model BreedingEvent {
   batchId   String
   batch     BreedingBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
   createdAt DateTime      @default(now())
+
+  // Tracking fields
+  eventValue Int?
+  eventNotes String?
 }
 
 // Kassenbuch
