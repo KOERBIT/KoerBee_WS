@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { AddInspectionButton } from './InspectionActions'
+import { InspectionRowMenu } from './InspectionRowMenu'
 
 function getVarroaFromItems(items: { key: string; value: string }[]) {
   return items.find(i => i.key === 'varroa')?.value ?? null
@@ -88,6 +89,7 @@ export default async function InspectionsPage() {
                         {status.label}
                       </span>
                     )}
+                    <InspectionRowMenu inspection={ins} colonies={colonies} />
                   </div>
                 </div>
 
