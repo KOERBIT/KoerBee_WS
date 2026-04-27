@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { EventInputModal } from './EventInputModal'
+import { BatchSummary } from './BatchSummary'
+import { ReportExportButton } from './ReportExportButton'
 
 const EVENT_LABELS: Record<string, { label: string; day: number; color: string }> = {
   graft:      { label: 'Umlarven',     day: 0,  color: 'bg-violet-100 text-violet-700 border-violet-200' },
@@ -83,10 +86,10 @@ function PhaseIcon({ type, size = 28 }: { type: string; size?: number }) {
 
 function PhaseTimeline({
   batch,
-  toggleEvent,
+  onEventClick,
 }: {
   batch: BreedingBatch
-  toggleEvent: (eventId: string, completed: boolean) => Promise<void>
+  onEventClick: (event: BreedingEvent, batchId: string) => Promise<void>
 }) {
   const phases = ['graft', 'check', 'hatch', 'mating', 'laying', 'assessment']
   const next = nextEvent(batch)
@@ -104,7 +107,7 @@ function PhaseTimeline({
             <div key={phase} className="flex items-start flex-1 min-w-0">
               <div className="flex flex-col items-center flex-shrink-0">
                 <button
-                  onClick={() => event && toggleEvent(event.id, !event.completed)}
+                  onClick={() => event && onEventClick(event, batch.id)}
                   disabled={!event}
                   className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all ${
                     isDone
@@ -170,6 +173,8 @@ interface BreedingEvent {
   date: string
   completed: boolean
   notes: string | null
+  eventValue: number | null
+  eventNotes: string | null
 }
 
 interface BreedingBatch {
@@ -179,6 +184,10 @@ interface BreedingBatch {
   status: string
   motherColony: { id: string; name: string } | null
   events: BreedingEvent[]
+  larvaeGrafted: number | null
+  larvaeAccepted: number | null
+  queensHatched: number | null
+  queensMated: number | null
 }
 
 interface BreedingLine {
@@ -214,6 +223,12 @@ export default function BreedingPage() {
   const [graftDate, setGraftDate] = useState('')
   const [batchNotes, setBatchNotes] = useState('')
   const [savingBatch, setSavingBatch] = useState(false)
+  const [larvaeGrafted, setLarvaeGrafted] = useState('')
+  const [openEventModal, setOpenEventModal] = useState<{
+    eventId: string
+    eventType: string
+    batchId: string
+  } | null>(null)
 
   const load = useCallback(async () => {
     const res = await fetch('/api/breeding')
@@ -250,11 +265,15 @@ export default function BreedingPage() {
     await fetch(`/api/breeding/${lineId}/batches`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ graftDate, notes: batchNotes }),
+      body: JSON.stringify({
+        graftDate,
+        notes: batchNotes,
+        larvaeGrafted: larvaeGrafted ? parseInt(larvaeGrafted) : null
+      }),
     })
     setSavingBatch(false)
     setShowAddBatch(null)
-    setGraftDate(''); setBatchNotes('')
+    setGraftDate(''); setBatchNotes(''); setLarvaeGrafted('')
     load()
   }
 
@@ -271,6 +290,20 @@ export default function BreedingPage() {
       body: JSON.stringify({ completed }),
     })
     load()
+  }
+
+  async function handleEventClick(event: BreedingEvent, batchId: string) {
+    // For check, hatch, and mating events, open modal to enter count
+    if (['check', 'hatch', 'mating'].includes(event.type) && !event.completed) {
+      setOpenEventModal({
+        eventId: event.id,
+        eventType: event.type,
+        batchId,
+      })
+    } else {
+      // For other events, just toggle
+      await toggleEvent(event.id, !event.completed)
+    }
   }
 
   if (loading) return (
@@ -373,10 +406,15 @@ export default function BreedingPage() {
                           className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
                       </div>
                       <div>
-                        <label className="block text-[12px] font-medium text-zinc-500 mb-1">Notiz</label>
-                        <input value={batchNotes} onChange={e => setBatchNotes(e.target.value)} placeholder="optional"
+                        <label className="block text-[12px] font-medium text-zinc-500 mb-1">Larven umgelarvt</label>
+                        <input type="number" value={larvaeGrafted} onChange={e => setLarvaeGrafted(e.target.value)} placeholder="optional" min="0"
                           className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
                       </div>
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-medium text-zinc-500 mb-1">Notiz</label>
+                      <input value={batchNotes} onChange={e => setBatchNotes(e.target.value)} placeholder="optional"
+                        className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
                     </div>
                     <div className="flex gap-2">
                       <button type="submit" disabled={savingBatch || !graftDate}
@@ -423,7 +461,19 @@ export default function BreedingPage() {
                           </button>
                         </div>
 
-                        <PhaseTimeline batch={batch} toggleEvent={toggleEvent} />
+                        <PhaseTimeline batch={batch} onEventClick={handleEventClick} />
+
+                        {/* Survival Summary */}
+                        {batch.events.some(e => e.completed) && (
+                          <div className="mt-4 pt-4 border-t border-zinc-100">
+                            <BatchSummary batch={batch} />
+                          </div>
+                        )}
+
+                        {/* Report Export */}
+                        <div className="mt-4">
+                          <ReportExportButton lineId={line.id} batchId={batch.id} lineName={line.name} />
+                        </div>
                       </div>
                     )
                   })}
@@ -471,6 +521,33 @@ export default function BreedingPage() {
           </div>
         </div>
       )}
+
+      {/* Event Input Modal */}
+      {openEventModal && (() => {
+        const event = lines.flatMap(l => l.batches).flatMap(b => b.events).find(e => e.id === openEventModal.eventId)
+        if (!event) return null
+
+        const eventMeta = EVENT_LABELS[event.type]
+        const inputLabels: Record<string, string> = {
+          check: 'Königinnen angenommen',
+          hatch: 'Königinnen geschlüpft',
+          mating: 'Königinnen begattet',
+        }
+
+        return (
+          <EventInputModal
+            isOpen={true}
+            onClose={() => setOpenEventModal(null)}
+            eventType={event.type}
+            eventLabel={eventMeta?.label || event.type}
+            batchId={openEventModal.batchId}
+            eventId={event.id}
+            inputLabel={inputLabels[event.type] || 'Wert'}
+            currentValue={event.eventValue ?? undefined}
+            currentNotes={event.eventNotes ?? undefined}
+          />
+        )
+      })()}
     </div>
   )
 }
