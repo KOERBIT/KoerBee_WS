@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 interface EventInputModalProps {
   isOpen: boolean
   onClose: () => void
+  onSave?: () => void
   eventType: string
   eventLabel: string
   batchId: string
@@ -18,6 +18,7 @@ interface EventInputModalProps {
 export function EventInputModal({
   isOpen,
   onClose,
+  onSave,
   eventType,
   eventLabel,
   batchId,
@@ -29,7 +30,6 @@ export function EventInputModal({
   const [value, setValue] = useState(currentValue?.toString() ?? '')
   const [notes, setNotes] = useState(currentNotes ?? '')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -48,8 +48,8 @@ export function EventInputModal({
       })
       setValue('')
       setNotes('')
+      if (onSave) onSave()
       onClose()
-      router.refresh()
     } finally {
       setLoading(false)
     }

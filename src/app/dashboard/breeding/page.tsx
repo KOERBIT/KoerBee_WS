@@ -538,6 +538,10 @@ export default function BreedingPage() {
           <EventInputModal
             isOpen={true}
             onClose={() => setOpenEventModal(null)}
+            onSave={() => {
+              setOpenEventModal(null)
+              load()
+            }}
             eventType={event.type}
             eventLabel={eventMeta?.label || event.type}
             batchId={openEventModal.batchId}

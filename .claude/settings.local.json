@@ -37,7 +37,11 @@
       "Bash(curl -s http://localhost:3000/api/inspections)",
       "Bash(grep -n \"import.*InspectionForm\\\\|import.*EditInspection\\\\|import.*DeleteInspection\\\\|import.*InspectionRowMenu\" src/app/dashboard/inspections/*.tsx)",
       "Bash(gh pr create --title 'feat: add edit and delete functionality for inspections' --body ':*)",
-      "Bash(curl -s http://localhost:3000/api/breeding)"
+      "Bash(curl -s http://localhost:3000/api/breeding)",
+      "Bash(curl -s -H \"Accept: text/html\" http://localhost:3000/dashboard/breeding)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(gh pr:*)",
+      "Bash(npm exec:*)"
     ]
   }
 }
