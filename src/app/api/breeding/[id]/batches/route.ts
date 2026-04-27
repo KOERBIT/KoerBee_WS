@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const line = await prisma.breedingLine.findFirst({ where: { id: lineId, userId: session.user.id } })
   if (!line) return NextResponse.json({ error: 'Linie nicht gefunden' }, { status: 404 })
 
-  const { graftDate, notes, motherColonyId } = await req.json()
+  const { graftDate, notes, motherColonyId, larvaeGrafted } = await req.json()
   if (!graftDate) return NextResponse.json({ error: 'Umlarv-Datum fehlt' }, { status: 400 })
 
   const graft = new Date(graftDate)
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       graftDate: graft,
       notes: notes || null,
       motherColonyId: motherColonyId || null,
+      larvaeGrafted: larvaeGrafted || null,
       events: {
         create: [
           { type: 'graft',       date: graft,              completed: false },
@@ -40,7 +41,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     },
     include: {
-      events: { orderBy: { date: 'asc' } },
+      events: {
+        select: {
+          id: true,
+          type: true,
+          date: true,
+          completed: true,
+          notes: true,
+          eventValue: true,
+          eventNotes: true,
+        },
+        orderBy: { date: 'asc' }
+      },
       motherColony: { select: { id: true, name: true } },
     },
   })

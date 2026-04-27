@@ -29,7 +29,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       queensHatched: queensHatched !== undefined ? queensHatched : undefined,
       queensMated: queensMated !== undefined ? queensMated : undefined,
     },
-    include: { events: true }
+    include: {
+      events: {
+        select: {
+          id: true,
+          type: true,
+          date: true,
+          completed: true,
+          notes: true,
+          eventValue: true,
+          eventNotes: true,
+        },
+        orderBy: { date: 'asc' }
+      },
+      motherColony: { select: { id: true, name: true } }
+    }
   })
 
   return NextResponse.json(updated)

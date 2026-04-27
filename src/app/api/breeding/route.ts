@@ -9,11 +9,33 @@ export async function GET() {
 
   const lines = await prisma.breedingLine.findMany({
     where: { userId: session.user.id },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
       batches: {
-        include: {
-          events: { orderBy: { date: 'asc' } },
+        select: {
+          id: true,
+          graftDate: true,
+          notes: true,
+          status: true,
+          larvaeGrafted: true,
+          larvaeAccepted: true,
+          queensHatched: true,
+          queensMated: true,
           motherColony: { select: { id: true, name: true } },
+          events: {
+            select: {
+              id: true,
+              type: true,
+              date: true,
+              completed: true,
+              notes: true,
+              eventValue: true,
+              eventNotes: true,
+            },
+            orderBy: { date: 'asc' }
+          },
         },
         orderBy: { graftDate: 'desc' },
       },

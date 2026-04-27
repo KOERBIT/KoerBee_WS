@@ -26,7 +26,40 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       eventValue: eventValue !== undefined ? eventValue : undefined,
       eventNotes: eventNotes !== undefined ? eventNotes : undefined,
     },
-    include: { batch: true }
+    select: {
+      id: true,
+      type: true,
+      date: true,
+      completed: true,
+      notes: true,
+      eventValue: true,
+      eventNotes: true,
+      batch: {
+        select: {
+          id: true,
+          graftDate: true,
+          notes: true,
+          status: true,
+          larvaeGrafted: true,
+          larvaeAccepted: true,
+          queensHatched: true,
+          queensMated: true,
+          motherColony: { select: { id: true, name: true } },
+          events: {
+            select: {
+              id: true,
+              type: true,
+              date: true,
+              completed: true,
+              notes: true,
+              eventValue: true,
+              eventNotes: true,
+            },
+            orderBy: { date: 'asc' }
+          }
+        }
+      }
+    }
   })
 
   // Auto-update batch tracking field based on event type
