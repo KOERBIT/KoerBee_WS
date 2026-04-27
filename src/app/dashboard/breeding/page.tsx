@@ -83,10 +83,10 @@ function PhaseIcon({ type, size = 28 }: { type: string; size?: number }) {
 
 function PhaseTimeline({
   batch,
-  toggleEvent,
+  onEventClick,
 }: {
   batch: BreedingBatch
-  toggleEvent: (eventId: string, completed: boolean) => Promise<void>
+  onEventClick: (event: BreedingEvent) => void
 }) {
   const phases = ['graft', 'check', 'hatch', 'mating', 'laying', 'assessment']
   const next = nextEvent(batch)
@@ -104,7 +104,7 @@ function PhaseTimeline({
             <div key={phase} className="flex items-start flex-1 min-w-0">
               <div className="flex flex-col items-center flex-shrink-0">
                 <button
-                  onClick={() => event && toggleEvent(event.id, !event.completed)}
+                  onClick={() => event && onEventClick(event)}
                   disabled={!event}
                   className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all ${
                     isDone
@@ -170,6 +170,8 @@ interface BreedingEvent {
   date: string
   completed: boolean
   notes: string | null
+  eventValue: number | null
+  eventNotes: string | null
 }
 
 interface BreedingBatch {
@@ -179,6 +181,10 @@ interface BreedingBatch {
   status: string
   motherColony: { id: string; name: string } | null
   events: BreedingEvent[]
+  larvaeGrafted: number | null
+  larvaeAccepted: number | null
+  queensHatched: number | null
+  queensMated: number | null
 }
 
 interface BreedingLine {
@@ -214,6 +220,11 @@ export default function BreedingPage() {
   const [graftDate, setGraftDate] = useState('')
   const [batchNotes, setBatchNotes] = useState('')
   const [savingBatch, setSavingBatch] = useState(false)
+  const [larvaeGrafted, setLarvaeGrafted] = useState('')
+  const [modalEvent, setModalEvent] = useState<{ eventId: string; eventType: string; batchId: string; lineId: string } | null>(null)
+  const [modalValue, setModalValue] = useState('')
+  const [modalNotes, setModalNotes] = useState('')
+  const [savingEvent, setSavingEvent] = useState(false)
 
   const load = useCallback(async () => {
     const res = await fetch('/api/breeding')
@@ -250,11 +261,15 @@ export default function BreedingPage() {
     await fetch(`/api/breeding/${lineId}/batches`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ graftDate, notes: batchNotes }),
+      body: JSON.stringify({
+        graftDate,
+        notes: batchNotes,
+        larvaeGrafted: larvaeGrafted ? parseInt(larvaeGrafted) : null,
+      }),
     })
     setSavingBatch(false)
     setShowAddBatch(null)
-    setGraftDate(''); setBatchNotes('')
+    setGraftDate(''); setBatchNotes(''); setLarvaeGrafted('')
     load()
   }
 
@@ -270,6 +285,35 @@ export default function BreedingPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ completed }),
     })
+    load()
+  }
+
+  function openEventModal(event: BreedingEvent, batchId: string, lineId: string) {
+    if (['check', 'hatch', 'mating'].includes(event.type) && !event.completed) {
+      setModalEvent({ eventId: event.id, eventType: event.type, batchId, lineId })
+      setModalValue(event.eventValue?.toString() ?? '')
+      setModalNotes(event.eventNotes ?? '')
+    } else {
+      toggleEvent(event.id, !event.completed)
+    }
+  }
+
+  async function saveEventValue() {
+    if (!modalEvent || !modalValue.trim()) return
+    setSavingEvent(true)
+    await fetch(`/api/breeding/events/${modalEvent.eventId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventValue: parseInt(modalValue),
+        eventNotes: modalNotes || null,
+        completed: true,
+      }),
+    })
+    setSavingEvent(false)
+    setModalEvent(null)
+    setModalValue('')
+    setModalNotes('')
     load()
   }
 
@@ -366,10 +410,15 @@ export default function BreedingPage() {
                 <div className="px-5 pb-4 border-t border-zinc-50">
                   <form onSubmit={e => addBatch(line.id, e)} className="pt-4 space-y-3">
                     <p className="text-[13px] font-semibold text-zinc-700">Neuer Zuchtgang</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block text-[12px] font-medium text-zinc-500 mb-1">Umlarv-Datum *</label>
                         <input type="date" required value={graftDate} onChange={e => setGraftDate(e.target.value)}
+                          className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                      </div>
+                      <div>
+                        <label className="block text-[12px] font-medium text-zinc-500 mb-1">Larven umgelarvt</label>
+                        <input type="number" min="0" value={larvaeGrafted} onChange={e => setLarvaeGrafted(e.target.value)} placeholder="optional"
                           className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
                       </div>
                       <div>
@@ -423,7 +472,58 @@ export default function BreedingPage() {
                           </button>
                         </div>
 
-                        <PhaseTimeline batch={batch} toggleEvent={toggleEvent} />
+                        <PhaseTimeline batch={batch} onEventClick={(event) => openEventModal(event, batch.id, line.id)} />
+
+                        {/* Survival Summary */}
+                        {batch.larvaeGrafted && batch.events.some(e => e.completed) && (
+                          <div className="mt-4 pt-4 border-t border-zinc-100">
+                            <p className="text-[12px] font-semibold text-violet-600 uppercase tracking-wider mb-2">Überlebenschance</p>
+                            <div className="space-y-1 text-[12px]">
+                              <div className="flex items-center gap-2">
+                                <span className="text-zinc-700"><span className="font-semibold">{batch.larvaeGrafted}</span> Larven umgelarvt</span>
+                              </div>
+                              {batch.larvaeAccepted !== null && (
+                                <>
+                                  <div className="flex justify-start">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-violet-400">
+                                      <polyline points="6 9 12 15 18 9" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-zinc-700"><span className="font-semibold">{batch.larvaeAccepted}</span> angenommen</span>
+                                    <span className="text-violet-600 font-semibold">{Math.round((batch.larvaeAccepted / batch.larvaeGrafted) * 100)}%</span>
+                                  </div>
+                                </>
+                              )}
+                              {batch.queensHatched !== null && batch.larvaeAccepted !== null && (
+                                <>
+                                  <div className="flex justify-start">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-violet-400">
+                                      <polyline points="6 9 12 15 18 9" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-zinc-700"><span className="font-semibold">{batch.queensHatched}</span> geschlüpft</span>
+                                    <span className="text-violet-600 font-semibold">{Math.round((batch.queensHatched / batch.larvaeAccepted) * 100)}%</span>
+                                  </div>
+                                </>
+                              )}
+                              {batch.queensMated !== null && batch.queensHatched !== null && (
+                                <>
+                                  <div className="flex justify-start">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-violet-400">
+                                      <polyline points="6 9 12 15 18 9" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-zinc-700"><span className="font-semibold">{batch.queensMated}</span> begattet</span>
+                                    <span className="text-violet-600 font-semibold">{Math.round((batch.queensMated / batch.queensHatched) * 100)}%</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
@@ -439,6 +539,49 @@ export default function BreedingPage() {
           )
         })}
       </div>
+
+      {/* Event Value Modal */}
+      {modalEvent && (() => {
+        const event = lines.flatMap(l => l.batches).flatMap(b => b.events).find(e => e.id === modalEvent.eventId)
+        const eventLabel = EVENT_LABELS[modalEvent.eventType]?.label || modalEvent.eventType
+        const inputLabels: Record<string, string> = {
+          check: 'Königinnen angenommen',
+          hatch: 'Königinnen geschlüpft',
+          mating: 'Königinnen begattet',
+        }
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+              <div className="px-6 py-4 border-b border-zinc-100">
+                <h2 className="text-[15px] font-semibold text-zinc-900">{eventLabel}</h2>
+              </div>
+              <form onSubmit={e => { e.preventDefault(); saveEventValue() }} className="px-6 py-5 space-y-4">
+                <div>
+                  <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">{inputLabels[modalEvent.eventType] || 'Wert'} *</label>
+                  <input type="number" min="0" required value={modalValue} onChange={e => setModalValue(e.target.value)}
+                    className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                    autoFocus />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-zinc-700 mb-1.5">Kommentar (optional)</label>
+                  <textarea value={modalNotes} onChange={e => setModalNotes(e.target.value)} rows={3} placeholder="z.B. '3 deformiert', '1 nicht begattet'"
+                    className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent resize-none" />
+                </div>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setModalEvent(null)}
+                    className="flex-1 px-4 py-2 text-[13px] font-medium text-zinc-700 hover:bg-zinc-100 rounded-lg transition-colors">
+                    Abbrechen
+                  </button>
+                  <button type="submit" disabled={savingEvent || !modalValue.trim()}
+                    className="flex-1 px-4 py-2 text-[13px] font-medium text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 rounded-lg transition-colors">
+                    {savingEvent ? 'Wird gespeichert…' : 'Speichern'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Add Line Modal */}
       {showAddLine && (
