@@ -8,7 +8,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { completed } = await req.json()
+  const { completed, eventValue, eventNotes } = await req.json()
 
   // Verify ownership through chain
   const event = await prisma.breedingEvent.findFirst({
@@ -21,8 +21,28 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const updated = await prisma.breedingEvent.update({
     where: { id },
-    data: { completed },
+    data: {
+      completed: completed !== undefined ? completed : undefined,
+      eventValue: eventValue !== undefined ? eventValue : undefined,
+      eventNotes: eventNotes !== undefined ? eventNotes : undefined,
+    },
+    include: { batch: true }
   })
+
+  // Auto-update batch tracking field based on event type
+  if (eventValue !== undefined) {
+    const updateData: Record<string, number> = {}
+    if (event.type === 'check') updateData.larvaeAccepted = eventValue
+    if (event.type === 'hatch') updateData.queensHatched = eventValue
+    if (event.type === 'mating') updateData.queensMated = eventValue
+
+    if (Object.keys(updateData).length > 0) {
+      await prisma.breedingBatch.update({
+        where: { id: event.batchId },
+        data: updateData
+      })
+    }
+  }
 
   return NextResponse.json(updated)
 }
