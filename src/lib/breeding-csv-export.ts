@@ -194,7 +194,9 @@ export function generateBreedingCsv(data: ReportData): string {
 }
 
 export function downloadCsv(content: string, filename: string = 'zucht-report.csv') {
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+  // Add UTF-8 BOM for proper encoding in Excel
+  const bom = '\uFEFF'
+  const blob = new Blob([bom + content], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   const url = URL.createObjectURL(blob)
   link.setAttribute('href', url)
