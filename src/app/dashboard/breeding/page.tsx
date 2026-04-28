@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 
 const EVENT_LABELS: Record<string, { label: string; day: number; color: string }> = {
   graft:      { label: 'Umlarven',     day: 0,  color: 'bg-violet-100 text-violet-700 border-violet-200' },
@@ -209,6 +210,7 @@ function daysUntil(dateStr: string): number {
 }
 
 export default function BreedingPage() {
+  const router = useRouter()
   const [lines, setLines] = useState<BreedingLine[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddLine, setShowAddLine] = useState(false)
@@ -225,6 +227,24 @@ export default function BreedingPage() {
   const [modalValue, setModalValue] = useState('')
   const [modalNotes, setModalNotes] = useState('')
   const [savingEvent, setSavingEvent] = useState(false)
+  const [selectedLinesForReport, setSelectedLinesForReport] = useState<Set<string>>(new Set())
+
+  function toggleLineSelection(lineId: string) {
+    const next = new Set(selectedLinesForReport)
+    if (next.has(lineId)) {
+      next.delete(lineId)
+    } else {
+      next.add(lineId)
+    }
+    setSelectedLinesForReport(next)
+  }
+
+  function generateReport() {
+    const lineIds = Array.from(selectedLinesForReport).join(',')
+    if (lineIds) {
+      router.push(`/dashboard/breeding/report?lineIds=${lineIds}`)
+    }
+  }
 
   const load = useCallback(async () => {
     const res = await fetch('/api/breeding')
@@ -331,13 +351,26 @@ export default function BreedingPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Zuchtkalender</h1>
           <p className="text-zinc-500 text-[14px] mt-1">{lines.length} Zuchtreihe{lines.length !== 1 ? 'n' : ''}</p>
         </div>
-        <button onClick={() => setShowAddLine(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[13px] font-semibold transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Zuchtreihe anlegen
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowAddLine(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[13px] font-semibold transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Zuchtreihe anlegen
+          </button>
+          {selectedLinesForReport.size > 0 && (
+            <button
+              onClick={generateReport}
+              className="flex items-center gap-2 px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-xl text-[13px] font-semibold transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 12h6m-6 4h6M7 20h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v11a2 2 0 002 2z"/>
+              </svg>
+              Report ({selectedLinesForReport.size})
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Info banner */}
@@ -375,23 +408,31 @@ export default function BreedingPage() {
             <div key={line.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
               {/* Line header */}
               <div className="px-5 py-4 flex items-center justify-between">
-                <button className="flex-1 text-left" onClick={() => setExpandedLine(isOpen ? null : line.id)}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-violet-100 rounded-xl flex items-center justify-center shrink-0">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.75" strokeLinecap="round">
-                        <circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/>
-                      </svg>
+                <div className="flex items-center gap-3 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedLinesForReport.has(line.id)}
+                    onChange={() => toggleLineSelection(line.id)}
+                    className="w-4 h-4 rounded border-zinc-300"
+                  />
+                  <button className="flex-1 text-left" onClick={() => setExpandedLine(isOpen ? null : line.id)}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-violet-100 rounded-xl flex items-center justify-center shrink-0">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.75" strokeLinecap="round">
+                          <circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-[15px] font-semibold text-zinc-900">{line.name}</p>
+                        {line.description && <p className="text-[12px] text-zinc-400">{line.description}</p>}
+                      </div>
+                      <span className="ml-2 text-[11px] font-medium bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full">
+                        {line.batches.length} Batch{line.batches.length !== 1 ? 'es' : ''}
+                      </span>
                     </div>
-                    <div>
-                      <p className="text-[15px] font-semibold text-zinc-900">{line.name}</p>
-                      {line.description && <p className="text-[12px] text-zinc-400">{line.description}</p>}
-                    </div>
-                    <span className="ml-2 text-[11px] font-medium bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full">
-                      {line.batches.length} Batch{line.batches.length !== 1 ? 'es' : ''}
-                    </span>
-                  </div>
-                </button>
-                <div className="flex items-center gap-2 ml-4">
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
                   <button onClick={() => { setShowAddBatch(line.id); setExpandedLine(line.id) }}
                     className="text-[12px] font-medium text-amber-600 hover:text-amber-700 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
                     + Batch
