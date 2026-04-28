@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { generateQueenNumbers, parseQueensJson, serializeQueens, QueenRecord } from '@/lib/breeding-queens'
+import { randomUUID } from 'crypto'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
@@ -73,6 +75,49 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await prisma.breedingBatch.update({
         where: { id: event.batchId },
         data: updateData
+      })
+    }
+  }
+
+  // Generate queen numbers for hatch events
+  if (event.type === 'hatch' && eventValue && !event.completed) {
+    const batch = await prisma.breedingBatch.findUnique({
+      where: { id: event.batchId },
+      include: { line: true },
+    })
+
+    if (batch && batch.line) {
+      const hatchDate = new Date(event.date)
+      const hatchDateStr = hatchDate.toISOString().split('T')[0] // YYYY-MM-DD
+
+      const existingQueens = batch.queensIds ? parseQueensJson(batch.queensIds) : []
+      const newQueenNumbers = generateQueenNumbers({
+        lineName: batch.line.name,
+        hatchDate: hatchDateStr,
+        count: eventValue,
+        existingQueens: existingQueens.map(q => ({
+          number: q.number,
+          status: q.status
+        })),
+      })
+
+      // Create queen records
+      const newQueens: QueenRecord[] = newQueenNumbers.map((number) => ({
+        id: randomUUID(),
+        number,
+        hatchDate: new Date(hatchDateStr),
+        status: 'hatched',
+        notes: eventNotes || undefined,
+      }))
+
+      const allQueens = [...existingQueens, ...newQueens]
+
+      // Update batch with new queens
+      await prisma.breedingBatch.update({
+        where: { id: batch.id },
+        data: {
+          queensIds: serializeQueens(allQueens),
+        },
       })
     }
   }
