@@ -12,6 +12,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!existing) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
 
   const body = await req.json()
+  const { flightRadius } = body
   const apiary = await prisma.apiary.update({
     where: { id },
     data: {
@@ -22,6 +23,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       ...(body.status !== undefined && { status: body.status }),
       ...(body.statusNote !== undefined && { statusNote: body.statusNote ?? null }),
       ...(body.statusChangedAt !== undefined && { statusChangedAt: body.statusChangedAt ? new Date(body.statusChangedAt) : null }),
+      ...(flightRadius !== undefined && { flightRadius: flightRadius ? parseFloat(flightRadius) : null }),
     },
   })
   return NextResponse.json(apiary)
