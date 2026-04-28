@@ -12,6 +12,7 @@ interface Apiary {
   lat: number | null
   lng: number | null
   notes: string | null
+  flightRadius: number | null
 }
 
 function toFloat(val: string): number | null {
@@ -36,6 +37,7 @@ export function ApiaryDetailActions({ apiary }: { apiary: Apiary }) {
         lat: toFloat(data.lat),
         lng: toFloat(data.lng),
         notes: data.notes || null,
+        flightRadius: data.flightRadius ? parseFloat(data.flightRadius) : null,
       }),
     })
     setLoading(false)
@@ -108,6 +110,7 @@ export function ApiaryDetailActions({ apiary }: { apiary: Apiary }) {
               lat: apiary.lat?.toString() ?? '',
               lng: apiary.lng?.toString() ?? '',
               notes: apiary.notes ?? '',
+              flightRadius: apiary.flightRadius?.toString() ?? '',
             }}
             onSubmit={handleEdit}
             loading={loading}

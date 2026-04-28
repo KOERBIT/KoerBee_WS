@@ -15,6 +15,7 @@ export interface ApiaryFormData {
   lat: string
   lng: string
   notes: string
+  flightRadius: string
 }
 
 interface Apiary {
@@ -35,6 +36,7 @@ export function ApiaryForm({ initial, onSubmit, loading }: {
     lat: initial?.lat ?? '',
     lng: initial?.lng ?? '',
     notes: initial?.notes ?? '',
+    flightRadius: initial?.flightRadius ?? '',
   })
   const [gpsError, setGpsError] = useState<string | null>(null)
 
@@ -101,6 +103,22 @@ export function ApiaryForm({ initial, onSubmit, loading }: {
         <textarea {...field('notes')} rows={3} placeholder="Beschreibung, Zufahrt..."
           className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[14px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-none" />
       </div>
+
+      <div>
+        <label className="block text-[12px] font-medium text-zinc-500 mb-1">Flugradius (km)</label>
+        <input
+          type="number"
+          step="0.5"
+          min="0"
+          max="10"
+          placeholder="z.B. 2 oder 3.5"
+          value={form.flightRadius}
+          onChange={e => setForm(f => ({ ...f, flightRadius: e.target.value }))}
+          className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+        />
+        <p className="text-[11px] text-zinc-400 mt-1">Der Radius wird als Kreis auf der Karte angezeigt</p>
+      </div>
+
       <button type="submit" disabled={loading}
         className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-[14px] font-semibold transition-colors">
         {loading ? 'Wird gespeichert…' : 'Speichern'}
@@ -129,6 +147,7 @@ export function AddApiaryButton() {
         lat: toFloat(data.lat),
         lng: toFloat(data.lng),
         notes: data.notes || null,
+        flightRadius: data.flightRadius ? parseFloat(data.flightRadius) : null,
       }),
     })
     setLoading(false)
@@ -169,6 +188,7 @@ export function ApiaryRowActions({ apiary }: { apiary: Apiary }) {
         lat: toFloat(data.lat),
         lng: toFloat(data.lng),
         notes: data.notes || null,
+        flightRadius: data.flightRadius ? parseFloat(data.flightRadius) : null,
       }),
     })
     setLoading(false)

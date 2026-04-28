@@ -41,7 +41,8 @@
       "Bash(curl -s -H \"Accept: text/html\" http://localhost:3000/dashboard/breeding)",
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
       "Bash(gh pr:*)",
-      "Bash(npm exec:*)"
+      "Bash(npm exec:*)",
+      "Bash(curl -s \"http://localhost:3000/api/breeding/queens\" -H \"Cookie: sessionToken=test\")"
     ]
   }
 }
