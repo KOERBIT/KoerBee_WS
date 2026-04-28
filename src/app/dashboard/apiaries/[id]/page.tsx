@@ -39,7 +39,7 @@ export default async function ApiaryDetailPage({ params }: { params: Promise<{ i
         _count: { select: { colonies: true } },
       },
     }),
-    prisma.apiary.findMany({ where: { userId: session!.user.id }, select: { id: true, name: true } }),
+    prisma.apiary.findMany({ where: { userId: session!.user.id }, select: { id: true, name: true, flightRadius: true } }),
   ])
 
   if (!apiary) notFound()
@@ -102,7 +102,7 @@ export default async function ApiaryDetailPage({ params }: { params: Promise<{ i
       {/* Karte + Wetter */}
       {apiary.lat && apiary.lng && (
         <>
-          <ApiaryMapClient lat={apiary.lat} lng={apiary.lng} name={apiary.name} />
+          <ApiaryMapClient lat={apiary.lat} lng={apiary.lng} name={apiary.name} flightRadius={apiary.flightRadius} />
           <WeatherWidget lat={apiary.lat} lng={apiary.lng} />
         </>
       )}

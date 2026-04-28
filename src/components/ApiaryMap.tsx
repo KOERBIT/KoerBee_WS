@@ -4,6 +4,7 @@
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
+import { FlightRadiusCircle } from '@/components/FlightRadiusCircle'
 
 // Leaflet default-Icon fix (Next.js bundler verschluckt die PNG-Assets)
 const HIVE_ICON = L.divIcon({
@@ -18,9 +19,10 @@ interface ApiaryMapProps {
   lat: number
   lng: number
   name: string
+  flightRadius?: number | null
 }
 
-export function ApiaryMap({ lat, lng, name }: ApiaryMapProps) {
+export function ApiaryMap({ lat, lng, name, flightRadius }: ApiaryMapProps) {
   return (
     <div className="rounded-2xl overflow-hidden shadow-sm mb-6" style={{ height: 200 }}>
       <MapContainer
@@ -38,6 +40,14 @@ export function ApiaryMap({ lat, lng, name }: ApiaryMapProps) {
         <Marker position={[lat, lng]} icon={HIVE_ICON}>
           <Popup>{name}</Popup>
         </Marker>
+        {flightRadius && (
+          <FlightRadiusCircle
+            key={`circle-${name}`}
+            center={[lat, lng]}
+            radiusKm={flightRadius}
+            name={name}
+          />
+        )}
       </MapContainer>
     </div>
   )

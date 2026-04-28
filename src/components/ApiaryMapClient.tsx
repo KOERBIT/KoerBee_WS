@@ -12,8 +12,9 @@ interface ApiaryMapClientProps {
   lat: number
   lng: number
   name: string
+  flightRadius?: number | null
 }
 
-export function ApiaryMapClient({ lat, lng, name }: ApiaryMapClientProps) {
-  return <ApiaryMap lat={lat} lng={lng} name={name} />
+export function ApiaryMapClient({ lat, lng, name, flightRadius }: ApiaryMapClientProps) {
+  return <ApiaryMap lat={lat} lng={lng} name={name} flightRadius={flightRadius} />
 }
