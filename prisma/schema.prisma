@@ -36,6 +36,7 @@ model Apiary {
   status          String    @default("active")
   statusNote      String?
   statusChangedAt DateTime?
+  flightRadius    Float?    // in kilometers
   userId          String
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   colonies        Colony[]
@@ -154,6 +155,7 @@ model BreedingBatch {
   larvaeAccepted Int?
   queensHatched  Int?
   queensMated    Int?
+  queensIds      Json?           // Array of { id: string, number: string, hatchDate: DateTime, status: string, notes?: string }
 }
 
 model BreedingEvent {
