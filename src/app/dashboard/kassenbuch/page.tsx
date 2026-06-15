@@ -513,7 +513,11 @@ export default function KassenbuchPage() {
   const thisMonth = sales.filter(s => new Date(s.date).getMonth() === new Date().getMonth() && new Date(s.date).getFullYear() === new Date().getFullYear())
   const monthTotal = thisMonth.reduce((s, sale) => s + sale.total, 0)
   const activeConsignments = consignments.filter(c => c.status === 'active')
-  const consignmentValue = activeConsignments.reduce((s, c) => s + c.items.reduce((si, i) => si + i.quantity * i.price, 0), 0)
+  // Nur der offene Warenwert: bereits verkaufte/zurückgegebene Mengen werden
+  // zum Artikelpreis (Platzierungspreis) abgezogen – auch wenn der tatsächliche
+  // Verkaufspreis abweicht (z.B. 0 € verschenkt).
+  const consignmentValue = activeConsignments.reduce((s, c) =>
+    s + c.items.reduce((si, i) => si + (i.quantity - i.soldQuantity - i.returnedQuantity) * i.price, 0), 0)
 
   if (loading) return (
     <div className="px-8 py-8 flex items-center justify-center">
