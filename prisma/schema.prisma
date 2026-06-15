@@ -210,21 +210,26 @@ model CommissionStore {
   userId       String
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   consignments Consignment[]
+  sales        Sale[]
   createdAt    DateTime      @default(now())
 }
 
 model Sale {
-  id           String     @id @default(cuid())
-  date         DateTime   @default(now())
-  customerName String?
-  customerId   String?
-  customer     Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  items        SaleItem[]
-  total        Float      @default(0)
-  notes        String?
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt    DateTime   @default(now())
+  id                String           @id @default(cuid())
+  date              DateTime         @default(now())
+  customerName      String?
+  customerId        String?
+  customer          Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  commissionStoreId String?
+  commissionStore   CommissionStore? @relation(fields: [commissionStoreId], references: [id], onDelete: SetNull)
+  consignmentId     String?
+  consignment       Consignment?     @relation(fields: [consignmentId], references: [id], onDelete: SetNull)
+  items             SaleItem[]
+  total             Float            @default(0)
+  notes             String?
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
 }
 
 model SaleItem {
@@ -247,6 +252,7 @@ model Consignment {
   commissionStoreId String?
   commissionStore  CommissionStore?  @relation(fields: [commissionStoreId], references: [id], onDelete: SetNull)
   items            ConsignmentItem[]
+  sales            Sale[]
   status           String            @default("active")
   notes            String?
   userId           String

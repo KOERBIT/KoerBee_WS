@@ -7,7 +7,7 @@ type Tab = 'verkauf' | 'kommission' | 'artikel' | 'ausgaben' | 'laeden' | 'ueber
 interface CommissionStore { id: string; name: string; createdAt: string }
 interface Product { id: string; name: string; unit: string; price: number; description: string | null; fillAmount: number | null; fillUnit: string | null; stockQuantity: number }
 interface SaleItem { id: string; product: Product; quantity: number; price: number; total: number }
-interface Sale { id: string; date: string; customerName: string | null; total: number; notes: string | null; items: SaleItem[] }
+interface Sale { id: string; date: string; customerName: string | null; total: number; notes: string | null; items: SaleItem[]; commissionStore?: CommissionStore | null }
 interface ConsignmentItem { id: string; product: Product; quantity: number; price: number; soldQuantity: number; returnedQuantity: number }
 interface Consignment { id: string; date: string; locationName: string | null; status: string; notes: string | null; items: ConsignmentItem[]; commissionStore?: CommissionStore | null }
 interface Expense { id: string; date: string; amount: number; category: string; description: string | null }
@@ -65,10 +65,13 @@ export default function KassenbuchPage() {
   const [consItems, setConsItems] = useState([{ productId: '', quantity: 1, price: 0 }])
   const [savingCons, setSavingCons] = useState(false)
   const [consStoreId, setConsStoreId] = useState<string | null>(null)
-  const [settleConsignment, setSettleConsignment] = useState<Consignment | null>(null)
-  const [settleSoldQtys, setSettleSoldQtys] = useState<Record<string, number>>({})
-  const [settlingCons, setSettlingCons] = useState(false)
-  const [settleStockError, setSettleStockError] = useState<{ productName: string; requested: number; available: number }[]>([])
+  const [sellConsignment, setSellConsignment] = useState<Consignment | null>(null)
+  const [sellQtys, setSellQtys] = useState<Record<string, number>>({})
+  const [sellPrices, setSellPrices] = useState<Record<string, number>>({})
+  const [sellName, setSellName] = useState('')
+  const [sellDate, setSellDate] = useState(new Date().toISOString().slice(0, 10))
+  const [sellingCons, setSellingCons] = useState(false)
+  const [sellStockError, setSellStockError] = useState<{ productName: string; requested: number; available: number }[]>([])
 
   // Product form
   const [showProduct, setShowProduct] = useState(false)
@@ -214,35 +217,47 @@ export default function KassenbuchPage() {
     load()
   }
 
-  function openSettle(c: Consignment) {
-    const initial: Record<string, number> = {}
-    c.items.forEach(item => { initial[item.id] = item.soldQuantity })
-    setSettleSoldQtys(initial)
-    setSettleStockError([])
-    setSettleConsignment(c)
+  function openSell(c: Consignment) {
+    const qtys: Record<string, number> = {}
+    const prices: Record<string, number> = {}
+    c.items.forEach(item => { qtys[item.id] = 0; prices[item.id] = item.price })
+    setSellQtys(qtys)
+    setSellPrices(prices)
+    setSellName('')
+    setSellDate(new Date().toISOString().slice(0, 10))
+    setSellStockError([])
+    setSellConsignment(c)
   }
 
-  async function confirmSettle() {
-    if (!settleConsignment) return
-    setSettlingCons(true)
-    setSettleStockError([])
-    const items = settleConsignment.items.map(item => ({
-      id: item.id,
-      soldQuantity: settleSoldQtys[item.id] ?? 0,
-      returnedQuantity: item.quantity - (settleSoldQtys[item.id] ?? 0),
-    }))
-    const res = await fetch(`/api/kassenbuch/consignments/${settleConsignment.id}`, {
-      method: 'PATCH',
+  async function confirmSell() {
+    if (!sellConsignment) return
+    setSellingCons(true)
+    setSellStockError([])
+    const items = sellConsignment.items
+      .map(item => ({
+        id: item.id,
+        quantity: sellQtys[item.id] ?? 0,
+        price: sellPrices[item.id] ?? item.price,
+      }))
+      .filter(i => i.quantity > 0)
+    if (items.length === 0) { setSellingCons(false); return }
+    const res = await fetch(`/api/kassenbuch/consignments/${sellConsignment.id}/sell`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'settled', items }),
+      body: JSON.stringify({ customerName: sellName || null, date: sellDate, items }),
     })
-    setSettlingCons(false)
+    setSellingCons(false)
     if (res.status === 409) {
       const body = await res.json()
-      setSettleStockError(body.items ?? [])
+      if (body.error === 'exceeds_open') {
+        setSellStockError((body.items ?? []).map((e: { productName: string; requested: number; open: number }) =>
+          ({ productName: e.productName, requested: e.requested, available: e.open })))
+      } else {
+        setSellStockError(body.items ?? [])
+      }
       return
     }
-    setSettleConsignment(null)
+    setSellConsignment(null)
     load()
   }
 
@@ -392,33 +407,25 @@ export default function KassenbuchPage() {
   function getExportData() {
     const start = new Date(exportYear, exportMonth - 1, 1)
     const end = new Date(exportYear, exportMonth, 0, 23, 59, 59)
+    // Kommissionsverkäufe sind echte Verkäufe (mit commissionStore) und stecken
+    // bereits in `sales` — daher zählt die Einnahme allein aus den Verkäufen.
     const filteredSales = sales.filter(s => { const d = new Date(s.date); return d >= start && d <= end })
     const filteredExpenses = expenses.filter(e => { const d = new Date(e.date); return d >= start && d <= end })
-    const filteredConsignments = consignments.filter(c => { const d = new Date(c.date); return d >= start && d <= end })
-    const salesIncome = filteredSales.reduce((s, sale) => s + sale.total, 0)
-    const commissionIncome = filteredConsignments
-      .filter(c => c.status === 'settled')
-      .reduce((s, c) => s + c.items.reduce((si, i) => si + i.soldQuantity * i.price, 0), 0)
-    const totalIncome = salesIncome + commissionIncome
+    const totalIncome = filteredSales.reduce((s, sale) => s + sale.total, 0)
     const totalExpenses = filteredExpenses.reduce((s, exp) => s + exp.amount, 0)
-    return { filteredSales, filteredConsignments, filteredExpenses, totalIncome, totalExpenses, saldo: totalIncome - totalExpenses }
+    return { filteredSales, filteredExpenses, totalIncome, totalExpenses, saldo: totalIncome - totalExpenses }
   }
 
   function downloadCsv() {
-    const { filteredSales, filteredConsignments, filteredExpenses, totalIncome, totalExpenses, saldo } = getExportData()
+    const { filteredSales, filteredExpenses, totalIncome, totalExpenses, saldo } = getExportData()
     const monthName = new Date(exportYear, exportMonth - 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
     const rows: string[] = [
       'Datum;Typ;Beschreibung;Betrag',
-      ...filteredConsignments
-        .filter(c => c.status === 'settled')
-        .map(c => {
-          const total = c.items.reduce((sum, item) => sum + item.soldQuantity * item.price, 0)
-          const beschreibung = c.commissionStore?.name || c.locationName || '—'
-          return `${new Date(c.date).toLocaleDateString('de-DE')};Kommission;${beschreibung};${total.toFixed(2)}`
-        }),
-      ...filteredSales.map(s =>
-        `${new Date(s.date).toLocaleDateString('de-DE')};Verkauf;${s.customerName || 'Laufkundschaft'};${s.total.toFixed(2)}`
-      ),
+      ...filteredSales.map(s => {
+        const typ = s.commissionStore ? 'Kommission' : 'Verkauf'
+        const beschreibung = s.commissionStore ? `${s.commissionStore.name}${s.customerName ? ' — ' + s.customerName : ''}` : (s.customerName || 'Laufkundschaft')
+        return `${new Date(s.date).toLocaleDateString('de-DE')};${typ};${beschreibung};${s.total.toFixed(2)}`
+      }),
       ...filteredExpenses.map(e =>
         `${new Date(e.date).toLocaleDateString('de-DE')};Ausgabe;${e.category}${e.description ? ' — ' + e.description : ''};-${e.amount.toFixed(2)}`
       ),
@@ -438,7 +445,7 @@ export default function KassenbuchPage() {
   }
 
   async function downloadPdf() {
-    const { filteredSales, filteredConsignments, filteredExpenses, totalIncome, totalExpenses, saldo } = getExportData()
+    const { filteredSales, filteredExpenses, totalIncome, totalExpenses, saldo } = getExportData()
     const monthName = new Date(exportYear, exportMonth - 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
     const { default: jsPDF } = await import('jspdf')
     const { default: autoTable } = await import('jspdf-autotable')
@@ -450,27 +457,13 @@ export default function KassenbuchPage() {
     doc.setFontSize(11)
     doc.text('Einnahmen', 14, 30)
 
-    // Kommissionen + Verkäufe combined
-    const einnahmenData = [
-      ...filteredConsignments
-        .filter(c => c.status === 'settled')
-        .map(c => {
-          const total = c.items.reduce((sum, item) => sum + item.soldQuantity * item.price, 0)
-          const name = c.commissionStore?.name || c.locationName || '—'
-          return [
-            new Date(c.date).toLocaleDateString('de-DE'),
-            'Kommission',
-            name,
-            `${total.toFixed(2)} €`,
-          ]
-        }),
-      ...filteredSales.map(s => [
-        new Date(s.date).toLocaleDateString('de-DE'),
-        'Verkauf',
-        s.customerName || 'Laufkundschaft',
-        `${s.total.toFixed(2)} €`,
-      ]),
-    ]
+    // Verkäufe (inkl. Kommissionsverkäufe, gekennzeichnet über den Laden)
+    const einnahmenData = filteredSales.map(s => [
+      new Date(s.date).toLocaleDateString('de-DE'),
+      s.commissionStore ? 'Kommission' : 'Verkauf',
+      s.commissionStore ? `${s.commissionStore.name}${s.customerName ? ' — ' + s.customerName : ''}` : (s.customerName || 'Laufkundschaft'),
+      `${s.total.toFixed(2)} €`,
+    ])
 
     autoTable(doc, {
       startY: 33,
@@ -596,10 +589,15 @@ export default function KassenbuchPage() {
                 <div key={sale.id} className="bg-white rounded-2xl shadow-sm px-5 py-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[14px] font-semibold text-zinc-900">
                           {sale.customerName || 'Laufkundschaft'}
                         </span>
+                        {sale.commissionStore && (
+                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                            Kommission · {sale.commissionStore.name}
+                          </span>
+                        )}
                         <span className="text-[12px] text-zinc-400">{fmtDate(sale.date)}</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5 mt-2">
@@ -649,30 +647,36 @@ export default function KassenbuchPage() {
               {consignments.map(c => {
                 const st = STATUS_LABELS[c.status] ?? STATUS_LABELS.active
                 const totalValue = c.items.reduce((s, i) => s + i.quantity * i.price, 0)
+                const openValue = c.items.reduce((s, i) => s + (i.quantity - i.soldQuantity - i.returnedQuantity) * i.price, 0)
+                const hasOpen = c.items.some(i => i.quantity - i.soldQuantity - i.returnedQuantity > 0)
                 return (
                   <div key={c.id} className="bg-white rounded-2xl shadow-sm px-5 py-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[14px] font-semibold text-zinc-900">{c.locationName || '—'}</span>
+                          <span className="text-[14px] font-semibold text-zinc-900">{c.commissionStore?.name || c.locationName || '—'}</span>
                           <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span>
                           <span className="text-[12px] text-zinc-400">{fmtDate(c.date)}</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5 mt-2">
-                          {c.items.map(item => (
-                            <span key={item.id} className="text-[11px] bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full">
-                              {item.quantity}× {item.product.name}
-                              {item.soldQuantity > 0 && ` (${item.soldQuantity} verk.)`}
-                              {item.returnedQuantity > 0 && ` (${item.returnedQuantity} zurück)`}
-                            </span>
-                          ))}
+                          {c.items.map(item => {
+                            const open = item.quantity - item.soldQuantity - item.returnedQuantity
+                            return (
+                              <span key={item.id} className="text-[11px] bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full">
+                                {item.quantity}× {item.product.name}
+                                {item.soldQuantity > 0 && ` · ${item.soldQuantity} verk.`}
+                                {item.returnedQuantity > 0 && ` · ${item.returnedQuantity} zurück`}
+                                {open > 0 && ` · ${open} offen`}
+                              </span>
+                            )
+                          })}
                         </div>
                         {c.notes && <p className="text-[12px] text-zinc-400 mt-1">{c.notes}</p>}
-                        {c.status === 'active' && (
+                        {hasOpen && (
                           <div className="flex gap-2 mt-3">
-                            <button onClick={() => openSettle(c)}
+                            <button onClick={() => openSell(c)}
                               className="text-[12px] font-medium text-green-600 hover:text-green-700 px-3 py-1 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
-                              Abrechnen
+                              Verkauf buchen
                             </button>
                             <button onClick={() => updateConsignmentStatus(c.id, 'returned')}
                               className="text-[12px] font-medium text-zinc-600 hover:text-zinc-700 px-3 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
@@ -682,7 +686,12 @@ export default function KassenbuchPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-3 ml-4 shrink-0">
-                        <span className="text-[14px] font-semibold text-zinc-900">{fmt(totalValue)}</span>
+                        <div className="text-right">
+                          <span className="text-[14px] font-semibold text-zinc-900 block">{fmt(totalValue)}</span>
+                          {hasOpen && openValue !== totalValue && (
+                            <span className="text-[11px] text-zinc-400">{fmt(openValue)} offen</span>
+                          )}
+                        </div>
                         <button onClick={() => deleteConsignment(c.id)}
                           className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-rose-50 text-zinc-300 hover:text-rose-500 transition-colors">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -1339,45 +1348,68 @@ export default function KassenbuchPage() {
       )}
 
       {/* Modal: Kommission abrechnen */}
-      {settleConsignment && (
+      {sellConsignment && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 backdrop-blur-sm px-4 py-8 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md my-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
               <div>
-                <h2 className="text-[15px] font-semibold text-zinc-900">Kommission abrechnen</h2>
-                <p className="text-[12px] text-zinc-400 mt-0.5">{settleConsignment.locationName}</p>
+                <h2 className="text-[15px] font-semibold text-zinc-900">Verkauf aus Kommission</h2>
+                <p className="text-[12px] text-zinc-400 mt-0.5">{sellConsignment.commissionStore?.name || sellConsignment.locationName || '—'}</p>
               </div>
-              <button onClick={() => setSettleConsignment(null)} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
+              <button onClick={() => setSellConsignment(null)} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
             <div className="px-6 py-5 space-y-4">
-              {settleConsignment.items.map(item => {
-                const sold = settleSoldQtys[item.id] ?? 0
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold text-zinc-500 uppercase block mb-1">Name / Käufer</label>
+                  <input value={sellName} onChange={e => setSellName(e.target.value)} placeholder="z.B. Hofladen Müller"
+                    className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-amber-200" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-zinc-500 uppercase block mb-1">Datum</label>
+                  <input type="date" value={sellDate} onChange={e => setSellDate(e.target.value)}
+                    className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-amber-200" />
+                </div>
+              </div>
+
+              {sellConsignment.items.map(item => {
+                const open = item.quantity - item.soldQuantity - item.returnedQuantity
+                if (open <= 0) return null
+                const qty = sellQtys[item.id] ?? 0
+                const price = sellPrices[item.id] ?? item.price
                 const prod = products.find(p => p.id === item.product.id)
-                const stockOk = !prod || sold <= prod.stockQuantity
+                const stockOk = !prod || Math.round(qty) <= prod.stockQuantity
                 return (
                   <div key={item.id} className={`rounded-xl border p-4 ${stockOk ? 'border-zinc-200' : 'border-rose-200 bg-rose-50'}`}>
                     <div className="flex justify-between mb-2">
                       <div>
                         <p className="text-[13px] font-semibold text-zinc-900">{item.product.name}</p>
-                        <p className="text-[11px] text-zinc-400">Platziert: {item.quantity} · {fmt(item.price)}</p>
+                        <p className="text-[11px] text-zinc-400">Offen: {open} · platziert zu {fmt(item.price)}</p>
                       </div>
-                      <p className="text-[13px] font-semibold text-green-700">{fmt(sold * item.price)}</p>
+                      <p className="text-[13px] font-semibold text-green-700">{fmt(qty * price)}</p>
                     </div>
-                    <p className="text-[11px] font-semibold text-zinc-500 uppercase mb-2">Wie viele verkauft?</p>
                     <div className="flex items-center gap-3">
-                      <button type="button"
-                        onClick={() => setSettleSoldQtys(q => ({ ...q, [item.id]: Math.max(0, (q[item.id] ?? 0) - 1) }))}
-                        className="w-9 h-9 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-zinc-700 text-lg transition-colors">−</button>
-                      <span className="text-xl font-bold text-zinc-900 min-w-[32px] text-center">{sold}</span>
-                      <button type="button"
-                        onClick={() => setSettleSoldQtys(q => ({ ...q, [item.id]: Math.min(item.quantity, (q[item.id] ?? 0) + 1) }))}
-                        className="w-9 h-9 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-zinc-700 text-lg transition-colors">+</button>
-                      {!stockOk && prod && (
-                        <span className="text-[11px] text-rose-600 font-medium">Nur {prod.stockQuantity} im Lager</span>
-                      )}
+                      <div className="flex items-center gap-3">
+                        <button type="button"
+                          onClick={() => setSellQtys(q => ({ ...q, [item.id]: Math.max(0, (q[item.id] ?? 0) - 1) }))}
+                          className="w-9 h-9 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-zinc-700 text-lg transition-colors">−</button>
+                        <span className="text-xl font-bold text-zinc-900 min-w-[32px] text-center">{qty}</span>
+                        <button type="button"
+                          onClick={() => setSellQtys(q => ({ ...q, [item.id]: Math.min(open, (q[item.id] ?? 0) + 1) }))}
+                          className="w-9 h-9 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-zinc-700 text-lg transition-colors">+</button>
+                      </div>
+                      <div className="flex items-center gap-1 ml-auto">
+                        <input type="number" min="0" step="0.01" value={price}
+                          onChange={e => setSellPrices(p => ({ ...p, [item.id]: parseFloat(e.target.value) || 0 }))}
+                          className="w-20 border border-zinc-200 rounded-lg px-2 py-1.5 text-[13px] text-right focus:outline-none focus:ring-2 focus:ring-amber-200" />
+                        <span className="text-[12px] text-zinc-400">€/St.</span>
+                      </div>
                     </div>
+                    {!stockOk && prod && (
+                      <p className="text-[11px] text-rose-600 font-medium mt-2">Nur {prod.stockQuantity} im Lager</p>
+                    )}
                   </div>
                 )
               })}
@@ -1385,30 +1417,30 @@ export default function KassenbuchPage() {
               {/* Erlös-Zusammenfassung */}
               <div className="bg-green-50 rounded-xl p-4">
                 <div className="flex justify-between">
-                  <p className="text-[13px] font-semibold text-zinc-700">Erlös gesamt</p>
+                  <p className="text-[13px] font-semibold text-zinc-700">Erlös</p>
                   <p className="text-[15px] font-bold text-green-700">
-                    {fmt(settleConsignment.items.reduce((s, item) => s + (settleSoldQtys[item.id] ?? 0) * item.price, 0))}
+                    {fmt(sellConsignment.items.reduce((s, item) => s + (sellQtys[item.id] ?? 0) * (sellPrices[item.id] ?? item.price), 0))}
                   </p>
                 </div>
                 <p className="text-[11px] text-zinc-400 mt-1">Erstellt Verkauf + bucht Lager ab</p>
               </div>
 
-              {settleStockError.length > 0 && (
+              {sellStockError.length > 0 && (
                 <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
-                  {settleStockError.map(e => (
+                  {sellStockError.map(e => (
                     <p key={e.productName} className="text-[12px] text-rose-700 font-medium">
-                      ⚠ {e.productName}: nur {e.available} im Lager
+                      ⚠ {e.productName}: {e.requested} angefragt, nur {e.available} verfügbar
                     </p>
                   ))}
                 </div>
               )}
 
               <div className="flex gap-3">
-                <button onClick={confirmSettle} disabled={settlingCons}
+                <button onClick={confirmSell} disabled={sellingCons}
                   className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-3 text-[13px] font-semibold transition-colors">
-                  {settlingCons ? 'Wird gebucht…' : 'Abrechnen & Verkauf buchen'}
+                  {sellingCons ? 'Wird gebucht…' : 'Verkauf buchen'}
                 </button>
-                <button onClick={() => setSettleConsignment(null)}
+                <button onClick={() => setSellConsignment(null)}
                   className="px-4 border border-zinc-200 rounded-xl text-[13px] text-zinc-500 hover:bg-zinc-50 transition-colors">
                   Abbrechen
                 </button>
