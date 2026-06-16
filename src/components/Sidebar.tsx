@@ -73,6 +73,18 @@ const navItems = [
     ),
   },
   {
+    label: 'Tracht',
+    href: '/dashboard/tracht',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22V12" />
+        <path d="M12 12c0-3 2-5 5-5 0 3-2 5-5 5z" />
+        <path d="M12 12c0-3-2-5-5-5 0 3 2 5 5 5z" />
+        <circle cx="12" cy="8" r="2.5" />
+      </svg>
+    ),
+  },
+  {
     label: 'Kassenbuch',
     href: '/dashboard/kassenbuch',
     icon: (

@@ -23,6 +23,7 @@ model User {
   commissionStores CommissionStore[]
   expenses         Expense[]
   stockCorrections StockCorrection[]
+  bloomReports     BloomReport[]
   accounts         Account[]
   sessions         Session[]
 }
@@ -41,6 +42,7 @@ model Apiary {
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   colonies        Colony[]
   tasks           Task[]
+  bloomReports    BloomReport[]
   createdAt       DateTime  @default(now())
 }
 
@@ -294,6 +296,23 @@ model StockCorrection {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
+}
+
+// Imkermeldung: aktuell beobachtete Blüte (fließt in die Trachtprognose ein)
+model BloomReport {
+  id        String   @id @default(cuid())
+  plantId   String
+  plantName String
+  phase     String?
+  date      DateTime @default(now())
+  region    String?
+  lat       Float?
+  lng       Float?
+  apiaryId  String?
+  apiary    Apiary?  @relation(fields: [apiaryId], references: [id], onDelete: SetNull)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 // NextAuth required models
