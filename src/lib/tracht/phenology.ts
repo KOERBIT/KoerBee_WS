@@ -45,6 +45,10 @@ const REFERENCE_VEG_START_DOY = 95
  */
 export function seasonShiftDays(vegetationStart: string | null): number {
   if (!vegetationStart) return 0
-  const shift = dayOfYear(vegetationStart) - REFERENCE_VEG_START_DOY
-  return Math.max(-21, Math.min(21, shift))
+  // Die Sommer-Phänologie (z.B. Linde) folgt dem Frühjahrs-Vorsprung nur
+  // gedämpft, nicht 1:1 → halbiert und auf ±7 Tage begrenzt. So bleibt die
+  // natürliche Reihenfolge erhalten (Winterlinde startet frühestens ~18.6.).
+  const anomaly = dayOfYear(vegetationStart) - REFERENCE_VEG_START_DOY
+  const damped = Math.round(anomaly * 0.5)
+  return Math.max(-7, Math.min(7, damped))
 }

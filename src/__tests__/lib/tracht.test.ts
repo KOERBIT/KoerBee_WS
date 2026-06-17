@@ -83,8 +83,8 @@ describe('Blühkalender', () => {
   })
   it('phänologische Verschiebung zieht die Winterlindenblüte vor', () => {
     const wl = PLANTS_BY_ID['winterlinde']
-    expect(isBlooming(wl, midJune)).toBe(false)        // normal: ab 25.6.
-    expect(isBlooming(wl, midJune, -10)).toBe(true)    // 10 Tage früher → ab 15.6.
+    expect(isBlooming(wl, midJune)).toBe(false)       // normal: ab 25.6.
+    expect(isBlooming(wl, midJune, -7)).toBe(true)    // 7 Tage früher → ab 18.6. (midJune = 20.6.)
   })
 })
 
@@ -106,10 +106,16 @@ describe('Grünlandtemperatursumme (GTS)', () => {
     expect(r.vegetationStart).toBe('2026-04-09') // 40 Tage × 5 °C = 200
   })
 
-  it('seasonShiftDays: früh = negativ, spät = positiv, begrenzt', () => {
+  it('seasonShiftDays: gedämpft, früh = negativ, begrenzt auf ±7', () => {
     expect(seasonShiftDays(null)).toBe(0)
     expect(seasonShiftDays('2026-04-05')).toBe(0)   // Referenz (Tag 95)
-    expect(seasonShiftDays('2026-03-21')).toBe(-15) // Tag 80
-    expect(seasonShiftDays('2026-02-15')).toBe(-21) // stark begrenzt
+    expect(seasonShiftDays('2026-03-21')).toBe(-7)  // Tag 80 → -15 × 0,5 = -7,5 → -7
+    expect(seasonShiftDays('2026-02-15')).toBe(-7)  // sehr früh, auf -7 gedeckelt
+  })
+  it('Winterlinde startet auch bei sehr frühem Jahr nicht vor dem 18.6.', () => {
+    const wl = PLANTS_BY_ID['winterlinde']
+    const maxShift = seasonShiftDays('2026-02-15') // -7 (Maximum)
+    expect(isBlooming(wl, new Date('2026-06-17T12:00:00Z'), maxShift)).toBe(false)
+    expect(isBlooming(wl, new Date('2026-06-18T12:00:00Z'), maxShift)).toBe(true)
   })
 })

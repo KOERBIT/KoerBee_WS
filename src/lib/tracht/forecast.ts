@@ -178,7 +178,16 @@ export function buildLocationForecast(
     coordinates: { lat: loc.lat, lon: loc.lng },
     flightRadius: loc.flightRadius,
     elevation: weather.elevation,
-    currentStatus: today ? {
+    // Live-Messung „jetzt" bevorzugen; Tagesmittel nur als Rückfall
+    currentStatus: weather.current ? {
+      date: today?.date ?? now.toISOString().slice(0, 10),
+      temperature: Math.round(weather.current.temperature),
+      humidity: Math.round(weather.current.humidity),
+      weather: wmoLabel(weather.current.weathercode),
+      wind: Math.round(weather.current.wind),
+      clouds: Math.round(weather.current.clouds),
+      precipitation: Math.round(weather.current.precipitation * 10) / 10,
+    } : today ? {
       date: today.date,
       temperature: Math.round(today.tempMean),
       humidity: Math.round(today.humidity),

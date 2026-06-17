@@ -9,6 +9,9 @@ import { computeGTS, seasonShiftDays } from '@/lib/tracht/phenology'
 import { verifyBlooms } from '@/lib/tracht/inaturalist'
 import { ForecastResult, LocationForecast } from '@/lib/tracht/types'
 
+// Immer frisch berechnen (aktuelles Wetter bei jedem Seitenaufruf).
+export const dynamic = 'force-dynamic'
+
 // Regionaler Regen-Bonus (Hessen ist niederschlagsreich; Linde profitiert).
 const REGION_RAIN_BONUS = 0.1
 

@@ -1,10 +1,21 @@
 import { WeatherDay } from './types'
 import { DailyMean } from './phenology'
 
+export interface CurrentWeather {
+  temperature: number
+  humidity: number
+  clouds: number
+  wind: number
+  precipitation: number
+  weathercode: number
+}
+
 export interface WeatherResult {
   source: 'Open-Meteo' | 'OpenWeatherMap' | 'OpenWeatherMap (Fallback)'
   elevation: number | null
   days: WeatherDay[]
+  /** Live-Messung „jetzt" (für die Anzeige des aktuellen Wetters) */
+  current: CurrentWeather | null
 }
 
 const FORECAST_DAYS = 7
@@ -37,10 +48,12 @@ async function fetchOpenMeteo(lat: number, lng: number): Promise<WeatherResult |
     'sunshine_duration', 'daylight_duration',
   ].join(',')
   const hourly = ['relative_humidity_2m', 'cloudcover'].join(',')
+  const currentParams = ['temperature_2m', 'relative_humidity_2m', 'weathercode', 'cloudcover', 'windspeed_10m', 'precipitation'].join(',')
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
-    `&daily=${daily}&hourly=${hourly}&forecast_days=${FORECAST_DAYS}&timezone=auto`
+    `&current=${currentParams}&daily=${daily}&hourly=${hourly}&forecast_days=${FORECAST_DAYS}&timezone=auto`
 
-  const res = await fetch(url, { next: { revalidate: 3600 } })
+  // Kein Cache: bei jedem Seitenaufruf das aktuelle Wetter liefern.
+  const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) return null
   const data = await res.json()
   const d = data?.daily
@@ -69,7 +82,17 @@ async function fetchOpenMeteo(lat: number, lng: number): Promise<WeatherResult |
   const humidityMissing = !data.hourly?.relative_humidity_2m?.length
   if (humidityMissing && process.env.OPENWEATHER_API_KEY) return null
 
-  return { source: 'Open-Meteo', elevation: data.elevation ?? null, days }
+  const c = data.current
+  const current: CurrentWeather | null = c ? {
+    temperature: c.temperature_2m,
+    humidity: c.relative_humidity_2m ?? 65,
+    clouds: c.cloudcover ?? 50,
+    wind: c.windspeed_10m ?? 0,
+    precipitation: c.precipitation ?? 0,
+    weathercode: c.weathercode ?? 0,
+  } : null
+
+  return { source: 'Open-Meteo', elevation: data.elevation ?? null, days, current }
 }
 
 // ── OpenWeatherMap One Call 3.0 (Fallback, benötigt API-Key) ──────
@@ -91,11 +114,22 @@ async function fetchOpenWeatherMap(lat: number, lng: number): Promise<WeatherRes
   if (!key) return null
   const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lng}` +
     `&units=metric&exclude=minutely,hourly,alerts&appid=${key}`
-  const res = await fetch(url, { next: { revalidate: 3600 } })
+  const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) return null
   const data = await res.json()
   const daily = data?.daily
   if (!Array.isArray(daily) || daily.length === 0) return null
+
+  const cur = data.current as Record<string, number | Record<string, number>[]> | undefined
+  const curWeather = (cur?.weather as Record<string, number>[])?.[0]
+  const current: CurrentWeather | null = cur ? {
+    temperature: cur.temp as number,
+    humidity: (cur.humidity as number) ?? 65,
+    clouds: (cur.clouds as number) ?? 50,
+    wind: ((cur.wind_speed as number) ?? 0) * 3.6,
+    precipitation: 0,
+    weathercode: owmToWmo((curWeather?.id as number) ?? 800),
+  } : null
 
   const days: WeatherDay[] = daily.slice(0, FORECAST_DAYS).map((day: Record<string, number | Record<string, number>[] | Record<string, number>>) => {
     const temp = day.temp as Record<string, number>
@@ -113,7 +147,7 @@ async function fetchOpenWeatherMap(lat: number, lng: number): Promise<WeatherRes
       sunFraction: 0, // → sunFactor nutzt Bewölkung
     }
   })
-  return { source: 'OpenWeatherMap', elevation: null, days }
+  return { source: 'OpenWeatherMap', elevation: null, days, current }
 }
 
 /**

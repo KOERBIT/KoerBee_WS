@@ -39,7 +39,7 @@ export default function TrachtPage() {
   const [saving, setSaving] = useState(false)
 
   const loadForecast = useCallback(async () => {
-    const res = await fetch('/api/tracht')
+    const res = await fetch('/api/tracht', { cache: 'no-store' })
     if (res.ok) setForecast(await res.json())
     setLoading(false)
   }, [])
@@ -155,7 +155,7 @@ export default function TrachtPage() {
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="text-[11px] uppercase tracking-wider text-zinc-400">Saison vs. Mittel</p>
+                      <p className="text-[11px] uppercase tracking-wider text-zinc-400">Blühkorrektur</p>
                       <p className={`text-[15px] font-semibold ${loc.phenology.bloomShiftDays < 0 ? 'text-lime-700' : loc.phenology.bloomShiftDays > 0 ? 'text-orange-600' : 'text-zinc-500'}`}>
                         {loc.phenology.bloomShiftDays === 0
                           ? 'im Schnitt'
