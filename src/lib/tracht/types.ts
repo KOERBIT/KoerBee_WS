@@ -118,6 +118,14 @@ export interface LocationForecast {
     currentSeason: string
     nextSeason: string
   }
+  phenology: {
+    /** Grünlandtemperatursumme in °C (null wenn keine Historie verfügbar) */
+    gts: number | null
+    /** Datum des Vegetationsbeginns (GTS ≥ 200 °C) */
+    vegetationStart: string | null
+    /** Angewendete phänologische Verschiebung der Blühzeiten in Tagen */
+    bloomShiftDays: number
+  }
   recommendations: {
     general: string
     shortTerm: string

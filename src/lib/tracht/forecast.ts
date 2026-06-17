@@ -32,18 +32,12 @@ export interface BuildOptions {
   bloomReports?: BloomReportInput[]
   /** Regionaler Regen-Bonus (Hessen ~0.1) */
   regionRainBonus?: number
-}
-
-/** Höhenkorrektur: über 500 m kühler und Blüte verzögert. */
-function adjustForElevation(days: WeatherDay[], elevation: number | null): WeatherDay[] {
-  if (!elevation || elevation <= 500) return days
-  const drop = 2 * Math.floor(elevation / 500)
-  return days.map(d => ({
-    ...d,
-    tempMean: d.tempMean - drop,
-    tempMax: d.tempMax - drop,
-    tempMin: d.tempMin - drop,
-  }))
+  /** Phänologische Verschiebung der Blühzeiten in Tagen (aus GTS abgeleitet) */
+  bloomShiftDays?: number
+  /** Grünlandtemperatursumme °C */
+  gts?: number | null
+  /** Datum des Vegetationsbeginns (GTS ≥ 200) */
+  vegetationStart?: string | null
 }
 
 function buildDayForecast(day: WeatherDay, plant: Plant, regionRainBonus: number): DayForecast {
@@ -92,19 +86,20 @@ export function buildLocationForecast(
   const reports = opts.bloomReports ?? []
   const regionRainBonus = opts.regionRainBonus ?? 0
   const region = loc.region ?? 'Hessen'
+  const shiftDays = opts.bloomShiftDays ?? 0
 
-  const days = adjustForElevation(weather.days, weather.elevation)
+  const days = weather.days
   const today = days[0]
 
-  // Aktuelle Blüten aus Kalender + Imkermeldungen zusammenführen
-  const currentInfos = getCurrentBloom(now)
+  // Aktuelle Blüten aus Kalender (standortverschoben) + Imkermeldungen
+  const currentInfos = getCurrentBloom(now, shiftDays)
   const currentIds = new Set(currentInfos.map(c => c.plant.id))
   const reportPlantIds = new Set(reports.map(r => r.plantId))
   // Gemeldete, aber kalendarisch (noch) nicht erfasste Blüten ergänzen
   for (const r of reports) {
     if (!currentIds.has(r.plantId) && PLANTS_BY_ID[r.plantId]) {
       const p = PLANTS_BY_ID[r.plantId]
-      const w = bloomWindow(p, now)
+      const w = bloomWindow(p, now, shiftDays)
       currentInfos.push({
         plant: p,
         phase: r.phase || 'Gemeldet',
@@ -147,7 +142,7 @@ export function buildLocationForecast(
     }
   })
 
-  const nextBloom = getNextBloom(now).map(n => ({
+  const nextBloom = getNextBloom(now, 90, shiftDays).map(n => ({
     plantId: n.plant.id,
     plantName: n.plant.name,
     estimatedStartDate: n.startDate,
@@ -197,6 +192,11 @@ export function buildLocationForecast(
     seasonalSummary: {
       currentSeason: seasonLabel(now),
       nextSeason: nextBloom[0] ? `${nextBloom[0].plantName} (in ${nextBloom[0].daysUntilStart} Tagen)` : '—',
+    },
+    phenology: {
+      gts: opts.gts ?? null,
+      vegetationStart: opts.vegetationStart ?? null,
+      bloomShiftDays: shiftDays,
     },
     recommendations: {
       general: topPlant

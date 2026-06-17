@@ -16,20 +16,30 @@ export interface BloomWindow {
   end: Date
 }
 
-/** Blühfenster der Pflanze im Jahr des Referenzdatums. */
-export function bloomWindow(plant: Plant, ref: Date): BloomWindow {
-  const year = ref.getUTCFullYear()
-  return { start: at(year, plant.bloomStart), end: at(year, plant.bloomEnd) }
+function shifted(d: Date, shiftDays: number): Date {
+  return shiftDays ? new Date(d.getTime() + shiftDays * DAY) : d
 }
 
-export function isBlooming(plant: Plant, ref: Date): boolean {
-  const { start, end } = bloomWindow(plant, ref)
+/**
+ * Blühfenster der Pflanze im Jahr des Referenzdatums. `shiftDays` verschiebt das
+ * Fenster phänologisch (negativ = früher, z.B. warmes Frühjahr/Tieflage).
+ */
+export function bloomWindow(plant: Plant, ref: Date, shiftDays = 0): BloomWindow {
+  const year = ref.getUTCFullYear()
+  return {
+    start: shifted(at(year, plant.bloomStart), shiftDays),
+    end: shifted(at(year, plant.bloomEnd), shiftDays),
+  }
+}
+
+export function isBlooming(plant: Plant, ref: Date, shiftDays = 0): boolean {
+  const { start, end } = bloomWindow(plant, ref, shiftDays)
   return ref >= start && ref <= end
 }
 
 /** Phasenbezeichnung je nach Fortschritt im Blühfenster. */
-export function bloomPhase(plant: Plant, ref: Date): string {
-  const { start, end } = bloomWindow(plant, ref)
+export function bloomPhase(plant: Plant, ref: Date, shiftDays = 0): string {
+  const { start, end } = bloomWindow(plant, ref, shiftDays)
   const span = end.getTime() - start.getTime()
   const ratio = span > 0 ? (ref.getTime() - start.getTime()) / span : 0
   const honigtau = plant.id === 'honigtau'
@@ -38,8 +48,8 @@ export function bloomPhase(plant: Plant, ref: Date): string {
   return honigtau ? 'Nachlassend' : 'Abblühend'
 }
 
-export function daysLeft(plant: Plant, ref: Date): number {
-  const { end } = bloomWindow(plant, ref)
+export function daysLeft(plant: Plant, ref: Date, shiftDays = 0): number {
+  const { end } = bloomWindow(plant, ref, shiftDays)
   return Math.max(0, Math.ceil((end.getTime() - ref.getTime()) / DAY))
 }
 
@@ -51,16 +61,16 @@ export interface CurrentBloomInfo {
   daysLeft: number
 }
 
-export function getCurrentBloom(ref: Date): CurrentBloomInfo[] {
-  return PLANTS.filter(p => isBlooming(p, ref))
+export function getCurrentBloom(ref: Date, shiftDays = 0): CurrentBloomInfo[] {
+  return PLANTS.filter(p => isBlooming(p, ref, shiftDays))
     .map(p => {
-      const w = bloomWindow(p, ref)
+      const w = bloomWindow(p, ref, shiftDays)
       return {
         plant: p,
-        phase: bloomPhase(p, ref),
+        phase: bloomPhase(p, ref, shiftDays),
         startDate: isoDate(w.start),
         endDate: isoDate(w.end),
-        daysLeft: daysLeft(p, ref),
+        daysLeft: daysLeft(p, ref, shiftDays),
       }
     })
     .sort((a, b) => a.daysLeft - b.daysLeft)
@@ -74,17 +84,17 @@ export interface NextBloomInfo {
 }
 
 /** Kommende Blüten innerhalb der nächsten `withinDays` Tage (Jahreswechsel berücksichtigt). */
-export function getNextBloom(ref: Date, withinDays = 90): NextBloomInfo[] {
+export function getNextBloom(ref: Date, withinDays = 90, shiftDays = 0): NextBloomInfo[] {
   const year = ref.getUTCFullYear()
   const result: NextBloomInfo[] = []
   for (const p of PLANTS) {
-    if (isBlooming(p, ref)) continue
+    if (isBlooming(p, ref, shiftDays)) continue
     // dieses Jahr, sonst nächstes Jahr
-    let start = at(year, p.bloomStart)
-    let end = at(year, p.bloomEnd)
+    let start = shifted(at(year, p.bloomStart), shiftDays)
+    let end = shifted(at(year, p.bloomEnd), shiftDays)
     if (start < ref) {
-      start = at(year + 1, p.bloomStart)
-      end = at(year + 1, p.bloomEnd)
+      start = shifted(at(year + 1, p.bloomStart), shiftDays)
+      end = shifted(at(year + 1, p.bloomEnd), shiftDays)
     }
     const daysUntil = Math.ceil((start.getTime() - ref.getTime()) / DAY)
     if (daysUntil >= 0 && daysUntil <= withinDays) {

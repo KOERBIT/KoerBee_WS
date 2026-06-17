@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { fetchWeather } from '@/lib/tracht/weather'
+import { fetchWeather, fetchYearHistory } from '@/lib/tracht/weather'
 import { buildLocationForecast } from '@/lib/tracht/forecast'
 import { getCurrentBloom } from '@/lib/tracht/bloom'
+import { computeGTS, seasonShiftDays } from '@/lib/tracht/phenology'
 import { verifyBlooms } from '@/lib/tracht/inaturalist'
 import { ForecastResult, LocationForecast } from '@/lib/tracht/types'
 
@@ -28,17 +29,23 @@ export async function GET() {
   ])
 
   const withCoords = apiaries.filter(a => a.lat != null && a.lng != null)
-  const currentBloomPlants = getCurrentBloom(now).map(c => c.plant)
 
   const locations: LocationForecast[] = []
   await Promise.all(withCoords.map(async (a) => {
     const lat = a.lat as number
     const lng = a.lng as number
-    const weather = await fetchWeather(lat, lng)
+    const [weather, history] = await Promise.all([
+      fetchWeather(lat, lng),
+      fetchYearHistory(lat, lng),
+    ])
     if (!weather) {
       locations.push(emptyLocation(a, lat, lng))
       return
     }
+    // Standortspezifische Phänologie aus der realen Wärmesumme dieses Jahres
+    const { gts, vegetationStart } = history ? computeGTS(history) : { gts: null, vegetationStart: null }
+    const shiftDays = seasonShiftDays(vegetationStart)
+    const currentBloomPlants = getCurrentBloom(now, shiftDays).map(c => c.plant)
     const verified = await verifyBlooms(lat, lng, currentBloomPlants, a.flightRadius ?? 10)
     const locReports = reports
       .filter(r => !r.apiaryId || r.apiaryId === a.id)
@@ -47,7 +54,10 @@ export async function GET() {
     locations.push(buildLocationForecast(
       { id: a.id, name: a.name, lat, lng, flightRadius: a.flightRadius ?? null },
       weather,
-      { now, verifiedPlantIds: verified, bloomReports: locReports, regionRainBonus: REGION_RAIN_BONUS },
+      {
+        now, verifiedPlantIds: verified, bloomReports: locReports,
+        regionRainBonus: REGION_RAIN_BONUS, bloomShiftDays: shiftDays, gts, vegetationStart,
+      },
     ))
   }))
 
@@ -79,6 +89,7 @@ function emptyLocation(a: { id: string; name: string; flightRadius: number | nul
     currentBloom: [],
     nextBloom: [],
     seasonalSummary: { currentSeason: '—', nextSeason: '—' },
+    phenology: { gts: null, vegetationStart: null, bloomShiftDays: 0 },
     recommendations: { general: 'Keine Wetterdaten verfügbar.', shortTerm: '—', actionItems: [] },
     dataQuality: {
       weatherDataSource: 'nicht verfügbar', bloomReportsUsed: 0, inaturalistVerified: 0,

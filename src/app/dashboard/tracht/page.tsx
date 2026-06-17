@@ -143,6 +143,32 @@ export default function TrachtPage() {
                 </div>
               )}
 
+              {/* Grünlandtemperatursumme / Phänologie */}
+              {loc.phenology.gts != null && (
+                <div className="bg-white rounded-2xl shadow-sm px-5 py-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-zinc-400">Grünlandtemperatursumme</p>
+                      <p className="text-2xl font-semibold text-zinc-900">{loc.phenology.gts} °C</p>
+                      {loc.phenology.vegetationStart && (
+                        <p className="text-[11px] text-zinc-400">Vegetationsbeginn (200 °C) am {fmtDate(loc.phenology.vegetationStart)}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[11px] uppercase tracking-wider text-zinc-400">Saison vs. Mittel</p>
+                      <p className={`text-[15px] font-semibold ${loc.phenology.bloomShiftDays < 0 ? 'text-lime-700' : loc.phenology.bloomShiftDays > 0 ? 'text-orange-600' : 'text-zinc-500'}`}>
+                        {loc.phenology.bloomShiftDays === 0
+                          ? 'im Schnitt'
+                          : loc.phenology.bloomShiftDays < 0
+                            ? `${Math.abs(loc.phenology.bloomShiftDays)} Tage früher`
+                            : `${loc.phenology.bloomShiftDays} Tage später`}
+                      </p>
+                      <p className="text-[10px] text-zinc-400">Blühzeiten standortkorrigiert</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Empfehlungen */}
               <div className="bg-amber-50 rounded-2xl px-5 py-4">
                 <p className="text-[14px] font-semibold text-zinc-900 mb-1">{loc.recommendations.general}</p>

@@ -1,4 +1,5 @@
 import { WeatherDay } from './types'
+import { DailyMean } from './phenology'
 
 export interface WeatherResult {
   source: 'Open-Meteo' | 'OpenWeatherMap' | 'OpenWeatherMap (Fallback)'
@@ -113,6 +114,31 @@ async function fetchOpenWeatherMap(lat: number, lng: number): Promise<WeatherRes
     }
   })
   return { source: 'OpenWeatherMap', elevation: null, days }
+}
+
+/**
+ * Tagesmittel-Temperaturen vom 1. Januar bis heute (für die GTS-Berechnung).
+ * Nutzt das Open-Meteo-Archiv; bei Fehlern null (GTS wird dann nicht angezeigt).
+ */
+export async function fetchYearHistory(lat: number, lng: number): Promise<DailyMean[] | null> {
+  const now = new Date()
+  const start = `${now.getUTCFullYear()}-01-01`
+  const end = now.toISOString().slice(0, 10)
+  const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lng}` +
+    `&start_date=${start}&end_date=${end}&daily=temperature_2m_mean&timezone=auto`
+  try {
+    const res = await fetch(url, { next: { revalidate: 86400 } })
+    if (!res.ok) return null
+    const data = await res.json()
+    const time: string[] = data?.daily?.time ?? []
+    const means: (number | null)[] = data?.daily?.temperature_2m_mean ?? []
+    if (!time.length) return null
+    return time
+      .map((date, i) => ({ date, mean: means[i] as number }))
+      .filter(d => d.mean != null && !Number.isNaN(d.mean))
+  } catch {
+    return null
+  }
 }
 
 /** Holt die 7-Tage-Vorhersage: Open-Meteo primär, OpenWeatherMap als Fallback. */

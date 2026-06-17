@@ -2,6 +2,7 @@ import {
   rangeFactor, temperatureFactor, rainFactor, windFactor, nektarIndex, rating,
 } from '@/lib/tracht/nektar'
 import { isBlooming, getCurrentBloom, getNextBloom, bloomPhase, bloomWindow } from '@/lib/tracht/bloom'
+import { computeGTS, seasonShiftDays } from '@/lib/tracht/phenology'
 import { PLANTS_BY_ID } from '@/lib/tracht/plants'
 import { WeatherDay } from '@/lib/tracht/types'
 
@@ -79,5 +80,36 @@ describe('Blühkalender', () => {
     for (let i = 1; i < next.length; i++) {
       expect(next[i].daysUntilStart).toBeGreaterThanOrEqual(next[i - 1].daysUntilStart)
     }
+  })
+  it('phänologische Verschiebung zieht die Winterlindenblüte vor', () => {
+    const wl = PLANTS_BY_ID['winterlinde']
+    expect(isBlooming(wl, midJune)).toBe(false)        // normal: ab 25.6.
+    expect(isBlooming(wl, midJune, -10)).toBe(true)    // 10 Tage früher → ab 15.6.
+  })
+})
+
+describe('Grünlandtemperatursumme (GTS)', () => {
+  it('gewichtet Januar mit 0,5', () => {
+    expect(computeGTS([{ date: '2026-01-15', mean: 20 }]).gts).toBe(10)
+  })
+  it('gewichtet Februar mit 0,75 und ignoriert negative Tage', () => {
+    const r = computeGTS([{ date: '2026-02-10', mean: 8 }, { date: '2026-02-11', mean: -5 }])
+    expect(r.gts).toBe(6)
+  })
+  it('erkennt den Vegetationsbeginn ab 200 °C', () => {
+    const days = Array.from({ length: 100 }, (_, i) => ({
+      date: new Date(Date.UTC(2026, 2, 1) + i * 86400000).toISOString().slice(0, 10),
+      mean: 5,
+    }))
+    const r = computeGTS(days)
+    expect(r.gts).toBe(500)
+    expect(r.vegetationStart).toBe('2026-04-09') // 40 Tage × 5 °C = 200
+  })
+
+  it('seasonShiftDays: früh = negativ, spät = positiv, begrenzt', () => {
+    expect(seasonShiftDays(null)).toBe(0)
+    expect(seasonShiftDays('2026-04-05')).toBe(0)   // Referenz (Tag 95)
+    expect(seasonShiftDays('2026-03-21')).toBe(-15) // Tag 80
+    expect(seasonShiftDays('2026-02-15')).toBe(-21) // stark begrenzt
   })
 })
