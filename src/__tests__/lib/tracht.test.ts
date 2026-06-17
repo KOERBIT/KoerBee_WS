@@ -1,11 +1,11 @@
 import {
   rangeFactor, temperatureFactor, rainFactor, windFactor, nektarIndex, rating,
 } from '@/lib/tracht/nektar'
-import { isBlooming, getCurrentBloom, getNextBloom, bloomPhase } from '@/lib/tracht/bloom'
+import { isBlooming, getCurrentBloom, getNextBloom, bloomPhase, bloomWindow } from '@/lib/tracht/bloom'
 import { PLANTS_BY_ID } from '@/lib/tracht/plants'
 import { WeatherDay } from '@/lib/tracht/types'
 
-const linde = PLANTS_BY_ID['winterlinde']
+const linde = PLANTS_BY_ID['sommerlinde']
 const raps = PLANTS_BY_ID['raps']
 
 function day(p: Partial<WeatherDay>): WeatherDay {
@@ -61,10 +61,18 @@ describe('Blühkalender', () => {
   it('Linde blüht Mitte Juni', () => expect(isBlooming(linde, midJune)).toBe(true))
   it('Raps blüht Mitte Juni nicht', () => expect(isBlooming(raps, midJune)).toBe(false))
   it('getCurrentBloom enthält Linde', () => {
-    expect(getCurrentBloom(midJune).some(c => c.plant.id === 'winterlinde')).toBe(true)
+    expect(getCurrentBloom(midJune).some(c => c.plant.id === 'sommerlinde')).toBe(true)
   })
   it('Phase im mittleren Blühfenster ist Hochblüte', () => {
     expect(bloomPhase(linde, new Date('2026-06-22T12:00:00Z'))).toBe('Hochblüte')
+  })
+  it('Sommerlinde blüht vor der Winterlinde', () => {
+    const so = bloomWindow(PLANTS_BY_ID['sommerlinde'], midJune)
+    const wi = bloomWindow(PLANTS_BY_ID['winterlinde'], midJune)
+    expect(so.start.getTime()).toBeLessThan(wi.start.getTime())
+  })
+  it('Brombeere ist Mitte Juni in der Tracht', () => {
+    expect(getCurrentBloom(midJune).some(c => c.plant.id === 'brombeere')).toBe(true)
   })
   it('getNextBloom ist nach daysUntilStart sortiert', () => {
     const next = getNextBloom(midJune)
