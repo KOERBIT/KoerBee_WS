@@ -105,6 +105,7 @@ export default function KassenbuchPage() {
   const [paypalTxns, setPaypalTxns] = useState<PayPalTxn[]>([])
   const [ppFilter, setPpFilter] = useState<'new' | 'ignored' | 'linked'>('new')
   const [ppSyncing, setPpSyncing] = useState(false)
+  const [ppImporting, setPpImporting] = useState(false)
   const [ppMsg, setPpMsg] = useState<string | null>(null)
   const [linkTxn, setLinkTxn] = useState<PayPalTxn | null>(null)
   const [linkMode, setLinkMode] = useState<'sale' | 'consignment'>('sale')
@@ -176,6 +177,27 @@ export default function KassenbuchPage() {
       return
     }
     setPpMsg(`${data.imported} neue Zahlung(en) abgerufen.`)
+    loadPaypal()
+  }
+
+  async function importPaypalCsv(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // erlaubt erneutes Hochladen derselben Datei
+    if (!file) return
+    setPpImporting(true); setPpMsg(null)
+    const text = await file.text()
+    const res = await fetch('/api/kassenbuch/paypal/import', {
+      method: 'POST', headers: { 'Content-Type': 'text/csv' }, body: text,
+    })
+    const data = await res.json().catch(() => ({}))
+    setPpImporting(false)
+    if (!res.ok) {
+      setPpMsg(data.error === 'no_rows'
+        ? 'CSV nicht erkannt – bitte den PayPal-Aktivitäten-Export (CSV) hochladen.'
+        : data.error === 'empty_file' ? 'Datei ist leer.' : 'Import fehlgeschlagen.')
+      return
+    }
+    setPpMsg(`${data.imported} neue Zahlung(en) importiert (${data.recognized} Eingänge erkannt, ${data.skipped} übersprungen).`)
     loadPaypal()
   }
 
@@ -814,10 +836,16 @@ export default function KassenbuchPage() {
                 </button>
               ))}
             </div>
-            <button onClick={syncPaypal} disabled={ppSyncing}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl text-[13px] font-semibold transition-colors">
-              {ppSyncing ? 'Wird abgerufen…' : 'Zahlungen abrufen'}
-            </button>
+            <div className="flex gap-2">
+              <label className={`flex items-center gap-2 px-4 py-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl text-[13px] font-medium transition-colors cursor-pointer ${ppImporting ? 'opacity-50 pointer-events-none' : ''}`}>
+                {ppImporting ? 'Importiert…' : 'CSV importieren'}
+                <input type="file" accept=".csv,text/csv" className="hidden" onChange={importPaypalCsv} />
+              </label>
+              <button onClick={syncPaypal} disabled={ppSyncing}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl text-[13px] font-semibold transition-colors">
+                {ppSyncing ? 'Wird abgerufen…' : 'Zahlungen abrufen'}
+              </button>
+            </div>
           </div>
           {ppMsg && <p className="text-[12px] text-zinc-500 mb-3">{ppMsg}</p>}
           {paypalTxns.length === 0 ? (
