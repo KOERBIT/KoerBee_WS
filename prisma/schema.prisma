@@ -11,6 +11,7 @@ model User {
   email            String              @unique
   passwordHash     String
   name             String?
+  role             String              @default("user") // user | admin
   plan             String              @default("hobby")
   createdAt        DateTime            @default(now())
   apiaries         Apiary[]

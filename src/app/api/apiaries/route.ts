@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { latOk, lngOk } from '@/lib/geo'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
 
   const { name, lat, lng, notes } = await req.json()
   if (!name) return NextResponse.json({ error: 'Name fehlt' }, { status: 400 })
+  if (!latOk(lat) || !lngOk(lng)) return NextResponse.json({ error: 'invalid_coordinates' }, { status: 400 })
 
   const apiary = await prisma.apiary.create({
     data: { name, lat: lat ?? null, lng: lng ?? null, notes: notes ?? null, userId: session.user.id },

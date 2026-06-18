@@ -15,6 +15,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!await ownsColony(id, session.user.id)) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
 
   const body = await req.json()
+  // Verschieben nur auf einen eigenen Bienenstand erlauben (IDOR-Schutz)
+  if (body.apiaryId !== undefined && body.apiaryId !== null) {
+    const apiary = await prisma.apiary.findFirst({ where: { id: body.apiaryId, userId: session.user.id } })
+    if (!apiary) return NextResponse.json({ error: 'invalid_apiary' }, { status: 422 })
+  }
   const colony = await prisma.colony.update({
     where: { id },
     data: {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { latOk, lngOk } from '@/lib/geo'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
@@ -12,6 +13,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!existing) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
 
   const body = await req.json()
+  if ((body.lat !== undefined && !latOk(body.lat)) || (body.lng !== undefined && !lngOk(body.lng))) {
+    return NextResponse.json({ error: 'invalid_coordinates' }, { status: 400 })
+  }
   const { flightRadius } = body
   const apiary = await prisma.apiary.update({
     where: { id },

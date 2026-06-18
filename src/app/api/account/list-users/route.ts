@@ -14,6 +14,13 @@ export async function GET() {
     )
   }
 
+  if (session.user.role !== 'admin') {
+    return NextResponse.json(
+      { success: false, error: 'Nur Administratoren dürfen Nutzer auflisten' },
+      { status: 403 }
+    )
+  }
+
   try {
     const users = await prisma.user.findMany({
       select: {

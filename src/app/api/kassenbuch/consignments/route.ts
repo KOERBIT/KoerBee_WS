@@ -20,6 +20,20 @@ export async function POST(req: NextRequest) {
   const { locationName, customerId, date, notes, items, commissionStoreId } = await req.json()
   if (!items || items.length === 0) return NextResponse.json({ error: 'Keine Positionen' }, { status: 400 })
 
+  // Fremdschlüssel müssen dem eingeloggten Nutzer gehören (IDOR-Schutz)
+  const userId = session.user.id
+  const productIds: string[] = items.map((i: { productId: string }) => i.productId)
+  const ownedProducts = await prisma.product.findMany({ where: { id: { in: productIds }, userId }, select: { id: true } })
+  if (ownedProducts.length !== new Set(productIds).size) {
+    return NextResponse.json({ error: 'invalid_product' }, { status: 422 })
+  }
+  if (customerId && !(await prisma.customer.findFirst({ where: { id: customerId, userId } }))) {
+    return NextResponse.json({ error: 'invalid_customer' }, { status: 422 })
+  }
+  if (commissionStoreId && !(await prisma.commissionStore.findFirst({ where: { id: commissionStoreId, userId } }))) {
+    return NextResponse.json({ error: 'invalid_store' }, { status: 422 })
+  }
+
   const consignment = await prisma.consignment.create({
     data: {
       locationName: locationName || null,

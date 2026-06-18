@@ -15,6 +15,13 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  if (session.user.role !== 'admin') {
+    return NextResponse.json(
+      { ok: false, error: 'Nur Administratoren dürfen Nutzer anlegen' },
+      { status: 403 }
+    )
+  }
+
   try {
     const body = (await request.json()) as Record<string, unknown>
     const { email, password, confirmPassword } = body as {

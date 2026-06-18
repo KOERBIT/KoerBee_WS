@@ -20,6 +20,11 @@ export async function POST(req: NextRequest) {
   const { customerName, customerId, date, notes, items } = await req.json()
   if (!items || items.length === 0) return NextResponse.json({ error: 'Keine Positionen' }, { status: 400 })
 
+  // Fremder Kunde? (IDOR-Schutz)
+  if (customerId && !(await prisma.customer.findFirst({ where: { id: customerId, userId: session.user.id } }))) {
+    return NextResponse.json({ error: 'invalid_customer' }, { status: 422 })
+  }
+
   // Lagerprüfung
   const productIds = items.map((i: { productId: string }) => i.productId)
   const products = await prisma.product.findMany({

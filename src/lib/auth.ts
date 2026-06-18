@@ -8,6 +8,7 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string
+      role: string
       name?: string | null
       email?: string | null
       image?: string | null
@@ -18,6 +19,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     id: string
+    role?: string
   }
 }
 
@@ -63,17 +65,29 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name ?? undefined,
+          role: user.role,
         }
       },
     }),
   ],
+  secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.id = user.id
+      if (user) {
+        token.id = user.id
+        token.role = (user as { role?: string }).role ?? 'user'
+      } else if (token.id && !token.role) {
+        // Bestehende Sessions: Rolle einmalig aus der DB nachladen
+        const dbUser = await prisma.user.findUnique({ where: { id: token.id }, select: { role: true } })
+        token.role = dbUser?.role ?? 'user'
+      }
       return token
     },
     async session({ session, token }) {
-      if (session.user) session.user.id = token.id as string
+      if (session.user) {
+        session.user.id = token.id as string
+        session.user.role = (token.role as string) ?? 'user'
+      }
       return session
     },
   },

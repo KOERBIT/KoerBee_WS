@@ -20,6 +20,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { graftDate, notes, motherColonyId, larvaeGrafted } = await req.json()
   if (!graftDate) return NextResponse.json({ error: 'Umlarv-Datum fehlt' }, { status: 400 })
 
+  // Mutter-Volk muss dem Nutzer gehören (IDOR-Schutz)
+  if (motherColonyId && !(await prisma.colony.findFirst({ where: { id: motherColonyId, apiary: { userId: session.user.id } } }))) {
+    return NextResponse.json({ error: 'invalid_colony' }, { status: 422 })
+  }
+
   const graft = new Date(graftDate)
 
   const batch = await prisma.breedingBatch.create({

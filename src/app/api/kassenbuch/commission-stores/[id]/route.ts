@@ -19,21 +19,14 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    const store = await prisma.commissionStore.findUnique({
-      where: { id },
+    const store = await prisma.commissionStore.findFirst({
+      where: { id, userId: session.user.id },
     })
 
     if (!store) {
       return NextResponse.json(
         { error: 'Laden nicht gefunden' },
         { status: 404 }
-      )
-    }
-
-    if (store.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: 'Nicht autorisiert' },
-        { status: 403 }
       )
     }
 
