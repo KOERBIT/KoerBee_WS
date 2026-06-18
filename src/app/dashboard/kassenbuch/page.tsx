@@ -164,9 +164,15 @@ export default function KassenbuchPage() {
     const data = await res.json().catch(() => ({}))
     setPpSyncing(false)
     if (!res.ok) {
-      setPpMsg(data.error === 'paypal_not_configured'
-        ? 'PayPal ist nicht konfiguriert – bitte PAYPAL_CLIENT_ID/SECRET hinterlegen.'
-        : 'Abruf fehlgeschlagen. Bitte später erneut versuchen.')
+      if (data.error === 'paypal_not_configured') {
+        setPpMsg('PayPal ist nicht konfiguriert – bitte Credentials in den Einstellungen hinterlegen.')
+      } else if (data.error === 'transaction_search_not_enabled') {
+        setPpMsg('„Transaction Search" ist in deiner PayPal-App nicht aktiviert. In der PayPal-App-Konfiguration unter „Features" aktivieren (kann nach dem Aktivieren einige Minuten dauern).')
+      } else if (data.error === 'auth_failed') {
+        setPpMsg('Anmeldung bei PayPal fehlgeschlagen – Client ID/Secret und Umgebung prüfen.')
+      } else {
+        setPpMsg(`Abruf fehlgeschlagen${data.detail ? ` (${data.detail})` : ''}. Bitte später erneut versuchen.`)
+      }
       return
     }
     setPpMsg(`${data.imported} neue Zahlung(en) abgerufen.`)

@@ -65,8 +65,18 @@ export async function POST() {
     })
 
     return NextResponse.json({ imported, lastSyncedAt: newLastSyncedAt })
-  } catch {
+  } catch (err) {
     // Fehler → lastSyncedAt bleibt unverändert, kein Datenverlust beim nächsten Versuch
-    return NextResponse.json({ error: 'sync_failed' }, { status: 502 })
+    console.error('[paypal sync]', err)
+    const msg = err instanceof Error ? err.message : ''
+    let code = 'sync_failed'
+    let detail: string | undefined
+    if (msg.startsWith('paypal_search_failed:')) {
+      detail = msg.slice('paypal_search_failed:'.length)
+      if (detail.startsWith('403')) code = 'transaction_search_not_enabled'
+    } else if (msg === 'paypal_auth_failed') {
+      code = 'auth_failed'
+    }
+    return NextResponse.json({ error: code, detail }, { status: 502 })
   }
 }

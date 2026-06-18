@@ -48,7 +48,14 @@ export async function searchTransactions(base: string, start: Date, end: Date, t
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
     })
-    if (!res.ok) throw new Error('paypal_search_failed')
+    if (!res.ok) {
+      let detail = `${res.status}`
+      try {
+        const e = await res.json()
+        detail = `${res.status} ${e.name ?? ''} ${e.message ?? ''}`.trim()
+      } catch { /* kein JSON-Body */ }
+      throw new Error(`paypal_search_failed:${detail}`)
+    }
     const data = await res.json()
     all.push(...((data.transaction_details ?? []) as RawDetail[]))
     totalPages = data.total_pages ?? 1
