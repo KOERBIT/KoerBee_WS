@@ -3,15 +3,18 @@
 import { useState } from 'react'
 import ChangePasswordForm from '@/components/ChangePasswordForm'
 import CreateUserModal from '@/components/CreateUserModal'
+import PayPalSettingsForm from '@/components/PayPalSettingsForm'
 
 interface SettingsPageClientProps {
   users: Array<{ id: string; email: string; name: string | null }>
   currentUserEmail: string | undefined
+  isAdmin?: boolean
 }
 
 export default function SettingsPageClient({
   users: initialUsers,
   currentUserEmail,
+  isAdmin = false,
 }: SettingsPageClientProps) {
   const [usersList, setUsersList] = useState(initialUsers)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -57,7 +60,18 @@ export default function SettingsPageClient({
         </div>
       </div>
 
-      {/* Nutzer verwalten */}
+      {/* PayPal */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
+        <div className="px-5 py-4 border-b border-zinc-100">
+          <h2 className="text-[15px] font-semibold text-zinc-900">PayPal-Anbindung</h2>
+        </div>
+        <div className="px-5 py-6">
+          <PayPalSettingsForm />
+        </div>
+      </div>
+
+      {/* Nutzer verwalten (nur Admins) */}
+      {isAdmin && (
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-zinc-100">
           <h2 className="text-[15px] font-semibold text-zinc-900">Nutzer verwalten</h2>
@@ -88,6 +102,7 @@ export default function SettingsPageClient({
           </button>
         </div>
       </div>
+      )}
 
       <CreateUserModal
         isOpen={isCreateModalOpen}

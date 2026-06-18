@@ -1,30 +1,19 @@
 import { RawDetail } from './sync'
 
-// PayPal REST API – Anbindung. Credentials/Base-URL nur serverseitig aus Env.
+// PayPal REST API – Anbindung. Credentials/Base-URL werden übergeben
+// (pro Nutzer aus der DB bzw. als Env-Fallback, siehe config.ts).
 // Sandbox: https://api-m.sandbox.paypal.com · Live: https://api-m.paypal.com
 
-interface PayPalConfig { base: string; clientId: string; secret: string }
+export interface PayPalConfig { base: string; clientId: string; secret: string }
 
-function config(): PayPalConfig {
-  const clientId = process.env.PAYPAL_CLIENT_ID
-  const secret = process.env.PAYPAL_CLIENT_SECRET
-  const base = process.env.PAYPAL_API_BASE || 'https://api-m.sandbox.paypal.com'
-  if (!clientId || !secret) throw new Error('paypal_not_configured')
-  return { base: base.replace(/\/$/, ''), clientId, secret }
-}
+const tokenCache = new Map<string, { token: string; expiresAt: number }>()
 
-export function paypalConfigured(): boolean {
-  return !!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET)
-}
-
-let cachedToken: { token: string; expiresAt: number } | null = null
-
-/** OAuth2 Client-Credentials-Token (mit kurzlebigem In-Memory-Cache). */
-export async function getAccessToken(): Promise<string> {
-  if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.token
-  const { base, clientId, secret } = config()
-  const auth = Buffer.from(`${clientId}:${secret}`).toString('base64')
-  const res = await fetch(`${base}/v1/oauth2/token`, {
+/** OAuth2 Client-Credentials-Token (In-Memory-Cache pro clientId). */
+export async function getAccessToken(cfg: PayPalConfig): Promise<string> {
+  const cached = tokenCache.get(cfg.clientId)
+  if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token
+  const auth = Buffer.from(`${cfg.clientId}:${cfg.secret}`).toString('base64')
+  const res = await fetch(`${cfg.base}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${auth}`,
@@ -35,16 +24,15 @@ export async function getAccessToken(): Promise<string> {
   })
   if (!res.ok) throw new Error('paypal_auth_failed')
   const data = await res.json()
-  cachedToken = {
+  tokenCache.set(cfg.clientId, {
     token: data.access_token,
     expiresAt: Date.now() + ((data.expires_in ?? 3000) * 1000),
-  }
-  return cachedToken.token
+  })
+  return data.access_token
 }
 
 /** Holt alle Transaktionen eines Zeitfensters (max. 31 Tage) inkl. Paginierung. */
-export async function searchTransactions(start: Date, end: Date, token: string): Promise<RawDetail[]> {
-  const { base } = config()
+export async function searchTransactions(base: string, start: Date, end: Date, token: string): Promise<RawDetail[]> {
   const all: RawDetail[] = []
   let page = 1
   let totalPages = 1
