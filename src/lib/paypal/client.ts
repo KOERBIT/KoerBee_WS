@@ -10,7 +10,8 @@ const tokenCache = new Map<string, { token: string; expiresAt: number }>()
 
 /** OAuth2 Client-Credentials-Token (In-Memory-Cache pro clientId). */
 export async function getAccessToken(cfg: PayPalConfig): Promise<string> {
-  const cached = tokenCache.get(cfg.clientId)
+  const cacheKey = `${cfg.base}|${cfg.clientId}`
+  const cached = tokenCache.get(cacheKey)
   if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token
   const auth = Buffer.from(`${cfg.clientId}:${cfg.secret}`).toString('base64')
   const res = await fetch(`${cfg.base}/v1/oauth2/token`, {
@@ -22,9 +23,18 @@ export async function getAccessToken(cfg: PayPalConfig): Promise<string> {
     body: 'grant_type=client_credentials',
     cache: 'no-store',
   })
-  if (!res.ok) throw new Error('paypal_auth_failed')
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    let detail = `${res.status}`
+    try {
+      const e = JSON.parse(body)
+      detail = `${res.status} ${e.error ?? e.name ?? ''} ${e.error_description ?? e.message ?? ''}`.trim()
+    } catch { if (body) detail = `${res.status} ${body.slice(0, 200)}` }
+    throw new Error(`paypal_auth_failed:${detail}`)
+  }
   const data = await res.json()
-  tokenCache.set(cfg.clientId, {
+  if (!data.access_token) throw new Error('paypal_auth_failed:200 kein access_token in der Antwort')
+  tokenCache.set(cacheKey, {
     token: data.access_token,
     expiresAt: Date.now() + ((data.expires_in ?? 3000) * 1000),
   })
@@ -49,11 +59,12 @@ export async function searchTransactions(base: string, start: Date, end: Date, t
       cache: 'no-store',
     })
     if (!res.ok) {
+      const body = await res.text().catch(() => '')
       let detail = `${res.status}`
       try {
-        const e = await res.json()
+        const e = JSON.parse(body)
         detail = `${res.status} ${e.name ?? ''} ${e.message ?? ''}`.trim()
-      } catch { /* kein JSON-Body */ }
+      } catch { if (body) detail = `${res.status} ${body.slice(0, 200)}` }
       throw new Error(`paypal_search_failed:${detail}`)
     }
     const data = await res.json()

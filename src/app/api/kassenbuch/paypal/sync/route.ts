@@ -74,8 +74,9 @@ export async function POST() {
     if (msg.startsWith('paypal_search_failed:')) {
       detail = msg.slice('paypal_search_failed:'.length)
       if (detail.startsWith('403')) code = 'transaction_search_not_enabled'
-    } else if (msg === 'paypal_auth_failed') {
+    } else if (msg.startsWith('paypal_auth_failed')) {
       code = 'auth_failed'
+      detail = msg.includes(':') ? msg.slice(msg.indexOf(':') + 1) : undefined
     }
     return NextResponse.json({ error: code, detail }, { status: 502 })
   }

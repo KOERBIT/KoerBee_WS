@@ -167,9 +167,9 @@ export default function KassenbuchPage() {
       if (data.error === 'paypal_not_configured') {
         setPpMsg('PayPal ist nicht konfiguriert – bitte Credentials in den Einstellungen hinterlegen.')
       } else if (data.error === 'transaction_search_not_enabled') {
-        setPpMsg('„Transaction Search" ist in deiner PayPal-App nicht aktiviert. In der PayPal-App-Konfiguration unter „Features" aktivieren (kann nach dem Aktivieren einige Minuten dauern).')
+        setPpMsg(`PayPal verweigert den Zugriff (403). Meist: „Transaction Search" ist nicht (auf dieser App / in dieser Umgebung) aktiv, oder das Konto ist dafür nicht berechtigt (Reporting-API benötigt ein Geschäftskonto).${data.detail ? ` PayPal-Detail: ${data.detail}` : ''}`)
       } else if (data.error === 'auth_failed') {
-        setPpMsg('Anmeldung bei PayPal fehlgeschlagen – Client ID/Secret und Umgebung prüfen.')
+        setPpMsg(`Anmeldung bei PayPal fehlgeschlagen – Client ID/Secret passen nicht zur gewählten Umgebung (Sandbox-Schlüssel funktionieren nur mit „Sandbox", Live-Schlüssel nur mit „Live").${data.detail ? ` PayPal-Detail: ${data.detail}` : ''}`)
       } else {
         setPpMsg(`Abruf fehlgeschlagen${data.detail ? ` (${data.detail})` : ''}. Bitte später erneut versuchen.`)
       }
