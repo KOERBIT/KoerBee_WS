@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-type Tab = 'verkauf' | 'kommission' | 'artikel' | 'ausgaben' | 'laeden' | 'uebersicht' | 'lagerkorrektionen'
+type Tab = 'verkauf' | 'kommission' | 'paypal' | 'artikel' | 'ausgaben' | 'laeden' | 'uebersicht' | 'lagerkorrektionen'
 
 interface CommissionStore { id: string; name: string; createdAt: string }
 interface Product { id: string; name: string; unit: string; price: number; description: string | null; fillAmount: number | null; fillUnit: string | null; stockQuantity: number }
@@ -12,6 +12,7 @@ interface ConsignmentItem { id: string; product: Product; quantity: number; pric
 interface Consignment { id: string; date: string; locationName: string | null; status: string; notes: string | null; items: ConsignmentItem[]; commissionStore?: CommissionStore | null }
 interface Expense { id: string; date: string; amount: number; category: string; description: string | null }
 interface StockCorrection { id: string; productId: string; quantity: number; reason: string; batchNumber: string | null; expiryDate: string | null; createdAt: string }
+interface PayPalTxn { id: string; transactionId: string; date: string; amount: number; currency: string; payerName: string | null; payerEmail: string | null; paypalStatus: string | null; status: string; saleId: string | null; consignmentId: string | null }
 
 function fmt(n: number) { return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) }
 function fmtDate(d: string) { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
@@ -100,6 +101,19 @@ export default function KassenbuchPage() {
   const [corrExpiry, setCorrExpiry] = useState('')
   const [savingCorr, setSavingCorr] = useState(false)
 
+  // PayPal
+  const [paypalTxns, setPaypalTxns] = useState<PayPalTxn[]>([])
+  const [ppFilter, setPpFilter] = useState<'new' | 'ignored' | 'linked'>('new')
+  const [ppSyncing, setPpSyncing] = useState(false)
+  const [ppMsg, setPpMsg] = useState<string | null>(null)
+  const [linkTxn, setLinkTxn] = useState<PayPalTxn | null>(null)
+  const [linkMode, setLinkMode] = useState<'sale' | 'consignment'>('sale')
+  const [linkItems, setLinkItems] = useState([{ productId: '', quantity: 1 }])
+  const [linkName, setLinkName] = useState('')
+  const [linkConsignmentId, setLinkConsignmentId] = useState('')
+  const [linking, setLinking] = useState(false)
+  const [linkError, setLinkError] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     const [p, s, c, e, stores] = await Promise.all([
       fetch('/api/kassenbuch/products').then(r => r.json()),
@@ -136,6 +150,76 @@ export default function KassenbuchPage() {
       loadStockCorrections()
     }
   }, [tab, loadStockCorrections])
+
+  const loadPaypal = useCallback(async () => {
+    const res = await fetch(`/api/kassenbuch/paypal?status=${ppFilter}`)
+    if (res.ok) setPaypalTxns(await res.json())
+  }, [ppFilter])
+
+  useEffect(() => { if (tab === 'paypal') loadPaypal() }, [tab, loadPaypal])
+
+  async function syncPaypal() {
+    setPpSyncing(true); setPpMsg(null)
+    const res = await fetch('/api/kassenbuch/paypal/sync', { method: 'POST' })
+    const data = await res.json().catch(() => ({}))
+    setPpSyncing(false)
+    if (!res.ok) {
+      setPpMsg(data.error === 'paypal_not_configured'
+        ? 'PayPal ist nicht konfiguriert – bitte PAYPAL_CLIENT_ID/SECRET hinterlegen.'
+        : 'Abruf fehlgeschlagen. Bitte später erneut versuchen.')
+      return
+    }
+    setPpMsg(`${data.imported} neue Zahlung(en) abgerufen.`)
+    loadPaypal()
+  }
+
+  async function setPaypalStatus(id: string, status: 'new' | 'ignored') {
+    await fetch(`/api/kassenbuch/paypal/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
+    })
+    loadPaypal()
+  }
+
+  async function deletePaypal(id: string) {
+    if (!confirm('Zahlung aus der Liste löschen?')) return
+    await fetch(`/api/kassenbuch/paypal/${id}`, { method: 'DELETE' })
+    loadPaypal()
+  }
+
+  function openLink(txn: PayPalTxn) {
+    setLinkTxn(txn)
+    setLinkMode('sale')
+    setLinkItems([{ productId: products[0]?.id ?? '', quantity: 1 }])
+    setLinkName(txn.payerName ?? '')
+    setLinkConsignmentId('')
+    setLinkError(null)
+  }
+
+  async function confirmLink() {
+    if (!linkTxn) return
+    setLinking(true); setLinkError(null)
+    const items = linkItems.filter(i => i.productId && i.quantity > 0)
+    if (items.length === 0) { setLinking(false); setLinkError('Bitte mindestens einen Artikel wählen.'); return }
+    const res = await fetch(`/api/kassenbuch/paypal/${linkTxn.id}/link`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: linkMode, items, customerName: linkName || null, consignmentId: linkConsignmentId || null }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setLinking(false)
+    if (!res.ok) {
+      if (data.error === 'insufficient_stock') setLinkError('Nicht genug Lagerbestand für die gewählte Menge.')
+      else if (data.error === 'exceeds_open') setLinkError('Mehr als die offene Kommissionsmenge gewählt.')
+      else if (data.error === 'consignment_required') setLinkError('Bitte eine Kommission auswählen.')
+      else if (data.error === 'not_in_consignment') setLinkError('Artikel ist nicht Teil dieser Kommission.')
+      else setLinkError('Verknüpfung fehlgeschlagen.')
+      return
+    }
+    setLinkTxn(null)
+    await Promise.all([loadPaypal(), load()])
+    if (data.mismatch) {
+      alert(`Hinweis: PayPal-Betrag (${fmt(data.paid)}) weicht vom Artikelwert (${fmt(data.expected)}) ab – der PayPal-Betrag wurde als Verkaufssumme übernommen.`)
+    }
+  }
 
   // Auto-fill price when product selected
   function updateSaleItem(i: number, key: string, value: string | number) {
@@ -563,10 +647,10 @@ export default function KassenbuchPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 mb-6 overflow-x-auto">
-        {(['verkauf', 'kommission', 'artikel', 'ausgaben', 'laeden', 'lagerkorrektionen', 'uebersicht'] as Tab[]).map(t => (
+        {(['verkauf', 'kommission', 'paypal', 'artikel', 'ausgaben', 'laeden', 'lagerkorrektionen', 'uebersicht'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`flex-1 py-2 rounded-lg text-[13px] font-medium transition-colors capitalize whitespace-nowrap ${tab === t ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
-            {t === 'verkauf' ? 'Verkäufe' : t === 'kommission' ? 'Kommission' : t === 'artikel' ? 'Artikel' : t === 'ausgaben' ? 'Ausgaben' : t === 'laeden' ? 'Läden' : t === 'lagerkorrektionen' ? 'Lagerkorrektionen' : 'Übersicht'}
+            {t === 'verkauf' ? 'Verkäufe' : t === 'kommission' ? 'Kommission' : t === 'paypal' ? 'PayPal' : t === 'artikel' ? 'Artikel' : t === 'ausgaben' ? 'Ausgaben' : t === 'laeden' ? 'Läden' : t === 'lagerkorrektionen' ? 'Lagerkorrektionen' : 'Übersicht'}
           </button>
         ))}
       </div>
@@ -707,6 +791,65 @@ export default function KassenbuchPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* PAYPAL */}
+      {tab === 'paypal' && (
+        <div>
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+            <div className="flex gap-1 bg-zinc-100 rounded-xl p-1">
+              {(['new', 'ignored', 'linked'] as const).map(f => (
+                <button key={f} onClick={() => setPpFilter(f)}
+                  className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${ppFilter === f ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
+                  {f === 'new' ? 'Offen' : f === 'ignored' ? 'Ignoriert' : 'Verknüpft'}
+                </button>
+              ))}
+            </div>
+            <button onClick={syncPaypal} disabled={ppSyncing}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl text-[13px] font-semibold transition-colors">
+              {ppSyncing ? 'Wird abgerufen…' : 'Zahlungen abrufen'}
+            </button>
+          </div>
+          {ppMsg && <p className="text-[12px] text-zinc-500 mb-3">{ppMsg}</p>}
+          {paypalTxns.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm py-16 text-center">
+              <p className="text-[15px] font-medium text-zinc-900">Keine Zahlungen</p>
+              <p className="text-[13px] text-zinc-400 mt-1">Über „Zahlungen abrufen" holst du eingegangene PayPal-Zahlungen.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {paypalTxns.map(t => (
+                <div key={t.id} className={`bg-white rounded-2xl shadow-sm px-5 py-4 ${t.status === 'ignored' ? 'opacity-60' : ''}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[14px] font-semibold text-zinc-900">{t.payerName || 'Unbekannt'}</span>
+                        {t.status === 'linked' && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">verknüpft</span>}
+                        {t.status === 'ignored' && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500">ignoriert</span>}
+                        <span className="text-[12px] text-zinc-400">{fmtDate(t.date)}</span>
+                      </div>
+                      {t.payerEmail && <p className="text-[12px] text-zinc-400 mt-0.5 truncate">{t.payerEmail}</p>}
+                      <p className="text-[11px] text-zinc-400 truncate">ID {t.transactionId}</p>
+                    </div>
+                    <span className="text-[15px] font-semibold text-zinc-900 shrink-0">{fmt(t.amount)}</span>
+                  </div>
+                  {t.status !== 'linked' && (
+                    <div className="flex gap-2 mt-3 flex-wrap">
+                      <button onClick={() => openLink(t)}
+                        className="text-[12px] font-medium text-green-600 hover:text-green-700 px-3 py-1 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                        Mit Verkauf verknüpfen
+                      </button>
+                      {t.status === 'new'
+                        ? <button onClick={() => setPaypalStatus(t.id, 'ignored')} className="text-[12px] font-medium text-zinc-600 px-3 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Nicht relevant</button>
+                        : <button onClick={() => setPaypalStatus(t.id, 'new')} className="text-[12px] font-medium text-zinc-600 px-3 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Zurück zu offen</button>}
+                      <button onClick={() => deletePaypal(t.id)} className="text-[12px] font-medium text-rose-600 px-3 py-1 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors">Löschen</button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -1448,6 +1591,86 @@ export default function KassenbuchPage() {
                   className="px-4 border border-zinc-200 rounded-xl text-[13px] text-zinc-500 hover:bg-zinc-50 transition-colors">
                   Abbrechen
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: PayPal-Zahlung verknüpfen */}
+      {linkTxn && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 backdrop-blur-sm px-4 py-8 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md my-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <div>
+                <h2 className="text-[15px] font-semibold text-zinc-900">Zahlung verknüpfen</h2>
+                <p className="text-[12px] text-zinc-400 mt-0.5">Betrag: {fmt(linkTxn.amount)} (aus PayPal)</p>
+              </div>
+              <button onClick={() => setLinkTxn(null)} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Käufer</label>
+                <input value={linkName} onChange={e => setLinkName(e.target.value)} placeholder="Name aus Zahlung"
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+
+              <div className="flex gap-1 bg-zinc-100 rounded-xl p-1">
+                <button type="button" onClick={() => setLinkMode('sale')}
+                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium ${linkMode === 'sale' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'}`}>Direktverkauf</button>
+                <button type="button" onClick={() => setLinkMode('consignment')}
+                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium ${linkMode === 'consignment' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'}`}>Kommission</button>
+              </div>
+
+              {linkMode === 'consignment' && (
+                <div>
+                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Kommission</label>
+                  <select value={linkConsignmentId} onChange={e => setLinkConsignmentId(e.target.value)}
+                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    <option value="">Bitte wählen…</option>
+                    {consignments.filter(c => c.items.some(i => i.quantity - i.soldQuantity - i.returnedQuantity > 0)).map(c => (
+                      <option key={c.id} value={c.id}>{(c.commissionStore?.name || c.locationName || '—')} · {fmtDate(c.date)}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Artikel & Menge</label>
+                <div className="space-y-2">
+                  {linkItems.map((row, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <select value={row.productId}
+                        onChange={e => setLinkItems(rows => rows.map((r, i) => i === idx ? { ...r, productId: e.target.value } : r))}
+                        className="flex-1 border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                        <option value="">Artikel…</option>
+                        {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                      <input type="number" min="1" value={row.quantity}
+                        onChange={e => setLinkItems(rows => rows.map((r, i) => i === idx ? { ...r, quantity: parseInt(e.target.value) || 1 } : r))}
+                        className="w-20 border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                      {linkItems.length > 1 && (
+                        <button type="button" onClick={() => setLinkItems(rows => rows.filter((_, i) => i !== idx))}
+                          className="w-9 h-9 flex items-center justify-center rounded-lg bg-zinc-100 hover:bg-rose-50 text-zinc-400 hover:text-rose-500">−</button>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setLinkItems(rows => [...rows, { productId: '', quantity: 1 }])}
+                    className="text-[12px] font-medium text-amber-600 hover:text-amber-700">+ Artikel hinzufügen</button>
+                </div>
+              </div>
+
+              {linkError && <p className="text-[12px] text-rose-600 font-medium">{linkError}</p>}
+
+              <div className="flex gap-3">
+                <button onClick={confirmLink} disabled={linking}
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-3 text-[13px] font-semibold transition-colors">
+                  {linking ? 'Wird verknüpft…' : 'Verknüpfen & Verkauf buchen'}
+                </button>
+                <button onClick={() => setLinkTxn(null)}
+                  className="px-4 border border-zinc-200 rounded-xl text-[13px] text-zinc-500 hover:bg-zinc-50 transition-colors">Abbrechen</button>
               </div>
             </div>
           </div>

@@ -24,6 +24,8 @@ model User {
   expenses         Expense[]
   stockCorrections StockCorrection[]
   bloomReports     BloomReport[]
+  paypalTransactions PayPalTransaction[]
+  paypalSyncState  PayPalSyncState?
   accounts         Account[]
   sessions         Session[]
 }
@@ -313,6 +315,35 @@ model BloomReport {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+// PayPal: abgerufene Zahlung (zur Sichtung & Übernahme als Verkauf)
+model PayPalTransaction {
+  id            String    @id @default(cuid())
+  transactionId String    // PayPal-Transaktions-ID (eindeutig pro User)
+  date          DateTime
+  amount        Float
+  currency      String    @default("EUR")
+  payerName     String?
+  payerEmail    String?
+  paypalStatus  String?   // Status laut PayPal (z.B. "S" = success)
+  status        String    @default("new") // new | ignored | linked
+  saleId        String?   // verknüpfter Verkauf (ohne FK – Sale bleibt unverändert)
+  consignmentId String?   // bzw. verknüpfte Kommission
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+
+  @@unique([userId, transactionId])
+}
+
+// Letzter erfolgreicher PayPal-Sync pro User (für inkrementellen Abruf)
+model PayPalSyncState {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastSyncedAt DateTime?
+  updatedAt    DateTime  @updatedAt
 }
 
 // NextAuth required models
