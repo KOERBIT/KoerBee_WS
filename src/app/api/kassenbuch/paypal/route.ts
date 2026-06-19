@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-const STATUSES = ['new', 'ignored', 'linked']
+const STATUSES = ['new', 'ignored', 'linked', 'deleted']
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)

@@ -103,7 +103,7 @@ export default function KassenbuchPage() {
 
   // PayPal
   const [paypalTxns, setPaypalTxns] = useState<PayPalTxn[]>([])
-  const [ppFilter, setPpFilter] = useState<'new' | 'ignored' | 'linked'>('new')
+  const [ppFilter, setPpFilter] = useState<'new' | 'ignored' | 'linked' | 'deleted'>('new')
   const [ppSyncing, setPpSyncing] = useState(false)
   const [ppImporting, setPpImporting] = useState(false)
   const [ppEmailFetching, setPpEmailFetching] = useState(false)
@@ -217,7 +217,7 @@ export default function KassenbuchPage() {
     loadPaypal()
   }
 
-  async function setPaypalStatus(id: string, status: 'new' | 'ignored') {
+  async function setPaypalStatus(id: string, status: 'new' | 'ignored' | 'deleted') {
     await fetch(`/api/kassenbuch/paypal/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
     })
@@ -225,7 +225,7 @@ export default function KassenbuchPage() {
   }
 
   async function deletePaypal(id: string) {
-    if (!confirm('Zahlung aus der Liste löschen?')) return
+    if (!confirm('Als gelöscht markieren? Der Eintrag verschwindet aus der Liste und wird beim erneuten Abruf nicht neu angelegt (unter „Gelöscht" wiederherstellbar).')) return
     await fetch(`/api/kassenbuch/paypal/${id}`, { method: 'DELETE' })
     loadPaypal()
   }
@@ -845,10 +845,10 @@ export default function KassenbuchPage() {
         <div>
           <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <div className="flex gap-1 bg-zinc-100 rounded-xl p-1">
-              {(['new', 'ignored', 'linked'] as const).map(f => (
+              {(['new', 'ignored', 'linked', 'deleted'] as const).map(f => (
                 <button key={f} onClick={() => setPpFilter(f)}
                   className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${ppFilter === f ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
-                  {f === 'new' ? 'Offen' : f === 'ignored' ? 'Ignoriert' : 'Verknüpft'}
+                  {f === 'new' ? 'Offen' : f === 'ignored' ? 'Ignoriert' : f === 'linked' ? 'Verknüpft' : 'Gelöscht'}
                 </button>
               ))}
             </div>
@@ -876,13 +876,14 @@ export default function KassenbuchPage() {
           ) : (
             <div className="space-y-3">
               {paypalTxns.map(t => (
-                <div key={t.id} className={`bg-white rounded-2xl shadow-sm px-5 py-4 ${t.status === 'ignored' ? 'opacity-60' : ''}`}>
+                <div key={t.id} className={`bg-white rounded-2xl shadow-sm px-5 py-4 ${t.status === 'ignored' || t.status === 'deleted' ? 'opacity-60' : ''}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[14px] font-semibold text-zinc-900">{t.payerName || 'Unbekannt'}</span>
                         {t.status === 'linked' && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">verknüpft</span>}
                         {t.status === 'ignored' && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500">ignoriert</span>}
+                        {t.status === 'deleted' && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-100 text-rose-600">gelöscht</span>}
                         <span className="text-[12px] text-zinc-400">{fmtDate(t.date)}</span>
                       </div>
                       {t.payerEmail && <p className="text-[12px] text-zinc-400 mt-0.5 truncate">{t.payerEmail}</p>}
@@ -890,7 +891,11 @@ export default function KassenbuchPage() {
                     </div>
                     <span className="text-[15px] font-semibold text-zinc-900 shrink-0">{fmt(t.amount)}</span>
                   </div>
-                  {t.status !== 'linked' && (
+                  {t.status === 'deleted' ? (
+                    <div className="flex gap-2 mt-3">
+                      <button onClick={() => setPaypalStatus(t.id, 'new')} className="text-[12px] font-medium text-zinc-600 px-3 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Wiederherstellen</button>
+                    </div>
+                  ) : t.status !== 'linked' ? (
                     <div className="flex gap-2 mt-3 flex-wrap">
                       <button onClick={() => openLink(t)}
                         className="text-[12px] font-medium text-green-600 hover:text-green-700 px-3 py-1 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
@@ -901,7 +906,7 @@ export default function KassenbuchPage() {
                         : <button onClick={() => setPaypalStatus(t.id, 'new')} className="text-[12px] font-medium text-zinc-600 px-3 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Zurück zu offen</button>}
                       <button onClick={() => deletePaypal(t.id)} className="text-[12px] font-medium text-rose-600 px-3 py-1 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors">Löschen</button>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ))}
             </div>
