@@ -106,6 +106,7 @@ export default function KassenbuchPage() {
   const [ppFilter, setPpFilter] = useState<'new' | 'ignored' | 'linked'>('new')
   const [ppSyncing, setPpSyncing] = useState(false)
   const [ppImporting, setPpImporting] = useState(false)
+  const [ppEmailFetching, setPpEmailFetching] = useState(false)
   const [ppMsg, setPpMsg] = useState<string | null>(null)
   const [linkTxn, setLinkTxn] = useState<PayPalTxn | null>(null)
   const [linkMode, setLinkMode] = useState<'sale' | 'consignment'>('sale')
@@ -177,6 +178,21 @@ export default function KassenbuchPage() {
       return
     }
     setPpMsg(`${data.imported} neue Zahlung(en) abgerufen.`)
+    loadPaypal()
+  }
+
+  async function fetchPaypalEmails() {
+    setPpEmailFetching(true); setPpMsg(null)
+    const res = await fetch('/api/kassenbuch/paypal/fetch-emails', { method: 'POST' })
+    const data = await res.json().catch(() => ({}))
+    setPpEmailFetching(false)
+    if (!res.ok) {
+      setPpMsg(data.error === 'mail_not_configured'
+        ? 'Kein Postfach hinterlegt – in den Einstellungen unter „E-Mail-Postfach" eintragen.'
+        : 'E-Mail-Abruf fehlgeschlagen. Bitte später erneut versuchen.')
+      return
+    }
+    setPpMsg(`${data.imported} neue Zahlung(en) aus E-Mails übernommen (${data.scanned} PayPal-Mails geprüft).`)
     loadPaypal()
   }
 
@@ -836,14 +852,18 @@ export default function KassenbuchPage() {
                 </button>
               ))}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={fetchPaypalEmails} disabled={ppEmailFetching}
+                className="flex items-center gap-2 px-4 py-2 border border-zinc-200 hover:bg-zinc-50 disabled:opacity-50 text-zinc-700 rounded-xl text-[13px] font-medium transition-colors">
+                {ppEmailFetching ? 'E-Mails…' : 'E-Mails abrufen'}
+              </button>
               <label className={`flex items-center gap-2 px-4 py-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl text-[13px] font-medium transition-colors cursor-pointer ${ppImporting ? 'opacity-50 pointer-events-none' : ''}`}>
                 {ppImporting ? 'Importiert…' : 'CSV importieren'}
                 <input type="file" accept=".csv,text/csv" className="hidden" onChange={importPaypalCsv} />
               </label>
               <button onClick={syncPaypal} disabled={ppSyncing}
                 className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl text-[13px] font-semibold transition-colors">
-                {ppSyncing ? 'Wird abgerufen…' : 'Zahlungen abrufen'}
+                {ppSyncing ? 'Wird abgerufen…' : 'API-Abruf'}
               </button>
             </div>
           </div>

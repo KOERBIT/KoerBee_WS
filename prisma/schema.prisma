@@ -28,6 +28,7 @@ model User {
   paypalTransactions PayPalTransaction[]
   paypalSyncState  PayPalSyncState?
   paypalCredential PayPalCredential?
+  mailCredential   MailCredential?
   accounts         Account[]
   sessions         Session[]
 }
@@ -356,6 +357,19 @@ model PayPalCredential {
   clientId     String
   clientSecret String   // verschlüsselt: base64(iv).base64(tag).base64(ciphertext)
   apiBase      String   @default("https://api-m.sandbox.paypal.com")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// IMAP-Postfachzugang pro Nutzer (für das Auslesen von PayPal-Mails)
+model MailCredential {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imapHost     String   @default("imap.gmx.net")
+  imapPort     Int      @default(993)
+  imapUser     String
+  imapPassword String   // AES-256-GCM-verschlüsselt
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

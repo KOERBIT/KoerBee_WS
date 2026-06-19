@@ -4,6 +4,7 @@ import { useState } from 'react'
 import ChangePasswordForm from '@/components/ChangePasswordForm'
 import CreateUserModal from '@/components/CreateUserModal'
 import PayPalSettingsForm from '@/components/PayPalSettingsForm'
+import MailSettingsForm from '@/components/MailSettingsForm'
 
 interface SettingsPageClientProps {
   users: Array<{ id: string; email: string; name: string | null }>
@@ -67,6 +68,16 @@ export default function SettingsPageClient({
         </div>
         <div className="px-5 py-6">
           <PayPalSettingsForm />
+        </div>
+      </div>
+
+      {/* E-Mail-Postfach (PayPal-Mails) */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
+        <div className="px-5 py-4 border-b border-zinc-100">
+          <h2 className="text-[15px] font-semibold text-zinc-900">E-Mail-Postfach (PayPal-Zahlungsmails)</h2>
+        </div>
+        <div className="px-5 py-6">
+          <MailSettingsForm />
         </div>
       </div>
 
