@@ -29,6 +29,7 @@ model User {
   paypalSyncState  PayPalSyncState?
   paypalCredential PayPalCredential?
   mailCredential   MailCredential?
+  anthropicCredential AnthropicCredential?
   accounts         Account[]
   sessions         Session[]
 }
@@ -287,7 +288,20 @@ model Expense {
   description String?
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receipt     ExpenseReceipt?
   createdAt   DateTime @default(now())
+}
+
+// Original-Beleg (Foto/PDF) zu einer Ausgabe, in der DB gespeichert
+model ExpenseReceipt {
+  id        String   @id @default(cuid())
+  expenseId String   @unique
+  expense   Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  userId    String
+  data      Bytes
+  mimeType  String
+  fileName  String?
+  createdAt DateTime @default(now())
 }
 
 model StockCorrection {
@@ -372,6 +386,17 @@ model MailCredential {
   imapPassword String   // AES-256-GCM-verschlüsselt
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// Anthropic (Claude) API-Zugang pro Nutzer – für die Beleg-Auswertung
+model AnthropicCredential {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKey    String   // AES-256-GCM-verschlüsselt
+  model     String   @default("claude-haiku-4-5")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // NextAuth required models

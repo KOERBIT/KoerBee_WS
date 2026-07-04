@@ -10,7 +10,7 @@ interface SaleItem { id: string; product: Product; quantity: number; price: numb
 interface Sale { id: string; date: string; customerName: string | null; total: number; notes: string | null; items: SaleItem[]; commissionStore?: CommissionStore | null }
 interface ConsignmentItem { id: string; product: Product; quantity: number; price: number; soldQuantity: number; returnedQuantity: number }
 interface Consignment { id: string; date: string; locationName: string | null; status: string; notes: string | null; items: ConsignmentItem[]; commissionStore?: CommissionStore | null }
-interface Expense { id: string; date: string; amount: number; category: string; description: string | null }
+interface Expense { id: string; date: string; amount: number; category: string; description: string | null; receipt?: { id: string; mimeType: string } | null }
 interface StockCorrection { id: string; productId: string; quantity: number; reason: string; batchNumber: string | null; expiryDate: string | null; createdAt: string }
 interface PayPalTxn { id: string; transactionId: string; date: string; amount: number; currency: string; payerName: string | null; payerEmail: string | null; paypalStatus: string | null; status: string; saleId: string | null; consignmentId: string | null }
 
@@ -43,6 +43,9 @@ export default function KassenbuchPage() {
   const [expCategory, setExpCategory] = useState('Sonstiges')
   const [expDesc, setExpDesc] = useState('')
   const [savingExp, setSavingExp] = useState(false)
+  const [expReceipt, setExpReceipt] = useState<{ base64: string; mimeType: string; fileName: string } | null>(null)
+  const [scanning, setScanning] = useState(false)
+  const [scanMsg, setScanMsg] = useState<string | null>(null)
 
   // Export modal
   const [showExport, setShowExport] = useState(false)
@@ -440,12 +443,74 @@ export default function KassenbuchPage() {
     await fetch('/api/kassenbuch/expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: expDate, amount: parseFloat(expAmount), category: expCategory, description: expDesc || null }),
+      body: JSON.stringify({ date: expDate, amount: parseFloat(expAmount), category: expCategory, description: expDesc || null, receipt: expReceipt }),
     })
     setSavingExp(false)
     setShowExpense(false)
-    setExpAmount(''); setExpDesc(''); setExpCategory('Sonstiges')
+    setExpAmount(''); setExpDesc(''); setExpCategory('Sonstiges'); setExpReceipt(null); setScanMsg(null)
     load()
+  }
+
+  // Beleg-Datei vorbereiten: Bilder werden clientseitig verkleinert (Upload-Limit + günstiger)
+  async function prepareReceiptFile(file: File): Promise<{ base64: string; mimeType: string; fileName: string }> {
+    if (file.type === 'application/pdf') {
+      const buf = await file.arrayBuffer()
+      const bytes = new Uint8Array(buf)
+      let binary = ''
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+      return { base64: btoa(binary), mimeType: 'application/pdf', fileName: file.name }
+    }
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const img = new window.Image()
+      img.onload = () => {
+        const max = 1600
+        let { width, height } = img
+        if (width > max || height > max) {
+          const s = max / Math.max(width, height)
+          width = Math.round(width * s); height = Math.round(height * s)
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.8))
+        URL.revokeObjectURL(img.src)
+      }
+      img.onerror = reject
+      img.src = URL.createObjectURL(file)
+    })
+    return { base64: dataUrl.split(',')[1], mimeType: 'image/jpeg', fileName: file.name }
+  }
+
+  async function scanReceipt(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setScanning(true); setScanMsg(null)
+    try {
+      const prepared = await prepareReceiptFile(file)
+      const res = await fetch('/api/kassenbuch/expenses/scan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64: prepared.base64, mimeType: prepared.mimeType }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setScanMsg(data.error === 'anthropic_not_configured'
+          ? 'Kein Anthropic-Key hinterlegt – in den Einstellungen unter „Beleg-Erkennung" eintragen.'
+          : 'Beleg konnte nicht ausgelesen werden. Bitte manuell erfassen.')
+        return
+      }
+      if (data.amount != null) setExpAmount(String(data.amount))
+      if (data.date) setExpDate(data.date)
+      if (data.category) setExpCategory(data.category)
+      if (data.description) setExpDesc(data.description)
+      setExpReceipt(prepared)
+      setShowExpense(true)
+      setScanMsg('Beleg ausgelesen – bitte Werte prüfen und speichern.')
+    } catch {
+      setScanMsg('Beleg konnte nicht verarbeitet werden.')
+    } finally {
+      setScanning(false)
+    }
   }
 
   const saveStockCorrection = async () => {
@@ -1008,12 +1073,20 @@ export default function KassenbuchPage() {
       {/* AUSGABEN */}
       {tab === 'ausgaben' && (
         <div>
-          <div className="flex justify-end mb-4">
-            <button onClick={() => setShowExpense(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[13px] font-semibold transition-colors">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Ausgabe erfassen
-            </button>
+          <div className="mb-4">
+            <div className="flex justify-end gap-2 flex-wrap">
+              <label className={`flex items-center gap-2 px-4 py-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl text-[13px] font-medium cursor-pointer transition-colors ${scanning ? 'opacity-50 pointer-events-none' : ''}`}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                {scanning ? 'Beleg wird gelesen…' : 'Beleg scannen'}
+                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={scanReceipt} />
+              </label>
+              <button onClick={() => { setExpReceipt(null); setScanMsg(null); setShowExpense(true) }}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[13px] font-semibold transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Ausgabe erfassen
+              </button>
+            </div>
+            {scanMsg && <p className="text-[12px] text-zinc-500 mt-2 text-right">{scanMsg}</p>}
           </div>
 
           {showExpense && (
@@ -1043,12 +1116,13 @@ export default function KassenbuchPage() {
                 <input value={expDesc} onChange={e => setExpDesc(e.target.value)} placeholder="z.B. Bienenwachs, 2kg"
                   className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400" />
               </div>
+              {expReceipt && <p className="text-[12px] text-green-600 font-medium">📎 Beleg angehängt{expReceipt.fileName ? ` (${expReceipt.fileName})` : ''}</p>}
               <div className="flex gap-2">
                 <button type="submit" disabled={savingExp}
                   className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-2 text-[13px] font-semibold transition-colors">
                   {savingExp ? 'Wird gespeichert…' : 'Speichern'}
                 </button>
-                <button type="button" onClick={() => setShowExpense(false)}
+                <button type="button" onClick={() => { setShowExpense(false); setExpReceipt(null); setScanMsg(null) }}
                   className="px-4 border border-zinc-200 rounded-xl text-[13px] text-zinc-500 hover:bg-zinc-50 transition-colors">
                   Abbrechen
                 </button>
@@ -1070,7 +1144,9 @@ export default function KassenbuchPage() {
                       <span className="text-[11px] font-medium bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full">{exp.category}</span>
                       {exp.description && <span className="text-[13px] text-zinc-700">{exp.description}</span>}
                     </div>
-                    <p className="text-[12px] text-zinc-400 mt-0.5">{fmtDate(exp.date)}</p>
+                    <p className="text-[12px] text-zinc-400 mt-0.5">{fmtDate(exp.date)}
+                      {exp.receipt && <> · <a href={`/api/kassenbuch/expenses/${exp.id}/receipt`} target="_blank" rel="noreferrer" className="text-amber-600 hover:text-amber-700 font-medium">Beleg ansehen</a></>}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <p className="text-[15px] font-semibold text-rose-600">−{fmt(exp.amount)}</p>
