@@ -6,8 +6,29 @@ import type { ForecastResult } from '@/lib/tracht/types'
 
 interface Apiary { id: string; name: string; lat: number | null; lng: number | null }
 interface BloomReport { id: string; plantId: string; plantName: string; phase: string | null; date: string; apiaryId: string | null }
+interface BloomRecord { id: string; plantId: string; plantName: string; year: number; startDate: string | null; endDate: string | null; notes: string | null }
 
 function fmtDate(d: string) { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) }
+function fmtDateY(d: string) { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
+
+// Kleiner GTS-Verlauf als SVG-Linie (mit 200-°C-Schwelle + Vegetationsbeginn-Marker)
+function GtsChart({ series, vegetationStart }: { series: { date: string; gts: number }[]; vegetationStart: string | null }) {
+  if (series.length < 2) return null
+  const W = 600, H = 120, pad = 4
+  const maxG = Math.max(200, ...series.map(s => s.gts))
+  const n = series.length
+  const x = (i: number) => pad + (i / (n - 1)) * (W - 2 * pad)
+  const y = (g: number) => H - pad - (g / maxG) * (H - 2 * pad)
+  const path = series.map((s, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(s.gts).toFixed(1)}`).join(' ')
+  const vegIdx = vegetationStart ? series.findIndex(s => s.date === vegetationStart) : -1
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-24">
+      <line x1={pad} x2={W - pad} y1={y(200)} y2={y(200)} stroke="#f59e0b" strokeWidth="1" strokeDasharray="5 4" vectorEffect="non-scaling-stroke" />
+      {vegIdx >= 0 && <line x1={x(vegIdx)} x2={x(vegIdx)} y1={pad} y2={H - pad} stroke="#84cc16" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />}
+      <path d={path} fill="none" stroke="#0ea5e9" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+    </svg>
+  )
+}
 
 function ratingColor(index: number): string {
   if (index >= 90) return 'bg-green-500'
@@ -38,6 +59,14 @@ export default function TrachtPage() {
   const [repApiary, setRepApiary] = useState<string>('')
   const [saving, setSaving] = useState(false)
 
+  // Trachtbeginn/-ende erfassen (überschreibt Modell + Statistik)
+  const [records, setRecords] = useState<BloomRecord[]>([])
+  const [showRecord, setShowRecord] = useState(false)
+  const [recPlant, setRecPlant] = useState(PLANTS[0].id)
+  const [recStart, setRecStart] = useState('')
+  const [recEnd, setRecEnd] = useState('')
+  const [recSaving, setRecSaving] = useState(false)
+
   const loadForecast = useCallback(async () => {
     const res = await fetch('/api/tracht', { cache: 'no-store' })
     if (res.ok) setForecast(await res.json())
@@ -45,12 +74,14 @@ export default function TrachtPage() {
   }, [])
 
   const loadMeta = useCallback(async () => {
-    const [a, r] = await Promise.all([
+    const [a, r, rec] = await Promise.all([
       fetch('/api/apiaries').then(r => r.ok ? r.json() : []),
       fetch('/api/tracht/bloom-reports').then(r => r.ok ? r.json() : []),
+      fetch('/api/tracht/records').then(r => r.ok ? r.json() : []),
     ])
     setApiaries(a)
     setReports(r)
+    setRecords(rec)
   }, [])
 
   useEffect(() => { loadForecast(); loadMeta() }, [loadForecast, loadMeta])
@@ -73,6 +104,32 @@ export default function TrachtPage() {
     await Promise.all([loadMeta(), loadForecast()])
   }
 
+  async function postRecord(body: Record<string, unknown>) {
+    await fetch('/api/tracht/records', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    })
+    await Promise.all([loadMeta(), loadForecast()])
+  }
+
+  async function saveRecord(e: React.FormEvent) {
+    e.preventDefault()
+    setRecSaving(true)
+    const body: Record<string, unknown> = { plantId: recPlant }
+    if (recStart) body.startDate = recStart
+    if (recEnd) body.endDate = recEnd
+    await postRecord(body)
+    setRecSaving(false); setShowRecord(false); setRecStart(''); setRecEnd('')
+  }
+
+  async function markEnded(plantId: string) {
+    await postRecord({ plantId, endDate: new Date().toISOString().slice(0, 10) })
+  }
+
+  async function deleteRecord(id: string) {
+    await fetch(`/api/tracht/records?id=${id}`, { method: 'DELETE' })
+    await Promise.all([loadMeta(), loadForecast()])
+  }
+
   if (loading) return (
     <div className="px-8 py-8 flex items-center justify-center">
       <div className="w-8 h-8 rounded-full border-2 border-amber-200 border-t-amber-500 animate-spin" />
@@ -89,11 +146,17 @@ export default function TrachtPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">🌳 Trachtprognose</h1>
           <p className="text-zinc-500 text-[14px] mt-1">Nektar-Index & 7-Tage-Vorhersage pro Standort</p>
         </div>
-        <button onClick={() => setShowReport(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[13px] font-semibold transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Blüte melden
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => { setRecStart(''); setRecEnd(''); setShowRecord(true) }}
+            className="flex items-center gap-2 px-4 py-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl text-[13px] font-medium transition-colors">
+            Tracht erfassen
+          </button>
+          <button onClick={() => setShowReport(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[13px] font-semibold transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Blüte melden
+          </button>
+        </div>
       </div>
 
       {!forecast || forecast.locations.length === 0 ? (
@@ -166,6 +229,17 @@ export default function TrachtPage() {
                       <p className="text-[10px] text-zinc-400">Blühzeiten standortkorrigiert</p>
                     </div>
                   </div>
+                  {loc.phenology.gtsSeries.length > 1 && (
+                    <div className="mt-3">
+                      <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-1">Verlauf {new Date().getFullYear()}</p>
+                      <GtsChart series={loc.phenology.gtsSeries} vegetationStart={loc.phenology.vegetationStart} />
+                      <div className="flex gap-3 text-[10px] text-zinc-400 mt-1">
+                        <span><span className="inline-block w-3 border-t-2 border-sky-500 align-middle mr-1" />GTS</span>
+                        <span><span className="inline-block w-3 border-t border-dashed border-amber-500 align-middle mr-1" />200 °C (Vegetationsbeginn)</span>
+                        {loc.phenology.vegetationStart && <span><span className="inline-block w-3 border-t border-dashed border-lime-500 align-middle mr-1" />ab {fmtDate(loc.phenology.vegetationStart)}</span>}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -195,6 +269,7 @@ export default function TrachtPage() {
                         <span className="text-[15px] font-semibold text-zinc-900">{plant.plantName}</span>
                         <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600">{plant.bloomPhase}</span>
                         {plant.verified && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">✓ verifiziert</span>}
+                        {plant.viaRecord && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">eigene Angabe</span>}
                       </div>
                       <p className="text-[12px] text-zinc-400 mt-0.5">Nektar: {plant.nectarAmountExpected} · Pollen: {plant.pollenAmountExpected} · noch ca. {plant.bloomDaysLeft} Tage</p>
                     </div>
@@ -237,6 +312,16 @@ export default function TrachtPage() {
                     </div>
                   )}
                   {plant.warning && <p className="text-[12px] text-orange-600 font-medium mt-2">⚠ {plant.warning}</p>}
+                  <div className="mt-3 flex gap-2 flex-wrap">
+                    <button onClick={() => markEnded(plant.plantId)}
+                      className="text-[12px] font-medium text-zinc-600 px-3 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
+                      Blüht nicht mehr (Ende heute)
+                    </button>
+                    <button onClick={() => { setRecPlant(plant.plantId); setRecStart(''); setRecEnd(''); setShowRecord(true) }}
+                      className="text-[12px] font-medium text-zinc-500 px-3 py-1 hover:bg-zinc-50 rounded-lg transition-colors">
+                      Beginn/Ende erfassen…
+                    </button>
+                  </div>
                 </div>
               ))}
 
@@ -258,6 +343,41 @@ export default function TrachtPage() {
                       </div>
                     ))}
                   </div>
+                </>
+              )}
+
+              {/* Tracht-Historie (Statistik über die Jahre) */}
+              {records.length > 0 && (
+                <>
+                  <h2 className="text-[15px] font-semibold text-zinc-900 mt-6">📊 Tracht-Historie</h2>
+                  {Array.from(new Set(records.map(r => r.year))).sort((a, b) => b - a).map(year => (
+                    <div key={year} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                      <div className="px-5 py-2.5 border-b border-zinc-100 bg-zinc-50">
+                        <p className="text-[13px] font-semibold text-zinc-700">{year}</p>
+                      </div>
+                      <div className="divide-y divide-zinc-50">
+                        {records.filter(r => r.year === year).map(r => {
+                          const dur = r.startDate && r.endDate
+                            ? Math.max(0, Math.round((new Date(r.endDate).getTime() - new Date(r.startDate).getTime()) / 86400000))
+                            : null
+                          return (
+                            <div key={r.id} className="px-5 py-2.5 flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-[13px] font-medium text-zinc-900">{r.plantName}</p>
+                                <p className="text-[11px] text-zinc-400">
+                                  {r.startDate ? `Beginn ${fmtDateY(r.startDate)}` : 'Beginn —'} · {r.endDate ? `Ende ${fmtDateY(r.endDate)}` : 'Ende —'}
+                                  {dur != null && ` · ${dur} Tage`}
+                                </p>
+                              </div>
+                              <button onClick={() => deleteRecord(r.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-rose-50 text-zinc-300 hover:text-rose-500 transition-colors">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M9 6V4h6v2"/></svg>
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </>
               )}
             </div>
@@ -321,6 +441,49 @@ export default function TrachtPage() {
               <button type="submit" disabled={saving}
                 className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-3 text-[13px] font-semibold transition-colors">
                 {saving ? 'Wird gespeichert…' : 'Meldung speichern'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Tracht erfassen (Beginn/Ende) */}
+      {showRecord && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 backdrop-blur-sm px-4 py-8 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md my-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <div>
+                <h2 className="text-[15px] font-semibold text-zinc-900">Tracht erfassen</h2>
+                <p className="text-[12px] text-zinc-400 mt-0.5">Beginn und/oder Ende – überschreibt das Modell &amp; landet in der Historie</p>
+              </div>
+              <button onClick={() => setShowRecord(false)} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <form onSubmit={saveRecord} className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">Pflanze</label>
+                <select value={recPlant} onChange={e => setRecPlant(e.target.value)}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                  {PLANTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Beginn (optional)</label>
+                  <input type="date" value={recStart} onChange={e => setRecStart(e.target.value)}
+                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Ende (optional)</label>
+                  <input type="date" value={recEnd} onChange={e => setRecEnd(e.target.value)}
+                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+              </div>
+              <p className="text-[11px] text-zinc-400">Du kannst nur den Beginn, nur das Ende oder beides angeben. Fehlt der Beginn, gilt der Modellkalender.</p>
+              <button type="submit" disabled={recSaving || (!recStart && !recEnd)}
+                className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-3 text-[13px] font-semibold transition-colors">
+                {recSaving ? 'Wird gespeichert…' : 'Speichern'}
               </button>
             </form>
           </div>

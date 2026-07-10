@@ -25,6 +25,7 @@ model User {
   expenses         Expense[]
   stockCorrections StockCorrection[]
   bloomReports     BloomReport[]
+  bloomRecords     BloomRecord[]
   paypalTransactions PayPalTransaction[]
   paypalSyncState  PayPalSyncState?
   paypalCredential PayPalCredential?
@@ -332,6 +333,24 @@ model BloomReport {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+// Tatsächlicher Trachtbeginn/-ende pro Pflanze & Jahr (Imker-Beobachtung).
+// Überschreibt den Modellkalender und dient als Jahres-Statistik.
+model BloomRecord {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plantId   String
+  plantName String
+  year      Int
+  startDate DateTime?
+  endDate   DateTime?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userId, plantId, year])
 }
 
 // PayPal: abgerufene Zahlung (zur Sichtung & Übernahme als Verkauf)

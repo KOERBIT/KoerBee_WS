@@ -20,7 +20,8 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const now = new Date()
-  const [apiaries, reports] = await Promise.all([
+  const currentYear = now.getUTCFullYear()
+  const [apiaries, reports, records] = await Promise.all([
     prisma.apiary.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: 'desc' },
@@ -29,7 +30,15 @@ export async function GET() {
       where: { userId: session.user.id, date: { gte: new Date(now.getTime() - 30 * 86400000) } },
       orderBy: { date: 'desc' },
     }),
+    prisma.bloomRecord.findMany({
+      where: { userId: session.user.id, year: currentYear },
+    }),
   ])
+  const bloomRecords = records.map(r => ({
+    plantId: r.plantId,
+    startDate: r.startDate ? r.startDate.toISOString() : null,
+    endDate: r.endDate ? r.endDate.toISOString() : null,
+  }))
 
   const withCoords = apiaries.filter(a => a.lat != null && a.lng != null)
 
@@ -46,7 +55,9 @@ export async function GET() {
       return
     }
     // Standortspezifische Phänologie aus der realen Wärmesumme dieses Jahres
-    const { gts, vegetationStart } = history ? computeGTS(history) : { gts: null, vegetationStart: null }
+    const gtsResult = history ? computeGTS(history) : { gts: null, vegetationStart: null, series: [] }
+    const { gts, vegetationStart } = gtsResult
+    const gtsSeries = gtsResult.series
     const shiftDays = seasonShiftDays(vegetationStart)
     const currentBloomPlants = getCurrentBloom(now, shiftDays).map(c => c.plant)
     const verified = await verifyBlooms(lat, lng, currentBloomPlants, a.flightRadius ?? 10)
@@ -60,6 +71,7 @@ export async function GET() {
       {
         now, verifiedPlantIds: verified, bloomReports: locReports,
         regionRainBonus: REGION_RAIN_BONUS, bloomShiftDays: shiftDays, gts, vegetationStart,
+        gtsSeries, bloomRecords,
       },
     ))
   }))
@@ -92,7 +104,7 @@ function emptyLocation(a: { id: string; name: string; flightRadius: number | nul
     currentBloom: [],
     nextBloom: [],
     seasonalSummary: { currentSeason: '—', nextSeason: '—' },
-    phenology: { gts: null, vegetationStart: null, bloomShiftDays: 0 },
+    phenology: { gts: null, vegetationStart: null, bloomShiftDays: 0, gtsSeries: [] },
     recommendations: { general: 'Keine Wetterdaten verfügbar.', shortTerm: '—', actionItems: [] },
     dataQuality: {
       weatherDataSource: 'nicht verfügbar', bloomReportsUsed: 0, inaturalistVerified: 0,

@@ -9,6 +9,8 @@ export interface GTSResult {
   gts: number
   /** Datum, an dem die GTS erstmals ≥ 200 °C erreicht (Vegetationsbeginn). */
   vegetationStart: string | null
+  /** Kumulierter GTS-Verlauf über die Zeit (für die Grafik). */
+  series: { date: string; gts: number }[]
 }
 
 function monthWeight(month: number): number {
@@ -20,13 +22,18 @@ function monthWeight(month: number): number {
 export function computeGTS(daily: DailyMean[]): GTSResult {
   let sum = 0
   let vegetationStart: string | null = null
+  const series: { date: string; gts: number }[] = []
   for (const d of daily) {
-    if (d.mean == null || Number.isNaN(d.mean) || d.mean <= 0) continue
+    if (d.mean == null || Number.isNaN(d.mean) || d.mean <= 0) {
+      series.push({ date: d.date, gts: Math.round(sum) })
+      continue
+    }
     const month = Number(d.date.slice(5, 7))
     sum += d.mean * monthWeight(month)
     if (vegetationStart === null && sum >= 200) vegetationStart = d.date
+    series.push({ date: d.date, gts: Math.round(sum) })
   }
-  return { gts: Math.round(sum), vegetationStart }
+  return { gts: Math.round(sum), vegetationStart, series }
 }
 
 export function dayOfYear(dateIso: string): number {

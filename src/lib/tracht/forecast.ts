@@ -38,6 +38,16 @@ export interface BuildOptions {
   gts?: number | null
   /** Datum des Vegetationsbeginns (GTS ≥ 200) */
   vegetationStart?: string | null
+  /** Kumulierter GTS-Verlauf (für die Grafik) */
+  gtsSeries?: { date: string; gts: number }[]
+  /** Vom Imker gemeldeter Trachtbeginn/-ende (überschreibt das Modell), aktuelles Jahr */
+  bloomRecords?: BloomRecordInput[]
+}
+
+export interface BloomRecordInput {
+  plantId: string
+  startDate: string | null
+  endDate: string | null
 }
 
 function buildDayForecast(day: WeatherDay, plant: Plant, regionRainBonus: number): DayForecast {
@@ -111,8 +121,50 @@ export function buildLocationForecast(
     }
   }
 
-  const currentBloom: CurrentBloomPlant[] = currentInfos.map(info => {
+  // Imker-Meldungen (Beginn/Ende) überschreiben den Modellkalender
+  const recMap = new Map<string, { start: Date | null; end: Date | null }>()
+  for (const r of opts.bloomRecords ?? []) {
+    recMap.set(r.plantId, {
+      start: r.startDate ? new Date(r.startDate) : null,
+      end: r.endDate ? new Date(r.endDate) : null,
+    })
+  }
+  const isEndedByRecord = (id: string) => {
+    const rec = recMap.get(id)
+    return !!(rec?.end && rec.end.getTime() < now.getTime())
+  }
+  const isStartedByRecord = (id: string) => {
+    const rec = recMap.get(id)
+    return !!(rec?.start && rec.start.getTime() <= now.getTime() && (!rec.end || rec.end.getTime() >= now.getTime()))
+  }
+  // Gemeldeter Beginn, im Kalender aber (noch) nicht blühend → ergänzen
+  for (const pid of recMap.keys()) {
+    if (isStartedByRecord(pid) && !currentIds.has(pid) && PLANTS_BY_ID[pid]) {
+      const p = PLANTS_BY_ID[pid]
+      const rec = recMap.get(pid)!
+      const end = rec.end ?? bloomWindow(p, now, shiftDays).end
+      currentInfos.push({
+        plant: p,
+        phase: 'Gemeldet',
+        startDate: rec.start!.toISOString().slice(0, 10),
+        endDate: end.toISOString().slice(0, 10),
+        daysLeft: Math.max(0, Math.ceil((end.getTime() - now.getTime()) / DAY)),
+      })
+      currentIds.add(pid)
+    }
+  }
+  // Als beendet gemeldete Pflanzen aus der aktuellen Tracht entfernen
+  const activeInfos = currentInfos.filter(c => !isEndedByRecord(c.plant.id))
+
+  const currentBloom: CurrentBloomPlant[] = activeInfos.map(info => {
     const plant = info.plant
+    const rec = recMap.get(plant.id)
+    const viaRecord = !!(rec && (rec.start || rec.end))
+    const startDate = rec?.start ? rec.start.toISOString().slice(0, 10) : info.startDate
+    const endDate = rec?.end ? rec.end.toISOString().slice(0, 10) : info.endDate
+    const daysLeft = rec?.end
+      ? Math.max(0, Math.ceil((rec.end.getTime() - now.getTime()) / DAY))
+      : info.daysLeft
     const forecast7days = days.map(d => buildDayForecast(d, plant, regionRainBonus))
     const todayFc = forecast7days[0]
     const best = pickBestDays(forecast7days)
@@ -121,9 +173,9 @@ export function buildLocationForecast(
       plantId: plant.id,
       plantName: plant.name,
       bloomPhase: info.phase,
-      bloomStartDate: info.startDate,
-      estimatedEndDate: info.endDate,
-      bloomDaysLeft: info.daysLeft,
+      bloomStartDate: startDate,
+      estimatedEndDate: endDate,
+      bloomDaysLeft: daysLeft,
       nectarAmountExpected: plant.nectar,
       pollenAmountExpected: plant.pollen,
       nectarIndexToday: todayFc.nectarIndex,
@@ -138,11 +190,14 @@ export function buildLocationForecast(
       bestDaysAhead: best.dates,
       bestDaysExplanation: best.explanation,
       verified: isVerified,
-      warning: plantWarning(plant, days, info.daysLeft),
+      viaRecord,
+      warning: plantWarning(plant, days, daysLeft),
     }
   })
 
-  const nextBloom = getNextBloom(now, 90, shiftDays).map(n => ({
+  const nextBloom = getNextBloom(now, 90, shiftDays)
+    .filter(n => !isEndedByRecord(n.plant.id) && !isStartedByRecord(n.plant.id))
+    .map(n => ({
     plantId: n.plant.id,
     plantName: n.plant.name,
     estimatedStartDate: n.startDate,
@@ -206,6 +261,7 @@ export function buildLocationForecast(
       gts: opts.gts ?? null,
       vegetationStart: opts.vegetationStart ?? null,
       bloomShiftDays: shiftDays,
+      gtsSeries: opts.gtsSeries ?? [],
     },
     recommendations: {
       general: topPlant

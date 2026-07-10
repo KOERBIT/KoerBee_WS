@@ -83,6 +83,8 @@ export interface CurrentBloomPlant {
   bestDaysAhead: string[]
   bestDaysExplanation: string
   verified: boolean
+  /** true, wenn Beginn/Ende aus einer eigenen Imker-Meldung stammt (überschreibt das Modell) */
+  viaRecord: boolean
   warning: string | null
 }
 
@@ -125,6 +127,8 @@ export interface LocationForecast {
     vegetationStart: string | null
     /** Angewendete phänologische Verschiebung der Blühzeiten in Tagen */
     bloomShiftDays: number
+    /** Kumulierter GTS-Verlauf (für die Grafik) */
+    gtsSeries: { date: string; gts: number }[]
   }
   recommendations: {
     general: string
