@@ -58,6 +58,7 @@ export async function GET() {
     const gtsResult = history ? computeGTS(history) : { gts: null, vegetationStart: null, series: [] }
     const { gts, vegetationStart } = gtsResult
     const gtsSeries = gtsResult.series
+    const dailyMax = (history ?? []).map(h => ({ date: h.date, max: h.max }))
     const shiftDays = seasonShiftDays(vegetationStart)
     const currentBloomPlants = getCurrentBloom(now, shiftDays).map(c => c.plant)
     const verified = await verifyBlooms(lat, lng, currentBloomPlants, a.flightRadius ?? 10)
@@ -71,7 +72,7 @@ export async function GET() {
       {
         now, verifiedPlantIds: verified, bloomReports: locReports,
         regionRainBonus: REGION_RAIN_BONUS, bloomShiftDays: shiftDays, gts, vegetationStart,
-        gtsSeries, bloomRecords,
+        gtsSeries, bloomRecords, dailyMax,
       },
     ))
   }))

@@ -1,5 +1,4 @@
 import { WeatherDay } from './types'
-import { DailyMean } from './phenology'
 
 export interface CurrentWeather {
   temperature: number
@@ -150,25 +149,29 @@ async function fetchOpenWeatherMap(lat: number, lng: number): Promise<WeatherRes
   return { source: 'OpenWeatherMap', elevation: null, days, current }
 }
 
+export interface HistoryDay { date: string; mean: number; max: number; precip: number }
+
 /**
- * Tagesmittel-Temperaturen vom 1. Januar bis heute (für die GTS-Berechnung).
- * Nutzt das Open-Meteo-Archiv; bei Fehlern null (GTS wird dann nicht angezeigt).
+ * Tages-Historie (Mittel/Max/Niederschlag) vom 1. Januar bis heute – für GTS
+ * und das hitzegetriebene Trachtende. Nutzt das Open-Meteo-Archiv; null bei Fehlern.
  */
-export async function fetchYearHistory(lat: number, lng: number): Promise<DailyMean[] | null> {
+export async function fetchYearHistory(lat: number, lng: number): Promise<HistoryDay[] | null> {
   const now = new Date()
   const start = `${now.getUTCFullYear()}-01-01`
   const end = now.toISOString().slice(0, 10)
   const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lng}` +
-    `&start_date=${start}&end_date=${end}&daily=temperature_2m_mean&timezone=auto`
+    `&start_date=${start}&end_date=${end}&daily=temperature_2m_mean,temperature_2m_max,precipitation_sum&timezone=auto`
   try {
     const res = await fetch(url, { next: { revalidate: 86400 } })
     if (!res.ok) return null
     const data = await res.json()
     const time: string[] = data?.daily?.time ?? []
     const means: (number | null)[] = data?.daily?.temperature_2m_mean ?? []
+    const maxes: (number | null)[] = data?.daily?.temperature_2m_max ?? []
+    const precs: (number | null)[] = data?.daily?.precipitation_sum ?? []
     if (!time.length) return null
     return time
-      .map((date, i) => ({ date, mean: means[i] as number }))
+      .map((date, i) => ({ date, mean: means[i] as number, max: (maxes[i] as number) ?? 0, precip: (precs[i] as number) ?? 0 }))
       .filter(d => d.mean != null && !Number.isNaN(d.mean))
   } catch {
     return null

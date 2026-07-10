@@ -2,6 +2,7 @@ import { nektarIndex, rating, reasonFor } from './nektar'
 import { getCurrentBloom, getNextBloom, seasonLabel, isBlooming, bloomWindow } from './bloom'
 import { PLANTS_BY_ID } from './plants'
 import { wmoLabel, weekday } from './wmo'
+import { heatBloomEnd, DailyMax } from './heat'
 import {
   CurrentBloomPlant, DayForecast, LocationForecast, Plant, WeatherDay,
 } from './types'
@@ -42,6 +43,8 @@ export interface BuildOptions {
   gtsSeries?: { date: string; gts: number }[]
   /** Vom Imker gemeldeter Trachtbeginn/-ende (überschreibt das Modell), aktuelles Jahr */
   bloomRecords?: BloomRecordInput[]
+  /** Tageshöchstwerte des Jahres (für hitzegetriebenes Trachtende) */
+  dailyMax?: DailyMax[]
 }
 
 export interface BloomRecordInput {
@@ -153,22 +156,34 @@ export function buildLocationForecast(
       currentIds.add(pid)
     }
   }
-  // Als beendet gemeldete Pflanzen aus der aktuellen Tracht entfernen
-  const activeInfos = currentInfos.filter(c => !isEndedByRecord(c.plant.id))
+  // Hitzegetriebenes Trachtende (nur wenn keine eigene Meldung vorliegt)
+  const dailyMax = opts.dailyMax ?? []
+  const nowIso = now.toISOString().slice(0, 10)
+  const heatEndOf = (id: string, start: string, end: string): string | null =>
+    recMap.has(id) ? null : heatBloomEnd(id, start, end, dailyMax, nowIso)
+
+  // Beendete Trachten entfernen: eigene Meldung ODER hitzebedingt vorbei
+  const activeInfos = currentInfos.filter(c => {
+    if (isEndedByRecord(c.plant.id)) return false
+    const he = heatEndOf(c.plant.id, c.startDate, c.endDate)
+    return !(he && he < nowIso)
+  })
 
   const currentBloom: CurrentBloomPlant[] = activeInfos.map(info => {
     const plant = info.plant
     const rec = recMap.get(plant.id)
+    const heatEnd = heatEndOf(plant.id, info.startDate, info.endDate)
     const viaRecord = !!(rec && (rec.start || rec.end))
     const startDate = rec?.start ? rec.start.toISOString().slice(0, 10) : info.startDate
-    const endDate = rec?.end ? rec.end.toISOString().slice(0, 10) : info.endDate
-    const daysLeft = rec?.end
-      ? Math.max(0, Math.ceil((rec.end.getTime() - now.getTime()) / DAY))
-      : info.daysLeft
+    const endDate = rec?.end ? rec.end.toISOString().slice(0, 10) : (heatEnd ?? info.endDate)
+    const daysLeft = Math.max(0, Math.ceil((new Date(endDate + 'T12:00:00Z').getTime() - now.getTime()) / DAY))
     const forecast7days = days.map(d => buildDayForecast(d, plant, regionRainBonus))
     const todayFc = forecast7days[0]
     const best = pickBestDays(forecast7days)
     const isVerified = verified.has(plant.id) || reportPlantIds.has(plant.id)
+    const heatWarning = heatEnd
+      ? `Hitze verkürzt die Tracht – Ende voraussichtlich um den ${endDate.slice(8, 10)}.${endDate.slice(5, 7)}.`
+      : null
     return {
       plantId: plant.id,
       plantName: plant.name,
@@ -191,7 +206,7 @@ export function buildLocationForecast(
       bestDaysExplanation: best.explanation,
       verified: isVerified,
       viaRecord,
-      warning: plantWarning(plant, days, daysLeft),
+      warning: heatWarning ?? plantWarning(plant, days, daysLeft),
     }
   })
 

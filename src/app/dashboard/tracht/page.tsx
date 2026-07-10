@@ -380,6 +380,14 @@ export default function TrachtPage() {
                   ))}
                 </>
               )}
+
+              {/* Externe Live-Tracht (Stockwaagen) */}
+              <div className="bg-white rounded-2xl shadow-sm px-5 py-4">
+                <p className="text-[13px] font-semibold text-zinc-900">Live-Tracht in deiner Region</p>
+                <p className="text-[12px] text-zinc-500 mt-1">Echtzeit-Gewichtsdaten von Bienenstock-Waagen (TrachtNet) zeigen, ob gerade Nektar fließt.</p>
+                <a href="https://www.bienenkunde.rlp.de/Bienenkunde/Trachtnet/Bundesland-auswaehlen/Hessen" target="_blank" rel="noreferrer"
+                  className="inline-block mt-2 text-[12px] font-medium text-amber-600 hover:text-amber-700">TrachtNet Hessen öffnen →</a>
+              </div>
             </div>
           )}
         </>
