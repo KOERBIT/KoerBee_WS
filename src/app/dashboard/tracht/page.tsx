@@ -274,7 +274,7 @@ export default function TrachtPage() {
               {(dwdLoading || (dwd && dwd.phenology.length > 0)) && (
                 <div className="bg-white rounded-2xl shadow-sm px-5 py-4">
                   <p className="text-[13px] font-semibold text-zinc-900">DWD-Blühbeginn {dwd?.year ?? ''} (amtlich, nächste Station)</p>
-                  <p className="text-[12px] text-zinc-500 mt-0.5">Echte Beobachtungen des Deutschen Wetterdienstes zur Verifizierung des Modells.</p>
+                  <p className="text-[12px] text-zinc-500 mt-0.5">Echte Beobachtungen des Deutschen Wetterdienstes – fließen automatisch als Blühbeginn ins Modell ein (Karten mit <span className="font-medium text-amber-700">DWD</span>-Kennzeichen). Eigene Meldungen haben Vorrang.</p>
                   {dwdLoading ? (
                     <p className="text-[12px] text-zinc-400 mt-2">Lädt…</p>
                   ) : (
@@ -286,7 +286,7 @@ export default function TrachtPage() {
                             <span className="text-zinc-400"> · {p.stationName} ({p.distanceKm} km)</span>
                           </span>
                           <button onClick={() => postRecord({ plantId: p.plantId, startDate: p.bloomStart })}
-                            className="text-[11px] font-medium text-amber-600 hover:text-amber-700 whitespace-nowrap">als Beginn übernehmen</button>
+                            className="text-[11px] font-medium text-amber-600 hover:text-amber-700 whitespace-nowrap" title="Als eigene Meldung fixieren (überschreibt künftige DWD-Aktualisierungen)">als eigene Meldung fixieren</button>
                         </div>
                       ))}
                     </div>
@@ -310,6 +310,7 @@ export default function TrachtPage() {
                         <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600">{plant.bloomPhase}</span>
                         {plant.verified && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">✓ verifiziert</span>}
                         {plant.viaRecord && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">eigene Angabe</span>}
+                        {plant.viaDwd && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700" title="Blühbeginn aus amtlichen DWD-Phänologiedaten">DWD</span>}
                       </div>
                       <p className="text-[12px] text-zinc-400 mt-0.5">Nektar: {plant.nectarAmountExpected} · Pollen: {plant.pollenAmountExpected} · noch ca. {plant.bloomDaysLeft} Tage</p>
                     </div>

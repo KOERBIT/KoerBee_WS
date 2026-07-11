@@ -46,6 +46,38 @@ describe('Trachtbeginn/-ende überschreibt das Modell', () => {
   })
 })
 
+describe('DWD-Blühbeginn fließt automatisch ins Modell ein', () => {
+  it('zieht den Blühbeginn auf das DWD-Datum vor und markiert viaDwd', () => {
+    const f = buildLocationForecast(loc, weather(now), {
+      now, dwdStarts: [{ plantId: 'winterlinde', bloomStart: '2026-06-15' }],
+    })
+    const wl = f.currentBloom.find(p => p.plantId === 'winterlinde')
+    expect(wl?.bloomStartDate).toBe('2026-06-15')
+    expect(wl?.viaDwd).toBe(true)
+    expect(wl?.viaRecord).toBe(false)
+  })
+
+  it('eigene Meldung hat Vorrang vor DWD', () => {
+    const f = buildLocationForecast(loc, weather(now), {
+      now,
+      dwdStarts: [{ plantId: 'winterlinde', bloomStart: '2026-06-15' }],
+      bloomRecords: [{ plantId: 'winterlinde', startDate: '2026-06-20', endDate: null }],
+    })
+    const wl = f.currentBloom.find(p => p.plantId === 'winterlinde')
+    expect(wl?.bloomStartDate).toBe('2026-06-20')
+    expect(wl?.viaRecord).toBe(true)
+    expect(wl?.viaDwd).toBe(false)
+  })
+
+  it('erweckt keine längst verblühte Tracht nur wegen eines DWD-Startdatums', () => {
+    // Sal-Weide blüht März/April – ein DWD-Beginn im März macht sie im Juli nicht wieder aktuell
+    const f = buildLocationForecast(loc, weather(now), {
+      now, dwdStarts: [{ plantId: 'salweide', bloomStart: '2026-03-20' }],
+    })
+    expect(f.currentBloom.some(p => p.plantId === 'salweide')).toBe(false)
+  })
+})
+
 describe('computeGTS liefert einen Verlauf', () => {
   it('Serie so lang wie die Eingabe, letzter Wert = Gesamt-GTS', () => {
     const days = Array.from({ length: 60 }, (_, i) => ({

@@ -6,6 +6,7 @@ import { fetchWeather, fetchYearHistory } from '@/lib/tracht/weather'
 import { buildLocationForecast } from '@/lib/tracht/forecast'
 import { getCurrentBloom } from '@/lib/tracht/bloom'
 import { computeGTS, seasonShiftDays } from '@/lib/tracht/phenology'
+import { getDwdPhenology } from '@/lib/tracht/dwd'
 import { verifyBlooms } from '@/lib/tracht/inaturalist'
 import { ForecastResult, LocationForecast } from '@/lib/tracht/types'
 
@@ -46,14 +47,16 @@ export async function GET() {
   await Promise.all(withCoords.map(async (a) => {
     const lat = a.lat as number
     const lng = a.lng as number
-    const [weather, history] = await Promise.all([
+    const [weather, history, dwd] = await Promise.all([
       fetchWeather(lat, lng),
       fetchYearHistory(lat, lng),
+      getDwdPhenology(lat, lng, currentYear).catch(() => []),
     ])
     if (!weather) {
       locations.push(emptyLocation(a, lat, lng))
       return
     }
+    const dwdStarts = dwd.map(d => ({ plantId: d.plantId, bloomStart: d.bloomStart }))
     // Standortspezifische Phänologie aus der realen Wärmesumme dieses Jahres
     const gtsResult = history ? computeGTS(history) : { gts: null, vegetationStart: null, series: [] }
     const { gts, vegetationStart } = gtsResult
@@ -72,7 +75,7 @@ export async function GET() {
       {
         now, verifiedPlantIds: verified, bloomReports: locReports,
         regionRainBonus: REGION_RAIN_BONUS, bloomShiftDays: shiftDays, gts, vegetationStart,
-        gtsSeries, bloomRecords, dailyMax,
+        gtsSeries, bloomRecords, dailyMax, dwdStarts,
       },
     ))
   }))

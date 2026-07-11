@@ -85,6 +85,8 @@ export interface CurrentBloomPlant {
   verified: boolean
   /** true, wenn Beginn/Ende aus einer eigenen Imker-Meldung stammt (überschreibt das Modell) */
   viaRecord: boolean
+  /** true, wenn der Blühbeginn aus amtlichen DWD-Phänologiedaten stammt */
+  viaDwd: boolean
   warning: string | null
 }
 

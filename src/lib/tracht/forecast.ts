@@ -1,6 +1,6 @@
 import { nektarIndex, rating, reasonFor } from './nektar'
-import { getCurrentBloom, getNextBloom, seasonLabel, isBlooming, bloomWindow } from './bloom'
-import { PLANTS_BY_ID } from './plants'
+import { getNextBloom, seasonLabel, isBlooming, bloomWindow } from './bloom'
+import { PLANTS, PLANTS_BY_ID } from './plants'
 import { wmoLabel, weekday } from './wmo'
 import { heatBloomEnd, DailyMax } from './heat'
 import {
@@ -45,6 +45,8 @@ export interface BuildOptions {
   bloomRecords?: BloomRecordInput[]
   /** Tageshöchstwerte des Jahres (für hitzegetriebenes Trachtende) */
   dailyMax?: DailyMax[]
+  /** Amtliche DWD-Blühbeginne (fließen automatisch als Start ein) */
+  dwdStarts?: { plantId: string; bloomStart: string }[]
 }
 
 export interface BloomRecordInput {
@@ -104,90 +106,67 @@ export function buildLocationForecast(
   const days = weather.days
   const today = days[0]
 
-  // Aktuelle Blüten aus Kalender (standortverschoben) + Imkermeldungen
-  const currentInfos = getCurrentBloom(now, shiftDays)
-  const currentIds = new Set(currentInfos.map(c => c.plant.id))
-  const reportPlantIds = new Set(reports.map(r => r.plantId))
-  // Gemeldete, aber kalendarisch (noch) nicht erfasste Blüten ergänzen
-  for (const r of reports) {
-    if (!currentIds.has(r.plantId) && PLANTS_BY_ID[r.plantId]) {
-      const p = PLANTS_BY_ID[r.plantId]
-      const w = bloomWindow(p, now, shiftDays)
-      currentInfos.push({
-        plant: p,
-        phase: r.phase || 'Gemeldet',
-        startDate: w.start.toISOString().slice(0, 10),
-        endDate: w.end.toISOString().slice(0, 10),
-        daysLeft: Math.max(0, Math.ceil((w.end.getTime() - now.getTime()) / DAY)),
-      })
-      currentIds.add(r.plantId)
-    }
-  }
-
-  // Imker-Meldungen (Beginn/Ende) überschreiben den Modellkalender
-  const recMap = new Map<string, { start: Date | null; end: Date | null }>()
-  for (const r of opts.bloomRecords ?? []) {
-    recMap.set(r.plantId, {
-      start: r.startDate ? new Date(r.startDate) : null,
-      end: r.endDate ? new Date(r.endDate) : null,
-    })
-  }
-  const isEndedByRecord = (id: string) => {
-    const rec = recMap.get(id)
-    return !!(rec?.end && rec.end.getTime() < now.getTime())
-  }
-  const isStartedByRecord = (id: string) => {
-    const rec = recMap.get(id)
-    return !!(rec?.start && rec.start.getTime() <= now.getTime() && (!rec.end || rec.end.getTime() >= now.getTime()))
-  }
-  // Gemeldeter Beginn, im Kalender aber (noch) nicht blühend → ergänzen
-  for (const pid of recMap.keys()) {
-    if (isStartedByRecord(pid) && !currentIds.has(pid) && PLANTS_BY_ID[pid]) {
-      const p = PLANTS_BY_ID[pid]
-      const rec = recMap.get(pid)!
-      const end = rec.end ?? bloomWindow(p, now, shiftDays).end
-      currentInfos.push({
-        plant: p,
-        phase: 'Gemeldet',
-        startDate: rec.start!.toISOString().slice(0, 10),
-        endDate: end.toISOString().slice(0, 10),
-        daysLeft: Math.max(0, Math.ceil((end.getTime() - now.getTime()) / DAY)),
-      })
-      currentIds.add(pid)
-    }
-  }
-  // Hitzegetriebenes Trachtende (nur wenn keine eigene Meldung vorliegt)
-  const dailyMax = opts.dailyMax ?? []
   const nowIso = now.toISOString().slice(0, 10)
-  const heatEndOf = (id: string, start: string, end: string): string | null =>
-    recMap.has(id) ? null : heatBloomEnd(id, start, end, dailyMax, nowIso)
+  const dailyMax = opts.dailyMax ?? []
+  const reportPlantIds = new Set(reports.map(r => r.plantId))
 
-  // Beendete Trachten entfernen: eigene Meldung ODER hitzebedingt vorbei
-  const activeInfos = currentInfos.filter(c => {
-    if (isEndedByRecord(c.plant.id)) return false
-    const he = heatEndOf(c.plant.id, c.startDate, c.endDate)
-    return !(he && he < nowIso)
-  })
+  // Signalquellen für Beginn/Ende – Priorität: eigene Meldung > DWD > Modell
+  const recMap = new Map<string, { start: string | null; end: string | null }>()
+  for (const r of opts.bloomRecords ?? []) {
+    recMap.set(r.plantId, { start: r.startDate ? r.startDate.slice(0, 10) : null, end: r.endDate ? r.endDate.slice(0, 10) : null })
+  }
+  const dwdMap = new Map<string, string>()
+  for (const d of opts.dwdStarts ?? []) dwdMap.set(d.plantId, d.bloomStart.slice(0, 10))
 
-  const currentBloom: CurrentBloomPlant[] = activeInfos.map(info => {
-    const plant = info.plant
-    const rec = recMap.get(plant.id)
-    const heatEnd = heatEndOf(plant.id, info.startDate, info.endDate)
-    const viaRecord = !!(rec && (rec.start || rec.end))
-    const startDate = rec?.start ? rec.start.toISOString().slice(0, 10) : info.startDate
-    const endDate = rec?.end ? rec.end.toISOString().slice(0, 10) : (heatEnd ?? info.endDate)
+  // Kandidaten: alles, was Modell/Meldung/DWD/Report als relevant sieht
+  const candidateIds = new Set<string>()
+  for (const p of PLANTS) if (isBlooming(p, now, shiftDays)) candidateIds.add(p.id)
+  for (const id of recMap.keys()) candidateIds.add(id)
+  for (const id of dwdMap.keys()) candidateIds.add(id)
+  for (const r of reports) candidateIds.add(r.plantId)
+
+  function phaseLabel(plantId: string, startIso: string, endIso: string): string {
+    const s = new Date(startIso + 'T12:00:00Z').getTime()
+    const e = new Date(endIso + 'T12:00:00Z').getTime()
+    const ratio = e > s ? (now.getTime() - s) / (e - s) : 0
+    const ht = plantId === 'honigtau'
+    if (ratio < 0.34) return ht ? 'Einsetzend' : 'Blühbeginn'
+    if (ratio < 0.67) return ht ? 'Ergiebig' : 'Hochblüte'
+    return ht ? 'Nachlassend' : 'Abblühend'
+  }
+
+  const currentBloom: CurrentBloomPlant[] = []
+  const currentIds = new Set<string>()
+  for (const id of candidateIds) {
+    const plant = PLANTS_BY_ID[id]
+    if (!plant) continue
+    const win = bloomWindow(plant, now, shiftDays)
+    const modelEnd = win.end.toISOString().slice(0, 10)
+    const rec = recMap.get(id)
+    const dwdStart = dwdMap.get(id) ?? null
+
+    // Effektiver Beginn (Meldung > DWD > Modell) und Ende (Meldung > Hitze > Modell)
+    const startDate = rec?.start ?? dwdStart ?? win.start.toISOString().slice(0, 10)
+    const heatEnd = rec?.end ? null : heatBloomEnd(id, startDate, modelEnd, dailyMax, nowIso)
+    const endDate = rec?.end ?? heatEnd ?? modelEnd
+
+    if (!(startDate <= nowIso && nowIso <= endDate)) continue // aktuell nicht blühend
+
     const daysLeft = Math.max(0, Math.ceil((new Date(endDate + 'T12:00:00Z').getTime() - now.getTime()) / DAY))
+    const viaRecord = !!(rec && (rec.start || rec.end))
+    const viaDwd = !viaRecord && !!dwdStart && startDate === dwdStart
+    const phase = phaseLabel(id, startDate, endDate)
     const forecast7days = days.map(d => buildDayForecast(d, plant, regionRainBonus))
     const todayFc = forecast7days[0]
     const best = pickBestDays(forecast7days)
-    const isVerified = verified.has(plant.id) || reportPlantIds.has(plant.id)
+    const isVerified = verified.has(id) || reportPlantIds.has(id)
     const heatWarning = heatEnd
       ? `Hitze verkürzt die Tracht – Ende voraussichtlich um den ${endDate.slice(8, 10)}.${endDate.slice(5, 7)}.`
       : null
-    return {
-      plantId: plant.id,
+    currentBloom.push({
+      plantId: id,
       plantName: plant.name,
-      bloomPhase: info.phase,
+      bloomPhase: phase,
       bloomStartDate: startDate,
       estimatedEndDate: endDate,
       bloomDaysLeft: daysLeft,
@@ -195,7 +174,7 @@ export function buildLocationForecast(
       pollenAmountExpected: plant.pollen,
       nectarIndexToday: todayFc.nectarIndex,
       nectarRatingToday: todayFc.rating,
-      explanation: `${info.phase}: ${todayFc.reason}.`,
+      explanation: `${phase}: ${todayFc.reason}.`,
       recommendation: todayFc.nectarIndex >= 75
         ? 'Top-Bedingungen – auf ausreichend Wabenfläche/Honigraum achten.'
         : todayFc.nectarIndex >= 50
@@ -206,12 +185,15 @@ export function buildLocationForecast(
       bestDaysExplanation: best.explanation,
       verified: isVerified,
       viaRecord,
+      viaDwd,
       warning: heatWarning ?? plantWarning(plant, days, daysLeft),
-    }
-  })
+    })
+    currentIds.add(id)
+  }
+  currentBloom.sort((a, b) => a.bloomDaysLeft - b.bloomDaysLeft)
 
   const nextBloom = getNextBloom(now, 90, shiftDays)
-    .filter(n => !isEndedByRecord(n.plant.id) && !isStartedByRecord(n.plant.id))
+    .filter(n => !currentIds.has(n.plant.id))
     .map(n => ({
     plantId: n.plant.id,
     plantName: n.plant.name,
