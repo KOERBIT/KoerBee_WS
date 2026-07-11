@@ -67,6 +67,10 @@ export default function TrachtPage() {
   const [recEnd, setRecEnd] = useState('')
   const [recSaving, setRecSaving] = useState(false)
 
+  // DWD-Phänologie (amtlicher Blühbeginn, nächste Station)
+  const [dwd, setDwd] = useState<{ year: number; phenology: { plantId: string; plantName: string; bloomStart: string; stationName: string; distanceKm: number }[] } | null>(null)
+  const [dwdLoading, setDwdLoading] = useState(false)
+
   const loadForecast = useCallback(async () => {
     const res = await fetch('/api/tracht', { cache: 'no-store' })
     if (res.ok) setForecast(await res.json())
@@ -85,6 +89,18 @@ export default function TrachtPage() {
   }, [])
 
   useEffect(() => { loadForecast(); loadMeta() }, [loadForecast, loadMeta])
+
+  // DWD-Daten für den ausgewählten Standort nachladen
+  useEffect(() => {
+    const l = forecast?.locations[selected]
+    if (!l) return
+    setDwd(null); setDwdLoading(true)
+    fetch(`/api/tracht/dwd?lat=${l.coordinates.lat}&lng=${l.coordinates.lon}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setDwd(d))
+      .catch(() => setDwd(null))
+      .finally(() => setDwdLoading(false))
+  }, [forecast, selected])
 
   async function saveReport(e: React.FormEvent) {
     e.preventDefault()
@@ -253,6 +269,30 @@ export default function TrachtPage() {
                   ))}
                 </ul>
               </div>
+
+              {/* DWD-Phänologie (amtlicher Blühbeginn) */}
+              {(dwdLoading || (dwd && dwd.phenology.length > 0)) && (
+                <div className="bg-white rounded-2xl shadow-sm px-5 py-4">
+                  <p className="text-[13px] font-semibold text-zinc-900">DWD-Blühbeginn {dwd?.year ?? ''} (amtlich, nächste Station)</p>
+                  <p className="text-[12px] text-zinc-500 mt-0.5">Echte Beobachtungen des Deutschen Wetterdienstes zur Verifizierung des Modells.</p>
+                  {dwdLoading ? (
+                    <p className="text-[12px] text-zinc-400 mt-2">Lädt…</p>
+                  ) : (
+                    <div className="mt-2 space-y-1.5">
+                      {dwd!.phenology.map(p => (
+                        <div key={p.plantId} className="flex items-center justify-between gap-3 flex-wrap">
+                          <span className="text-[12px] text-zinc-700">
+                            <span className="font-medium text-zinc-900">{p.plantName}</span> · Blühbeginn {fmtDateY(p.bloomStart)}
+                            <span className="text-zinc-400"> · {p.stationName} ({p.distanceKm} km)</span>
+                          </span>
+                          <button onClick={() => postRecord({ plantId: p.plantId, startDate: p.bloomStart })}
+                            className="text-[11px] font-medium text-amber-600 hover:text-amber-700 whitespace-nowrap">als Beginn übernehmen</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Aktuelle Blüten */}
               <h2 className="text-[15px] font-semibold text-zinc-900 mt-6">🌸 Aktuelle Tracht</h2>
