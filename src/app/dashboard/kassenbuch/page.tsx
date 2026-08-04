@@ -7,7 +7,7 @@ type Tab = 'verkauf' | 'kommission' | 'paypal' | 'artikel' | 'ausgaben' | 'laede
 interface CommissionStore { id: string; name: string; createdAt: string }
 interface Product { id: string; name: string; unit: string; price: number; description: string | null; fillAmount: number | null; fillUnit: string | null; stockQuantity: number }
 interface SaleItem { id: string; product: Product; quantity: number; price: number; total: number }
-interface Sale { id: string; date: string; customerName: string | null; total: number; notes: string | null; items: SaleItem[]; commissionStore?: CommissionStore | null }
+interface Sale { id: string; date: string; customerName: string | null; total: number; notes: string | null; items: SaleItem[]; commissionStore?: CommissionStore | null; customer?: { email: string | null } | null; receipt?: { number: number; paymentMethod: string; emailedAt: string | null } | null }
 interface ConsignmentItem { id: string; product: Product; quantity: number; price: number; soldQuantity: number; returnedQuantity: number }
 interface Consignment { id: string; date: string; locationName: string | null; status: string; notes: string | null; items: ConsignmentItem[]; commissionStore?: CommissionStore | null }
 interface Expense { id: string; date: string; amount: number; category: string; description: string | null; receipt?: { id: string; mimeType: string } | null }
@@ -16,6 +16,56 @@ interface PayPalTxn { id: string; transactionId: string; date: string; amount: n
 
 function fmt(n: number) { return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) }
 function fmtDate(d: string) { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
+
+// Akzeptiert Punkt UND Komma als Dezimaltrennzeichen (Euro,Cent) und liefert eine Zahl.
+function parseDecimal(s: string): number {
+  const n = parseFloat(s.replace(/\s/g, '').replace(',', '.'))
+  return Number.isFinite(n) ? n : NaN
+}
+function numToText(v: number): string {
+  return !Number.isFinite(v) || v === 0 ? '' : String(v).replace('.', ',')
+}
+
+// Zahlen-Eingabefeld, das sowohl "6,50" als auch "6.50" versteht. Hält beim
+// Tippen den Rohtext, damit Zwischenstände wie "6," nicht zurückspringen.
+function DecimalInput({
+  value, onChange, className, placeholder, min = 0,
+}: {
+  value: number
+  onChange: (n: number) => void
+  className?: string
+  placeholder?: string
+  min?: number
+}) {
+  const [text, setText] = useState(() => numToText(value))
+  const [focused, setFocused] = useState(false)
+
+  useEffect(() => {
+    if (!focused && parseDecimal(text || '0') !== value) setText(numToText(value))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={text}
+      placeholder={placeholder}
+      className={className}
+      onFocus={() => setFocused(true)}
+      onBlur={() => { setFocused(false); setText(numToText(value)) }}
+      onChange={e => {
+        const raw = e.target.value
+        if (/[^0-9.,\s]/.test(raw)) return
+        setText(raw)
+        const trimmed = raw.trim()
+        if (trimmed === '' || trimmed === ',' || trimmed === '.') { onChange(min); return }
+        const n = parseDecimal(trimmed)
+        if (Number.isFinite(n)) onChange(n)
+      }}
+    />
+  )
+}
 
 const EXPENSE_CATEGORIES = ['Material', 'Tierarzt', 'Ausrüstung', 'Fahrt', 'Sonstiges']
 
@@ -76,6 +126,21 @@ export default function KassenbuchPage() {
   const [sellDate, setSellDate] = useState(new Date().toISOString().slice(0, 10))
   const [sellingCons, setSellingCons] = useState(false)
   const [sellStockError, setSellStockError] = useState<{ productName: string; requested: number; available: number }[]>([])
+
+  // Kommission korrigieren
+  const [correctCons, setCorrectCons] = useState<Consignment | null>(null)
+  const [corrRows, setCorrRows] = useState<Record<string, { quantity: number; soldQuantity: number; returnedQuantity: number; price: number }>>({})
+  const [correcting, setCorrecting] = useState(false)
+  const [correctMsg, setCorrectMsg] = useState<string | null>(null)
+
+  // Quittung
+  const [receiptSale, setReceiptSale] = useState<Sale | null>(null)
+  const [receiptMeta, setReceiptMeta] = useState<{ number: number; formatted: string; paymentMethod: string; emailedAt: string | null; recipient: string | null } | null>(null)
+  const [receiptPayment, setReceiptPayment] = useState<'bar' | 'ueberweisung'>('bar')
+  const [receiptEmail, setReceiptEmail] = useState('')
+  const [receiptBusy, setReceiptBusy] = useState(false)
+  const [receiptVersion, setReceiptVersion] = useState(0)
+  const [receiptMsg, setReceiptMsg] = useState<string | null>(null)
 
   // Product form
   const [showProduct, setShowProduct] = useState(false)
@@ -392,6 +457,98 @@ export default function KassenbuchPage() {
     load()
   }
 
+  function openCorrect(c: Consignment) {
+    const rows: Record<string, { quantity: number; soldQuantity: number; returnedQuantity: number; price: number }> = {}
+    c.items.forEach(item => {
+      rows[item.id] = { quantity: item.quantity, soldQuantity: item.soldQuantity, returnedQuantity: item.returnedQuantity, price: item.price }
+    })
+    setCorrRows(rows)
+    setCorrectMsg(null)
+    setCorrectCons(c)
+  }
+
+  async function saveCorrect() {
+    if (!correctCons) return
+    setCorrecting(true)
+    setCorrectMsg(null)
+    const items = correctCons.items.map(item => ({ id: item.id, ...corrRows[item.id] }))
+    const res = await fetch(`/api/kassenbuch/consignments/${correctCons.id}/correct`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+    })
+    setCorrecting(false)
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      setCorrectMsg(body.error === 'exceeds_quantity'
+        ? 'Verkauft + Zurück darf die platzierte Menge nicht überschreiten.'
+        : body.error === 'invalid_values' ? 'Ungültige Werte (nur Zahlen ≥ 0).'
+        : 'Korrektur fehlgeschlagen.')
+      return
+    }
+    setCorrectCons(null)
+    load()
+  }
+
+  async function openReceipt(sale: Sale) {
+    setReceiptSale(sale)
+    setReceiptMsg(null)
+    setReceiptMeta(null)
+    const initialPayment = (sale.receipt?.paymentMethod === 'ueberweisung' ? 'ueberweisung' : 'bar') as 'bar' | 'ueberweisung'
+    setReceiptPayment(initialPayment)
+    setReceiptEmail(sale.customer?.email ?? '')
+    setReceiptBusy(true)
+    const res = await fetch(`/api/kassenbuch/sales/${sale.id}/receipt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentMethod: initialPayment }),
+    })
+    setReceiptBusy(false)
+    if (res.ok) {
+      const meta = await res.json()
+      setReceiptMeta(meta)
+      if (meta.recipient) setReceiptEmail(meta.recipient)
+      setReceiptVersion(v => v + 1)
+    } else {
+      setReceiptMsg('Quittung konnte nicht erstellt werden.')
+    }
+  }
+
+  async function setReceiptPaymentMethod(method: 'bar' | 'ueberweisung') {
+    setReceiptPayment(method)
+    if (!receiptSale) return
+    const res = await fetch(`/api/kassenbuch/sales/${receiptSale.id}/receipt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentMethod: method }),
+    })
+    if (res.ok) { setReceiptMeta(await res.json()); setReceiptVersion(v => v + 1) }
+  }
+
+  async function emailReceipt() {
+    if (!receiptSale) return
+    setReceiptBusy(true)
+    setReceiptMsg(null)
+    const res = await fetch(`/api/kassenbuch/sales/${receiptSale.id}/receipt/email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: receiptEmail || null, paymentMethod: receiptPayment }),
+    })
+    setReceiptBusy(false)
+    const body = await res.json().catch(() => ({}))
+    if (res.ok) {
+      setReceiptMsg(`✓ Quittung an ${body.to} gesendet.`)
+      load()
+    } else {
+      setReceiptMsg(
+        body.error === 'no_recipient' ? 'Bitte eine gültige E-Mail-Adresse angeben.'
+        : body.error === 'smtp_not_configured' ? 'Kein Mail-Zugang hinterlegt (Einstellungen → E-Mail).'
+        : body.error === 'send_failed' ? 'Versand fehlgeschlagen – Zugangsdaten prüfen.'
+        : 'Versand fehlgeschlagen.',
+      )
+    }
+  }
+
   async function saveProduct(e: React.FormEvent) {
     e.preventDefault()
     setSavingProd(true)
@@ -401,9 +558,9 @@ export default function KassenbuchPage() {
       body: JSON.stringify({
         name: prodName,
         unit: prodUnit,
-        price: parseFloat(prodPrice),
+        price: parseDecimal(prodPrice),
         description: prodDesc,
-        fillAmount: prodFillAmount ? parseFloat(prodFillAmount) : null,
+        fillAmount: prodFillAmount ? parseDecimal(prodFillAmount) : null,
         fillUnit: prodFillAmount ? prodFillUnit : null,
       }),
     })
@@ -443,7 +600,7 @@ export default function KassenbuchPage() {
     await fetch('/api/kassenbuch/expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: expDate, amount: parseFloat(expAmount), category: expCategory, description: expDesc || null, receipt: expReceipt }),
+      body: JSON.stringify({ date: expDate, amount: parseDecimal(expAmount), category: expCategory, description: expDesc || null, receipt: expReceipt }),
     })
     setSavingExp(false)
     setShowExpense(false)
@@ -805,6 +962,15 @@ export default function KassenbuchPage() {
                         ))}
                       </div>
                       {sale.notes && <p className="text-[12px] text-zinc-400 mt-1">{sale.notes}</p>}
+                      <div className="mt-2">
+                        <button onClick={() => openReceipt(sale)}
+                          className="inline-flex items-center gap-1.5 text-[12px] font-medium text-amber-700 hover:text-amber-800 px-3 py-1 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+                          Quittung
+                          {sale.receipt && <span className="text-amber-500">· Nr. {String(sale.receipt.number).padStart(4, '0')}</span>}
+                          {sale.receipt?.emailedAt && <span className="text-green-600">· gesendet</span>}
+                        </button>
+                      </div>
                     </div>
                     <div className="flex items-center gap-3 ml-4 shrink-0">
                       <span className="text-[15px] font-semibold text-zinc-900">{fmt(sale.total)}</span>
@@ -869,18 +1035,24 @@ export default function KassenbuchPage() {
                           })}
                         </div>
                         {c.notes && <p className="text-[12px] text-zinc-400 mt-1">{c.notes}</p>}
-                        {hasOpen && (
-                          <div className="flex gap-2 mt-3">
-                            <button onClick={() => openSell(c)}
-                              className="text-[12px] font-medium text-green-600 hover:text-green-700 px-3 py-1 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
-                              Verkauf buchen
-                            </button>
-                            <button onClick={() => updateConsignmentStatus(c.id, 'returned')}
-                              className="text-[12px] font-medium text-zinc-600 hover:text-zinc-700 px-3 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
-                              Zurückgeholt
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex gap-2 mt-3 flex-wrap">
+                          {hasOpen && (
+                            <>
+                              <button onClick={() => openSell(c)}
+                                className="text-[12px] font-medium text-green-600 hover:text-green-700 px-3 py-1 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                                Verkauf buchen
+                              </button>
+                              <button onClick={() => updateConsignmentStatus(c.id, 'returned')}
+                                className="text-[12px] font-medium text-zinc-600 hover:text-zinc-700 px-3 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
+                                Zurückgeholt
+                              </button>
+                            </>
+                          )}
+                          <button onClick={() => openCorrect(c)}
+                            className="text-[12px] font-medium text-amber-700 hover:text-amber-800 px-3 py-1 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
+                            Korrigieren
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3 ml-4 shrink-0">
                         <div className="text-right">
@@ -1100,7 +1272,7 @@ export default function KassenbuchPage() {
                 </div>
                 <div>
                   <label className="block text-[12px] font-medium text-zinc-500 mb-1">Betrag (€)</label>
-                  <input type="number" step="0.01" min="0.01" value={expAmount} onChange={e => setExpAmount(e.target.value)} required placeholder="0.00"
+                  <input type="text" inputMode="decimal" value={expAmount} onChange={e => setExpAmount(e.target.value)} required placeholder="0,00"
                     className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400" />
                 </div>
               </div>
@@ -1364,12 +1536,10 @@ export default function KassenbuchPage() {
                         <option value="">Artikel wählen</option>
                         {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
-                      <input type="number" min="0.1" step="0.1" value={item.quantity}
-                        onChange={e => updateSaleItem(i, 'quantity', parseFloat(e.target.value))}
+                      <DecimalInput value={item.quantity} min={0} onChange={n => updateSaleItem(i, 'quantity', n)}
                         placeholder="Menge"
                         className="col-span-2 border border-zinc-200 rounded-lg px-2 py-2 text-[12px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                      <input type="number" min="0" step="0.01" value={item.price}
-                        onChange={e => updateSaleItem(i, 'price', parseFloat(e.target.value))}
+                      <DecimalInput value={item.price} min={0} onChange={n => updateSaleItem(i, 'price', n)}
                         placeholder="€"
                         className="col-span-3 border border-zinc-200 rounded-lg px-2 py-2 text-[12px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400" />
                       <span className="col-span-1 text-[11px] text-zinc-500 text-right">{fmt(item.quantity * item.price)}</span>
@@ -1490,8 +1660,7 @@ export default function KassenbuchPage() {
                         onChange={e => updateConsItem(i, 'quantity', parseInt(e.target.value))}
                         placeholder="Stück"
                         className="col-span-2 border border-zinc-200 rounded-lg px-2 py-2 text-[12px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                      <input type="number" min="0" step="0.01" value={item.price}
-                        onChange={e => updateConsItem(i, 'price', parseFloat(e.target.value))}
+                      <DecimalInput value={item.price} min={0} onChange={n => updateConsItem(i, 'price', n)}
                         placeholder="€"
                         className="col-span-3 border border-zinc-200 rounded-lg px-2 py-2 text-[12px] bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400" />
                       <span className="col-span-1 text-[11px] text-zinc-500 text-right">{fmt(item.quantity * item.price)}</span>
@@ -1550,14 +1719,14 @@ export default function KassenbuchPage() {
                 </div>
                 <div>
                   <label className="block text-[12px] font-medium text-zinc-500 mb-1">Preis (€) *</label>
-                  <input type="number" min="0" step="0.01" value={prodPrice} onChange={e => setProdPrice(e.target.value)} required placeholder="0.00"
+                  <input type="text" inputMode="decimal" value={prodPrice} onChange={e => setProdPrice(e.target.value)} required placeholder="0,00"
                     className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[12px] font-medium text-zinc-500 mb-1">Füllmenge (optional)</label>
-                  <input type="number" min="0" step="any" value={prodFillAmount} onChange={e => setProdFillAmount(e.target.value)}
+                  <input type="text" inputMode="decimal" value={prodFillAmount} onChange={e => setProdFillAmount(e.target.value)}
                     placeholder="z.B. 500"
                     className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
                 </div>
@@ -1683,8 +1852,8 @@ export default function KassenbuchPage() {
                           className="w-9 h-9 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-zinc-700 text-lg transition-colors">+</button>
                       </div>
                       <div className="flex items-center gap-1 ml-auto">
-                        <input type="number" min="0" step="0.01" value={price}
-                          onChange={e => setSellPrices(p => ({ ...p, [item.id]: parseFloat(e.target.value) || 0 }))}
+                        <DecimalInput value={price} min={0}
+                          onChange={n => setSellPrices(p => ({ ...p, [item.id]: n }))}
                           className="w-20 border border-zinc-200 rounded-lg px-2 py-1.5 text-[13px] text-right focus:outline-none focus:ring-2 focus:ring-amber-200" />
                         <span className="text-[12px] text-zinc-400">€/St.</span>
                       </div>
@@ -1726,6 +1895,145 @@ export default function KassenbuchPage() {
                   className="px-4 border border-zinc-200 rounded-xl text-[13px] text-zinc-500 hover:bg-zinc-50 transition-colors">
                   Abbrechen
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Kommission korrigieren */}
+      {correctCons && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 backdrop-blur-sm px-4 py-8 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md my-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <div>
+                <h2 className="text-[15px] font-semibold text-zinc-900">Kommission korrigieren</h2>
+                <p className="text-[12px] text-zinc-400 mt-0.5">{correctCons.commissionStore?.name || correctCons.locationName || '—'}</p>
+              </div>
+              <button onClick={() => setCorrectCons(null)} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              {correctCons.items.map(item => {
+                const row = corrRows[item.id] ?? { quantity: item.quantity, soldQuantity: item.soldQuantity, returnedQuantity: item.returnedQuantity, price: item.price }
+                const open = row.quantity - row.soldQuantity - row.returnedQuantity
+                const invalid = row.soldQuantity + row.returnedQuantity > row.quantity + 1e-9
+                const set = (key: 'quantity' | 'soldQuantity' | 'returnedQuantity' | 'price', n: number) =>
+                  setCorrRows(r => ({ ...r, [item.id]: { ...(r[item.id] ?? row), [key]: n } }))
+                return (
+                  <div key={item.id} className={`rounded-xl border p-4 ${invalid ? 'border-rose-200 bg-rose-50' : 'border-zinc-200'}`}>
+                    <p className="text-[13px] font-semibold text-zinc-900 mb-2">{item.product.name}</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-medium text-zinc-400 uppercase mb-1">Platziert</label>
+                        <DecimalInput value={row.quantity} onChange={n => set('quantity', n)}
+                          className="w-full border border-zinc-200 rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-amber-200" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-medium text-zinc-400 uppercase mb-1">Verkauft</label>
+                        <DecimalInput value={row.soldQuantity} onChange={n => set('soldQuantity', n)}
+                          className="w-full border border-zinc-200 rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-amber-200" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-medium text-zinc-400 uppercase mb-1">Zurück</label>
+                        <DecimalInput value={row.returnedQuantity} onChange={n => set('returnedQuantity', n)}
+                          className="w-full border border-zinc-200 rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-amber-200" />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px] text-zinc-400">Preis</span>
+                        <DecimalInput value={row.price} onChange={n => set('price', n)}
+                          className="w-20 border border-zinc-200 rounded-lg px-2 py-1 text-[12px] text-right focus:outline-none focus:ring-2 focus:ring-amber-200" />
+                        <span className="text-[11px] text-zinc-400">€</span>
+                      </div>
+                      <span className={`text-[11px] font-medium ${invalid ? 'text-rose-600' : 'text-zinc-400'}`}>
+                        {invalid ? 'Verk.+Zurück > Platziert' : `${open} offen`}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+              <p className="text-[11px] text-zinc-400">Korrigiert nur die Kommissions-Buchführung – es wird kein Lager bewegt.</p>
+              {correctMsg && <p className="text-[12px] text-rose-600 font-medium">{correctMsg}</p>}
+              <div className="flex gap-3">
+                <button onClick={saveCorrect} disabled={correcting}
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-3 text-[13px] font-semibold transition-colors">
+                  {correcting ? 'Wird gespeichert…' : 'Korrektur speichern'}
+                </button>
+                <button onClick={() => setCorrectCons(null)}
+                  className="px-4 border border-zinc-200 rounded-xl text-[13px] text-zinc-500 hover:bg-zinc-50 transition-colors">
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Quittung */}
+      {receiptSale && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 backdrop-blur-sm px-4 py-8 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg my-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <div>
+                <h2 className="text-[15px] font-semibold text-zinc-900">Quittung</h2>
+                <p className="text-[12px] text-zinc-400 mt-0.5">
+                  {receiptMeta ? `Nr. ${receiptMeta.formatted}` : 'Wird erstellt…'} · {receiptSale.customerName || 'Laufkundschaft'}
+                </p>
+              </div>
+              <button onClick={() => setReceiptSale(null)} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-zinc-500 uppercase mb-1.5">Zahlart</label>
+                <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 w-fit">
+                  {(['bar', 'ueberweisung'] as const).map(m => (
+                    <button key={m} onClick={() => setReceiptPaymentMethod(m)}
+                      className={`px-4 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${receiptPayment === m ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
+                      {m === 'bar' ? 'Bar' : 'Überweisung'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {receiptMeta ? (
+                <div className="rounded-xl border border-zinc-200 overflow-hidden bg-zinc-100">
+                  <iframe key={receiptVersion} title="Quittung-Vorschau"
+                    src={`/api/kassenbuch/sales/${receiptSale.id}/receipt?v=${receiptVersion}`}
+                    className="w-full bg-white" style={{ height: 460 }} />
+                </div>
+              ) : (
+                <div className="h-40 flex items-center justify-center text-[13px] text-zinc-400">
+                  {receiptBusy ? 'Quittung wird erstellt…' : (receiptMsg || 'Keine Vorschau')}
+                </div>
+              )}
+
+              <div className="flex gap-2 flex-wrap">
+                <a href={`/api/kassenbuch/sales/${receiptSale.id}/receipt?dl=1`} download
+                  className="flex-1 text-center border border-zinc-200 hover:bg-zinc-50 rounded-xl py-2.5 text-[13px] font-medium text-zinc-700 transition-colors">
+                  Herunterladen
+                </a>
+                <a href={`/api/kassenbuch/sales/${receiptSale.id}/receipt?v=${receiptVersion}`} target="_blank" rel="noopener noreferrer"
+                  className="flex-1 text-center border border-zinc-200 hover:bg-zinc-50 rounded-xl py-2.5 text-[13px] font-medium text-zinc-700 transition-colors">
+                  Öffnen / Drucken
+                </a>
+              </div>
+
+              <div className="border-t border-zinc-100 pt-4">
+                <label className="block text-[11px] font-semibold text-zinc-500 uppercase mb-1.5">Per E-Mail senden</label>
+                <div className="flex gap-2">
+                  <input type="email" value={receiptEmail} onChange={e => setReceiptEmail(e.target.value)} placeholder="kunde@example.de"
+                    className="flex-1 border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                  <button onClick={emailReceipt} disabled={receiptBusy}
+                    className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl px-5 text-[13px] font-semibold transition-colors">
+                    {receiptBusy ? '…' : 'Senden'}
+                  </button>
+                </div>
+                {receiptMsg && <p className={`text-[12px] mt-2 font-medium ${receiptMsg.startsWith('✓') ? 'text-green-600' : 'text-rose-600'}`}>{receiptMsg}</p>}
               </div>
             </div>
           </div>

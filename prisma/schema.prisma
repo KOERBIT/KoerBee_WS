@@ -236,9 +236,27 @@ model Sale {
   items             SaleItem[]
   total             Float            @default(0)
   notes             String?
+  receipt           SaleReceipt?
   userId            String
   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt         DateTime         @default(now())
+}
+
+// Quittung zu einem Verkauf: laufende Nummer + Zahlart. Das HTML wird bei Bedarf
+// aus den Verkaufsdaten gerendert (siehe src/lib/receipt), daher hier nicht gespeichert.
+model SaleReceipt {
+  id            String    @id @default(cuid())
+  saleId        String    @unique
+  sale          Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  userId        String
+  number        Int
+  paymentMethod String    @default("bar")
+  recipient     String?
+  emailedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, number])
 }
 
 model SaleItem {
@@ -403,6 +421,8 @@ model MailCredential {
   imapPort     Int      @default(993)
   imapUser     String
   imapPassword String   // AES-256-GCM-verschlüsselt
+  smtpHost     String   @default("mail.gmx.net")
+  smtpPort     Int      @default(587)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
