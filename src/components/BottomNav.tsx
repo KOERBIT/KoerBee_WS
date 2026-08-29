@@ -22,6 +22,11 @@ const MORE_ITEMS = [
       <line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/>
     </svg>
   )},
+  { label: 'Futter', href: '/dashboard/futter', icon: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2s5 5.5 5 10a5 5 0 01-10 0c0-4.5 5-10 5-10z"/>
+    </svg>
+  )},
   { label: 'Kalender', href: '/dashboard/calendar', icon: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="4" width="18" height="18" rx="2"/>
