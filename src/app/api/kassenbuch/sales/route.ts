@@ -17,8 +17,14 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { customerName, customerId, date, notes, items } = await req.json()
+  const { customerName, customerEmail, customerId, date, notes, items } = await req.json()
   if (!items || items.length === 0) return NextResponse.json({ error: 'Keine Positionen' }, { status: 400 })
+
+  // Optionale E-Mail leicht validieren (leer = keine).
+  const email = typeof customerEmail === 'string' ? customerEmail.trim() : ''
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: 'invalid_email' }, { status: 422 })
+  }
 
   // Fremder Kunde? (IDOR-Schutz)
   if (customerId && !(await prisma.customer.findFirst({ where: { id: customerId, userId: session.user.id } }))) {
@@ -62,6 +68,7 @@ export async function POST(req: NextRequest) {
     const created = await tx.sale.create({
       data: {
         customerName: customerName || null,
+        customerEmail: email || null,
         customerId: customerId || null,
         date: date ? new Date(date) : new Date(),
         notes: notes || null,

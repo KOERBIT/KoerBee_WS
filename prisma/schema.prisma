@@ -227,6 +227,7 @@ model Sale {
   id                String           @id @default(cuid())
   date              DateTime         @default(now())
   customerName      String?
+  customerEmail     String?
   customerId        String?
   customer          Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
   commissionStoreId String?

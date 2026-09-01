@@ -7,7 +7,7 @@ type Tab = 'verkauf' | 'kommission' | 'paypal' | 'artikel' | 'ausgaben' | 'laede
 interface CommissionStore { id: string; name: string; createdAt: string }
 interface Product { id: string; name: string; unit: string; price: number; description: string | null; fillAmount: number | null; fillUnit: string | null; stockQuantity: number }
 interface SaleItem { id: string; product: Product; quantity: number; price: number; total: number }
-interface Sale { id: string; date: string; customerName: string | null; total: number; notes: string | null; items: SaleItem[]; commissionStore?: CommissionStore | null; customer?: { email: string | null } | null; receipt?: { number: number; paymentMethod: string; emailedAt: string | null } | null }
+interface Sale { id: string; date: string; customerName: string | null; customerEmail?: string | null; total: number; notes: string | null; items: SaleItem[]; commissionStore?: CommissionStore | null; customer?: { email: string | null } | null; receipt?: { number: number; paymentMethod: string; emailedAt: string | null } | null }
 interface ConsignmentItem { id: string; product: Product; quantity: number; price: number; soldQuantity: number; returnedQuantity: number }
 interface Consignment { id: string; date: string; locationName: string | null; status: string; notes: string | null; items: ConsignmentItem[]; commissionStore?: CommissionStore | null }
 interface Expense { id: string; date: string; amount: number; category: string; description: string | null; receipt?: { id: string; mimeType: string } | null }
@@ -105,6 +105,8 @@ export default function KassenbuchPage() {
   // Sale form
   const [showSale, setShowSale] = useState(false)
   const [saleCustomer, setSaleCustomer] = useState('')
+  const [saleEmail, setSaleEmail] = useState('')
+  const [saleEmailError, setSaleEmailError] = useState(false)
   const [saleDate, setSaleDate] = useState(new Date().toISOString().slice(0, 10))
   const [saleNotes, setSaleNotes] = useState('')
   const [saleItems, setSaleItems] = useState([{ productId: '', quantity: 1, price: 0 }])
@@ -361,10 +363,11 @@ export default function KassenbuchPage() {
     e.preventDefault()
     setSavingSale(true)
     setSaleStockError([])
+    setSaleEmailError(false)
     const res = await fetch('/api/kassenbuch/sales', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customerName: saleCustomer, date: saleDate, notes: saleNotes, items: saleItems }),
+      body: JSON.stringify({ customerName: saleCustomer, customerEmail: saleEmail, date: saleDate, notes: saleNotes, items: saleItems }),
     })
     setSavingSale(false)
     if (res.status === 409) {
@@ -372,9 +375,13 @@ export default function KassenbuchPage() {
       setSaleStockError(body.items ?? [])
       return
     }
+    if (res.status === 422) {
+      const body = await res.json().catch(() => ({}))
+      if (body.error === 'invalid_email') { setSaleEmailError(true); return }
+    }
     setShowSale(false)
     setSaleStockError([])
-    setSaleCustomer(''); setSaleNotes(''); setSaleItems([{ productId: '', quantity: 1, price: 0 }])
+    setSaleCustomer(''); setSaleEmail(''); setSaleNotes(''); setSaleItems([{ productId: '', quantity: 1, price: 0 }])
     load()
   }
 
@@ -496,7 +503,7 @@ export default function KassenbuchPage() {
     setReceiptMeta(null)
     const initialPayment = (sale.receipt?.paymentMethod === 'ueberweisung' ? 'ueberweisung' : 'bar') as 'bar' | 'ueberweisung'
     setReceiptPayment(initialPayment)
-    setReceiptEmail(sale.customer?.email ?? '')
+    setReceiptEmail(sale.customerEmail ?? sale.customer?.email ?? '')
     setReceiptBusy(true)
     const res = await fetch(`/api/kassenbuch/sales/${sale.id}/receipt`, {
       method: 'POST',
@@ -950,6 +957,12 @@ export default function KassenbuchPage() {
                         {sale.commissionStore && (
                           <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                             Kommission · {sale.commissionStore.name}
+                          </span>
+                        )}
+                        {(sale.customerEmail || sale.customer?.email) && (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-zinc-400" title={sale.customerEmail || sale.customer?.email || ''}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                            {sale.customerEmail || sale.customer?.email}
                           </span>
                         )}
                         <span className="text-[12px] text-zinc-400">{fmtDate(sale.date)}</span>
@@ -1520,6 +1533,14 @@ export default function KassenbuchPage() {
                   <input type="date" value={saleDate} onChange={e => setSaleDate(e.target.value)}
                     className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-medium text-zinc-500 mb-1">E-Mail (optional)</label>
+                <input type="email" value={saleEmail} onChange={e => { setSaleEmail(e.target.value); setSaleEmailError(false) }}
+                  placeholder="kunde@example.de – für Quittung & spätere Mailings"
+                  className={`w-full border rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent ${saleEmailError ? 'border-rose-300' : 'border-zinc-200'}`} />
+                {saleEmailError && <p className="text-[11px] text-rose-600 mt-1">Bitte eine gültige E-Mail-Adresse eingeben.</p>}
               </div>
 
               <div>

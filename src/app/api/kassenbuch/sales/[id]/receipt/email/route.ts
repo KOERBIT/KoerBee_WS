@@ -54,5 +54,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     data: { recipient: to, emailedAt: new Date() },
   })
 
+  // E-Mail „lernen": am Verkauf und – falls dort noch leer – am Kunden hinterlegen,
+  // damit sie für spätere Mailingaktionen zur Verfügung steht.
+  if (!sale.customerEmail) {
+    await prisma.sale.update({ where: { id }, data: { customerEmail: to } })
+  }
+  if (sale.customerId && !sale.customer?.email) {
+    await prisma.customer.update({ where: { id: sale.customerId }, data: { email: to } })
+  }
+
   return NextResponse.json({ ok: true, to, formatted: nr })
 }
