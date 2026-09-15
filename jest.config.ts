@@ -12,4 +12,11 @@ const config: Config = {
   },
 }
 
-export default createJestConfig(config)
+export default async () => {
+  const jestConfig = await createJestConfig(config)()
+  // Allow jose (ESM-only) to be transformed by Jest
+  jestConfig.transformIgnorePatterns = [
+    'node_modules/(?!jose/)',
+  ]
+  return jestConfig
+}
