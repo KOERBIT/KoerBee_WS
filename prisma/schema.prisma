@@ -192,11 +192,19 @@ model Product {
   fillAmount       Float?
   fillUnit         String?
   stockQuantity    Int               @default(0)
+  shopVisible      Boolean           @default(false)
+  shopName         String?
+  shopNameEn       String?
+  descriptionEn    String?
+  imageUrl         String?
+  shopPrice        Float?
+  shopSortOrder    Int               @default(0)
   userId           String
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   saleItems        SaleItem[]
   consignmentItems ConsignmentItem[]
   stockCorrections StockCorrection[]
+  preOrderItems    PreOrderItem[]
   createdAt        DateTime          @default(now())
 }
 
@@ -470,4 +478,49 @@ model VerificationToken {
   token      String   @unique
   expires    DateTime
   @@unique([identifier, token])
+}
+
+// Shop: Vorbestellungs-System
+enum PreOrderStatus {
+  PENDING
+  CONFIRMED
+  READY
+  PICKED_UP
+  CANCELLED
+}
+
+model ShopCustomer {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  passwordHash  String
+  name          String
+  phone         String?
+  locale        String     @default("de")
+  emailVerified Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  preOrders     PreOrder[]
+}
+
+model PreOrder {
+  id              String         @id @default(cuid())
+  shopCustomerId  String
+  shopCustomer    ShopCustomer   @relation(fields: [shopCustomerId], references: [id], onDelete: Cascade)
+  status          PreOrderStatus @default(PENDING)
+  note            String?
+  adminNote       String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  statusChangedAt DateTime       @default(now())
+  items           PreOrderItem[]
+}
+
+model PreOrderItem {
+  id           String   @id @default(cuid())
+  preOrderId   String
+  preOrder     PreOrder @relation(fields: [preOrderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity     Int
+  priceAtOrder Float
 }
