@@ -2,6 +2,10 @@ import nodemailer from 'nodemailer'
 import { getSmtpConfigForUser } from '@/lib/receipt/mail'
 import { t, Locale } from './i18n'
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 interface SendShopEmailArgs {
   userId: string
   to: string
@@ -68,7 +72,7 @@ export async function sendOrderStatusEmail(args: {
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:auto">
       <h2 style="color:#f59e0b">${subject}</h2>
-      <p>${locale === 'de' ? 'Hallo' : 'Hello'} ${order.shopCustomer.name},</p>
+      <p>${locale === 'de' ? 'Hallo' : 'Hello'} ${escapeHtml(order.shopCustomer.name)},</p>
       <p><strong>Status:</strong> ${statusLabel}</p>
       <table style="border-collapse:collapse;width:100%;margin:16px 0">
         <tr style="background:#f5f5f5"><th style="padding:4px 8px;text-align:left">${locale === 'de' ? 'Produkt' : 'Product'}</th><th style="padding:4px 8px">${t(locale, 'shop.product.quantity')}</th><th style="padding:4px 8px">${t(locale, 'shop.product.price')}</th></tr>

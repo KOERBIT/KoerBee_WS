@@ -10,12 +10,13 @@ export async function POST(req: NextRequest) {
   // Always return success to prevent email enumeration
   const customer = await prisma.shopCustomer.findUnique({
     where: { email: email.toLowerCase() },
+    select: { id: true, email: true, locale: true, passwordHash: true },
   })
 
   if (customer) {
     try {
       const secret = new TextEncoder().encode(process.env.SHOP_JWT_SECRET!)
-      const resetToken = await new SignJWT({ sub: customer.id, purpose: 'reset' })
+      const resetToken = await new SignJWT({ sub: customer.id, purpose: 'reset', phash: customer.passwordHash.slice(-8) })
         .setProtectedHeader({ alg: 'HS256' })
         .setExpirationTime('1h')
         .sign(secret)

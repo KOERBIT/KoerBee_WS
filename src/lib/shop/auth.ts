@@ -26,6 +26,8 @@ export async function verifyShopToken(
   try {
     const { payload } = await jwtVerify(token, getSecret())
     if (typeof payload.sub !== 'string') return null
+    // Reject special-purpose tokens (verify, reset) from being used as auth tokens
+    if (payload.purpose) return null
     return { sub: payload.sub }
   } catch {
     return null

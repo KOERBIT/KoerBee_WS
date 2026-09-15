@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     if (!product) {
       return NextResponse.json({ error: `product_not_found: ${item.productId}` }, { status: 400 })
     }
-    if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+    if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999) {
       return NextResponse.json({ error: 'invalid_quantity' }, { status: 400 })
     }
     orderItems.push({

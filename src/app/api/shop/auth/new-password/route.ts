@@ -19,6 +19,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'invalid_token' }, { status: 400 })
     }
 
+    // Verify the token hasn't already been used by checking current password hash
+    const customer = await prisma.shopCustomer.findUnique({ where: { id: payload.sub }, select: { passwordHash: true } })
+    if (!customer) {
+      return NextResponse.json({ error: 'invalid_token' }, { status: 400 })
+    }
+    // If token includes a password hash snapshot, verify it hasn't changed (single-use enforcement)
+    if (payload.phash && payload.phash !== customer.passwordHash.slice(-8)) {
+      return NextResponse.json({ error: 'token_already_used' }, { status: 400 })
+    }
+
     const passwordHash = await bcrypt.hash(password, 12)
     await prisma.shopCustomer.update({
       where: { id: payload.sub },

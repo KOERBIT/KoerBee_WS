@@ -38,18 +38,24 @@ export async function PATCH(
     )
   }
 
-  const updated = await prisma.preOrder.update({
-    where: { id },
-    data: {
-      status: newStatus,
-      statusChangedAt: new Date(),
-      ...(adminNote !== undefined ? { adminNote } : {}),
-    },
-    include: {
-      items: { include: { product: { select: { name: true } } } },
-      shopCustomer: { select: { email: true, name: true, locale: true } },
-    },
-  })
+  // Optimistic lock: include current status in where clause to prevent race conditions
+  let updated
+  try {
+    updated = await prisma.preOrder.update({
+      where: { id, status: order.status },
+      data: {
+        status: newStatus,
+        statusChangedAt: new Date(),
+        ...(adminNote !== undefined ? { adminNote } : {}),
+      },
+      include: {
+        items: { include: { product: { select: { name: true } } } },
+        shopCustomer: { select: { email: true, name: true, locale: true } },
+      },
+    })
+  } catch {
+    return NextResponse.json({ error: 'status_changed_concurrently' }, { status: 409 })
+  }
 
   // Send status email (best-effort)
   try {

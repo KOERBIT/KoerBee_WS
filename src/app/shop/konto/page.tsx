@@ -20,10 +20,12 @@ const STATUS_EN: Record<string, string> = { PENDING: 'Received', CONFIRMED: 'Con
 export default function KontoPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const locale = (document.cookie.match(/shop-locale=([^;]*)/)?.[1] === 'en' ? 'en' : 'de') as 'de' | 'en'
+  const [locale, setLocale] = useState<'de' | 'en'>('de')
   const statusLabels = locale === 'en' ? STATUS_EN : STATUS_DE
 
   useEffect(() => {
+    const m = document.cookie.match(/shop-locale=([^;]*)/)
+    if (m?.[1] === 'en') setLocale('en')
     fetch('/api/shop/orders').then(r => r.json()).then(d => setOrders(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoading(false))
   }, [])
 

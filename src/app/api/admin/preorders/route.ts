@@ -10,8 +10,14 @@ export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status')
   const search = req.nextUrl.searchParams.get('search')
 
+  const VALID_STATUSES = ['PENDING', 'CONFIRMED', 'READY', 'PICKED_UP', 'CANCELLED']
   const where: Record<string, unknown> = {}
-  if (status) where.status = status
+  if (status) {
+    if (!VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ error: 'invalid_status' }, { status: 400 })
+    }
+    where.status = status
+  }
   if (search) {
     where.shopCustomer = {
       OR: [
