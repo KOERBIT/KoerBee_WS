@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
@@ -11,6 +11,14 @@ const L = {
 }
 
 export default function PasswortVergessenPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-zinc-400">...</div></div>}>
+      <PasswortVergessenInner />
+    </Suspense>
+  )
+}
+
+function PasswortVergessenInner() {
   const searchParams = useSearchParams()
   const resetToken = searchParams.get('token')
   const [locale, setLocale] = useState<Locale>('de')
