@@ -3,6 +3,47 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* KörBee Shop Design Tokens */
+  --shop-bg: #f6f4ef;
+  --shop-panel: #ffffff;
+  --shop-panel-2: #faf8f2;
+  --shop-ink: #18150f;
+  --shop-dim: #726b5a;
+  --shop-border: rgba(24,21,15,.10);
+  --shop-shadow: 0 10px 30px rgba(24,21,15,.08);
+  --shop-accent: #d98c1f;
+  --shop-accent-ink: #3a2705;
+  --shop-sky-top: #d7ecf7;
+  --shop-sky-bottom: #fbeecb;
+  --shop-cream: #fff4da;
+  --shop-blush: #f5a08e;
+
+  /* Bee SVG tokens */
+  --bee-cream: #fff4da;
+  --bee-shade: #f0c25c;
+  --bee-mid: #e7bd86;
+  --bee-ink: #33220f;
+  --wing-fill: rgba(255,247,219,.55);
+  --wing-shine: rgba(255,255,255,.85);
+  --wing-line: #caa25a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+
+    --shop-bg: #100e0a;
+    --shop-panel: #1c1812;
+    --shop-panel-2: #221d15;
+    --shop-ink: #f2ecdc;
+    --shop-dim: #a89a7c;
+    --shop-border: rgba(242,236,220,.12);
+    --shop-shadow: 0 10px 30px rgba(0,0,0,.55);
+    --shop-accent: #f0aa3d;
+    --shop-accent-ink: #241503;
+  }
 }
 
 @theme inline {
@@ -10,13 +51,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
@@ -27,4 +61,16 @@ body {
 
 input, select, textarea {
   color: #18181b;
+}
+
+/* Bee mascot animations */
+@keyframes flapL { 0%,100% { transform: rotate(0deg) scaleY(1); } 50% { transform: rotate(-14deg) scaleY(.56); } }
+@keyframes flapR { 0%,100% { transform: rotate(0deg) scaleY(1); } 50% { transform: rotate(14deg) scaleY(.56); } }
+@keyframes wiggleL { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(7deg); } }
+@keyframes wiggleR { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-7deg); } }
+@keyframes landBounce { 0% { transform: scale(1,1); } 28% { transform: scale(1.16,.8); } 54% { transform: scale(.91,1.11); } 76% { transform: scale(1.04,.97); } 100% { transform: scale(1,1); } }
+@keyframes badgePop { 0% { transform: scale(1); } 50% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .bee-wing, .bee-antenna-l, .bee-antenna-r, .bee-bounce { animation: none !important; }
 }

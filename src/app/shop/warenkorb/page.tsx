@@ -16,8 +16,8 @@ function getCart(): CartItem[] { try { return JSON.parse(localStorage.getItem('s
 function saveCart(c: CartItem[]) { localStorage.setItem('shop-cart', JSON.stringify(c)) }
 
 const L = {
-  de: { cart: 'Warenkorb', empty: 'Dein Warenkorb ist leer', total: 'Gesamt', submit: 'Vorbestellung absenden', note: 'Anmerkung (optional)', login_required: 'Bitte melde dich an, um zu bestellen', login: 'Anmelden', back: 'Weiter einkaufen', success: 'Deine Vorbestellung ist eingegangen!', orders: 'Zu meinen Bestellungen', remove: 'Entfernen', quantity: 'Menge', pickup: 'Bezahlung & Abholung vor Ort' },
-  en: { cart: 'Cart', empty: 'Your cart is empty', total: 'Total', submit: 'Submit pre-order', note: 'Note (optional)', login_required: 'Please sign in to place an order', login: 'Sign In', back: 'Continue shopping', success: 'Your pre-order has been received!', orders: 'Go to my orders', remove: 'Remove', quantity: 'Qty', pickup: 'Payment & pickup on site' },
+  de: { cart: 'Warenkorb', empty: 'Dein Warenkorb ist leer', total: 'Gesamt', submit: 'Vorbestellung absenden', note: 'Anmerkung (optional)', login_required: 'Bitte melde dich an, um zu bestellen', login: 'Anmelden', back: 'Weiter einkaufen', success: 'Deine Vorbestellung ist eingegangen!', orders: 'Zu meinen Bestellungen', remove: 'Entfernen', pickup: 'Bezahlung & Abholung vor Ort', account: 'Konto' },
+  en: { cart: 'Cart', empty: 'Your cart is empty', total: 'Total', submit: 'Submit pre-order', note: 'Note (optional)', login_required: 'Please sign in to place an order', login: 'Sign In', back: 'Continue shopping', success: 'Your pre-order has been received!', orders: 'Go to my orders', remove: 'Remove', pickup: 'Payment & pickup on site', account: 'Account' },
 }
 
 export default function WarenkorbPage() {
@@ -77,86 +77,166 @@ export default function WarenkorbPage() {
   if (success) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center">
-        <div className="text-5xl mb-4">✅</div>
-        <h1 className="text-2xl font-bold text-zinc-800 mb-2">{t.success}</h1>
-        <p className="text-zinc-500 mb-6">{t.pickup}</p>
-        <Link href="/shop/konto" className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-xl">{t.orders}</Link>
+        <div className="text-6xl mb-6">🐝</div>
+        <h1 className="text-2xl font-extrabold mb-2" style={{ color: 'var(--shop-ink)' }}>{t.success}</h1>
+        <p className="mb-8" style={{ color: 'var(--shop-dim)' }}>{t.pickup}</p>
+        <Link
+          href="/shop/konto"
+          className="transition-all duration-150 active:scale-[.92]"
+          style={{
+            background: 'var(--shop-ink)', color: 'var(--shop-bg)',
+            fontWeight: 700, padding: '12px 24px', borderRadius: 999, textDecoration: 'none',
+          }}
+        >
+          {t.orders}
+        </Link>
       </div>
     )
   }
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-amber-100">
-        <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-3">
-          <Link href="/shop" className="text-lg font-bold text-amber-800">KörBee</Link>
-          <Link href="/shop/produkte" className="text-sm text-amber-600 hover:text-amber-700">{t.back}</Link>
-        </div>
+      {/* Header — pill nav */}
+      <header className="sticky top-0 z-50 px-4 pt-3 pb-2">
+        <nav
+          className="max-w-3xl mx-auto flex items-center justify-between gap-3 px-5 py-2.5"
+          style={{
+            background: 'var(--shop-panel)', border: '1px solid var(--shop-border)',
+            borderRadius: 999, boxShadow: 'var(--shop-shadow)',
+          }}
+        >
+          <Link href="/shop" style={{ textDecoration: 'none' }}>
+            <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.9rem', lineHeight: 1, color: 'var(--shop-ink)' }}>
+              KörBee
+            </span>
+          </Link>
+          <Link href="/shop/produkte" className="hover:opacity-70 transition-opacity" style={{ color: 'var(--shop-dim)', textDecoration: 'none', fontWeight: 600, fontSize: '.85rem' }}>
+            {t.back}
+          </Link>
+        </nav>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-zinc-800 mb-6">{t.cart}</h1>
+      <main className="max-w-3xl mx-auto px-4 py-10">
+        <h1 className="mb-8" style={{ fontSize: '1.6rem', fontWeight: 800 }}>{t.cart}</h1>
 
         {cart.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-zinc-500 text-lg">{t.empty}</p>
-            <Link href="/shop/produkte" className="inline-block mt-4 text-amber-600 hover:text-amber-700 font-medium">{t.back}</Link>
+          <div className="text-center py-20">
+            <div className="text-5xl mb-4">🛒</div>
+            <p className="text-lg mb-4" style={{ color: 'var(--shop-dim)' }}>{t.empty}</p>
+            <Link
+              href="/shop/produkte"
+              className="transition-all duration-150 active:scale-[.92]"
+              style={{
+                background: 'var(--shop-ink)', color: 'var(--shop-bg)',
+                fontWeight: 700, padding: '10px 20px', borderRadius: 999,
+                textDecoration: 'none', display: 'inline-block',
+              }}
+            >
+              {t.back}
+            </Link>
           </div>
         ) : (
           <>
-            <div className="space-y-4">
+            <div className="flex flex-col gap-3">
               {cart.map(item => {
                 const p = productMap.get(item.productId)
                 if (!p) return null
                 const price = p.shopPrice ?? p.price
                 return (
-                  <div key={item.productId} className="bg-white rounded-2xl border border-zinc-100 p-4 flex items-center gap-4">
+                  <div
+                    key={item.productId}
+                    className="flex items-center gap-4 p-4 rounded-[16px]"
+                    style={{ background: 'var(--shop-panel)', border: '1px solid var(--shop-border)', boxShadow: 'var(--shop-shadow)' }}
+                  >
                     <div className="flex-1">
-                      <h3 className="font-semibold text-zinc-800">{pName(p)}</h3>
-                      <p className="text-sm text-zinc-500">{price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} / {p.unit}</p>
+                      <h3 className="font-bold" style={{ color: 'var(--shop-ink)' }}>{pName(p)}</h3>
+                      <p className="text-sm" style={{ color: 'var(--shop-dim)', fontFamily: "'IBM Plex Mono', monospace" }}>
+                        {price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} / {p.unit}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => updateQty(item.productId, item.quantity - 1)} className="w-8 h-8 rounded-lg border border-zinc-200 flex items-center justify-center hover:bg-zinc-50">−</button>
-                      <span className="w-8 text-center font-medium">{item.quantity}</span>
-                      <button onClick={() => updateQty(item.productId, item.quantity + 1)} className="w-8 h-8 rounded-lg border border-zinc-200 flex items-center justify-center hover:bg-zinc-50">+</button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => updateQty(item.productId, item.quantity - 1)}
+                        className="w-8 h-8 rounded-full flex items-center justify-center transition-opacity hover:opacity-70"
+                        style={{ background: 'var(--shop-panel-2)', border: '1px solid var(--shop-border)' }}
+                      >−</button>
+                      <span className="w-8 text-center font-bold text-sm" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{item.quantity}</span>
+                      <button
+                        onClick={() => updateQty(item.productId, item.quantity + 1)}
+                        className="w-8 h-8 rounded-full flex items-center justify-center transition-opacity hover:opacity-70"
+                        style={{ background: 'var(--shop-panel-2)', border: '1px solid var(--shop-border)' }}
+                      >+</button>
                     </div>
-                    <span className="font-bold text-amber-700 w-20 text-right">{(price * item.quantity).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
-                    <button onClick={() => removeItem(item.productId)} className="text-zinc-400 hover:text-rose-500 text-sm">{t.remove}</button>
+                    <span className="w-24 text-right font-bold" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '.95rem' }}>
+                      {(price * item.quantity).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                    </span>
+                    <button
+                      onClick={() => removeItem(item.productId)}
+                      className="text-sm transition-opacity hover:opacity-60"
+                      style={{ color: 'var(--shop-dim)', background: 'none', border: 'none', cursor: 'pointer' }}
+                    >
+                      {t.remove}
+                    </button>
                   </div>
                 )
               })}
             </div>
 
-            <div className="mt-6 bg-white rounded-2xl border border-zinc-100 p-4">
+            {/* Note */}
+            <div className="mt-5 rounded-[16px] p-4" style={{ background: 'var(--shop-panel)', border: '1px solid var(--shop-border)' }}>
               <textarea
                 value={note}
                 onChange={e => setNote(e.target.value)}
                 placeholder={t.note}
-                className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                className="w-full resize-none h-20 focus:outline-none"
+                style={{
+                  background: 'var(--shop-panel-2)', border: '1px solid var(--shop-border)',
+                  borderRadius: 12, padding: '10px 14px', fontSize: '.9rem',
+                  color: 'var(--shop-ink)', fontFamily: 'inherit',
+                }}
               />
             </div>
 
-            <div className="mt-6 flex items-center justify-between">
-              <span className="text-lg font-bold text-zinc-800">{t.total}: {total.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
+            {/* Total */}
+            <div className="mt-6 flex items-center justify-between px-1">
+              <span className="text-lg font-extrabold">{t.total}</span>
+              <span className="text-xl font-extrabold" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                {total.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+              </span>
             </div>
 
             {isLoggedIn === false && (
-              <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-                <p className="text-amber-800 mb-2">{t.login_required}</p>
-                <Link href={`/shop/login?callbackUrl=/shop/warenkorb`} className="inline-block bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-2 rounded-xl">{t.login}</Link>
+              <div className="mt-5 text-center p-5 rounded-[16px]" style={{ background: 'var(--shop-cream)', border: '1px solid var(--shop-border)' }}>
+                <p className="mb-3 font-medium" style={{ color: 'var(--shop-ink)' }}>{t.login_required}</p>
+                <Link
+                  href={`/shop/login?callbackUrl=/shop/warenkorb`}
+                  className="transition-all duration-150 active:scale-[.92]"
+                  style={{
+                    background: 'var(--shop-ink)', color: 'var(--shop-bg)',
+                    fontWeight: 700, padding: '10px 22px', borderRadius: 999,
+                    textDecoration: 'none', display: 'inline-block',
+                  }}
+                >
+                  {t.login}
+                </Link>
               </div>
             )}
 
-            {error && <p className="mt-4 text-rose-600 text-sm">{error}</p>}
+            {error && <p className="mt-4 text-sm" style={{ color: '#dc2626' }}>{error}</p>}
 
             <button
               onClick={submit}
               disabled={submitting || isLoggedIn === false}
-              className="mt-4 w-full bg-amber-500 hover:bg-amber-600 disabled:bg-zinc-300 text-white font-semibold py-3 rounded-xl transition-colors"
+              className="mt-5 w-full transition-all duration-150 active:scale-[.98] disabled:opacity-40"
+              style={{
+                background: 'var(--shop-ink)', color: 'var(--shop-bg)',
+                fontWeight: 700, fontSize: '.95rem', padding: '14px 0',
+                borderRadius: 999, border: 'none', cursor: 'pointer',
+              }}
             >
               {submitting ? '...' : t.submit}
             </button>
-            <p className="mt-2 text-center text-sm text-zinc-400">{t.pickup}</p>
+            <p className="mt-3 text-center" style={{ fontSize: '.78rem', color: 'var(--shop-dim)' }}>{t.pickup}</p>
           </>
         )}
       </main>
