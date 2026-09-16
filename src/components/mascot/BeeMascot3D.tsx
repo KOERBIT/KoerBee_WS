@@ -2,8 +2,9 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react'
 
-const HALF = 55
-const BEE_SIZE = 110
+const BASE_SIZE = 90
+const MIN_SCALE = 0.6
+const MAX_SCALE = 1.3
 
 type Mode = 'patrol' | 'flying' | 'landed'
 
@@ -22,6 +23,9 @@ function clamp(v: number, a: number, b: number) {
 function ease(t: number) {
   return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
 }
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t
+}
 
 export default function BeeMascot3D() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -30,10 +34,22 @@ export default function BeeMascot3D() {
   const pos = useRef({ x: 0, y: 0 })
   const last = useRef({ x: 0, y: 0 })
   const ori = useRef({ yaw: 0, pitch: 0, roll: 0 })
+  const scale = useRef(1)
+  const targetScale = useRef(1)
+  const mouse = useRef({ x: 0, y: 0 })
   const flight = useRef<Flight | null>(null)
   const landedUntil = useRef(0)
   const rafId = useRef(0)
   const [ready, setReady] = useState(false)
+
+  // Track mouse position
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      mouse.current = { x: e.clientX, y: e.clientY }
+    }
+    window.addEventListener('mousemove', onMove, { passive: true })
+    return () => window.removeEventListener('mousemove', onMove)
+  }, [])
 
   // Load model-viewer script once
   useEffect(() => {
@@ -65,24 +81,41 @@ export default function BeeMascot3D() {
   const apply = useCallback((x: number, y: number) => {
     if (!containerRef.current) return
     const o = ori.current
+    const s = scale.current
+    const half = (BASE_SIZE * s) / 2
     containerRef.current.style.transform =
-      `translate3d(${x - HALF}px, ${y - HALF}px, 0) rotateY(${o.yaw}deg) rotateX(${o.pitch}deg) rotateZ(${o.roll}deg)`
+      `translate3d(${x - half}px, ${y - half}px, 0) scale(${s}) rotateY(${o.yaw}deg) rotateX(${o.pitch}deg) rotateZ(${o.roll}deg)`
   }, [])
 
   const steer = useCallback((t: number, vx: number, vy: number, mult: number, capYaw: number, capRoll: number, ambient: boolean) => {
     const o = ori.current
+    const m = mouse.current
+    const p = pos.current
+
+    // Base steering from velocity
     let targetYaw = clamp(vx * mult, -capYaw, capYaw)
     let targetPitch = clamp(-vy * mult, -capYaw * 0.7, capYaw * 0.7)
     let targetRoll = clamp(vx * mult * 0.4, -capRoll, capRoll)
+
     if (ambient) {
-      targetYaw += Math.sin(t * 0.0006) * 10
-      targetPitch += Math.sin(t * 0.0008 + 1) * 8
-      // Horizontal tilt like real flight — occasional banking
-      targetRoll += Math.sin(t * 0.0004) * 18 + Math.sin(t * 0.00095 + 2.5) * 10
+      // Look toward mouse/viewer — gentle attraction
+      const dx = m.x - p.x
+      const dy = m.y - p.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      const lookStrength = clamp(1 - dist / 600, 0, 1) * 0.6
+
+      targetYaw += clamp(dx * 0.04, -20, 20) * lookStrength
+      targetPitch += clamp(-dy * 0.03, -15, 15) * lookStrength
+
+      // Ambient oscillation (slow, dreamy flight)
+      targetYaw += Math.sin(t * 0.0005) * 8
+      targetPitch += Math.sin(t * 0.0007 + 1) * 6
+      targetRoll += Math.sin(t * 0.00035) * 15 + Math.sin(t * 0.0008 + 2.5) * 8
     }
-    o.yaw += (targetYaw - o.yaw) * 0.06
-    o.pitch += (targetPitch - o.pitch) * 0.06
-    o.roll += (targetRoll - o.roll) * 0.06
+
+    o.yaw += (targetYaw - o.yaw) * 0.05
+    o.pitch += (targetPitch - o.pitch) * 0.05
+    o.roll += (targetRoll - o.roll) * 0.05
   }, [])
 
   const flyToCart = useCallback(() => {
@@ -110,14 +143,32 @@ export default function BeeMascot3D() {
     last.current = { x: d0.cx, y: d0.cy }
     apply(d0.cx, d0.cy)
 
+    // Patrol path: figure-8 with depth (scale) variation
+    // The bee flies a lazy loop, scaling up when "approaching" and down when "receding"
     function tick(t: number) {
       if (mode.current === 'patrol') {
         const d = getContainerCenter()
-        const x = d.cx + d.ax * Math.sin(t * 0.00028)
-        const y = d.cy + d.ay * Math.sin(t * 0.00042 + 1.1)
-        const nx = d.cx + d.ax * Math.sin((t + 16) * 0.00028)
-        const ny = d.cy + d.ay * Math.sin((t + 16) * 0.00042 + 1.1)
+
+        // Figure-8 path with varying speed
+        const phase = t * 0.00025
+        const x = d.cx + d.ax * Math.sin(phase)
+        const y = d.cy + d.ay * Math.sin(phase * 1.7 + 1.1)
+
+        // Depth simulation: bee "approaches" and "recedes"
+        // Use a slow sine to create approach/recede cycles
+        const depthPhase = Math.sin(t * 0.00015)  // slow cycle
+        const depthTarget = lerp(MIN_SCALE, MAX_SCALE, (depthPhase + 1) / 2)
+        targetScale.current = depthTarget
+
+        // Velocity for steering
+        const dt = 16
+        const nx = d.cx + d.ax * Math.sin((t + dt) * 0.00025)
+        const ny = d.cy + d.ay * Math.sin(((t + dt) * 0.00025) * 1.7 + 1.1)
         steer(t, nx - x, ny - y, 3.2, 26, 18, true)
+
+        // Smooth scale interpolation
+        scale.current += (targetScale.current - scale.current) * 0.03
+
         pos.current = { x, y }
         last.current = { x, y }
         apply(x, y)
@@ -129,6 +180,11 @@ export default function BeeMascot3D() {
         const cyArc = Math.min(f.from.y, f.to.y) - f.arc
         const x = (1 - e) * (1 - e) * f.from.x + 2 * (1 - e) * e * cxArc + e * e * f.to.x
         const y = (1 - e) * (1 - e) * f.from.y + 2 * (1 - e) * e * cyArc + e * e * f.to.y
+
+        // Shrink when flying to cart, grow when returning
+        targetScale.current = f.onDone ? lerp(scale.current, 0.5, 0.05) : lerp(scale.current, 1.0, 0.05)
+        scale.current += (targetScale.current - scale.current) * 0.08
+
         steer(t, x - last.current.x, y - last.current.y, 2.4, 34, 16, false)
         pos.current = { x, y }
         last.current = { x, y }
@@ -140,6 +196,8 @@ export default function BeeMascot3D() {
       } else if (mode.current === 'landed') {
         const c = getCartCenter()
         const bob = Math.sin(t * 0.006) * 2
+        targetScale.current = 0.5
+        scale.current += (targetScale.current - scale.current) * 0.05
         steer(t, 0, 0, 0, 26, 12, false)
         pos.current = { x: c.x, y: c.y + 18 + bob }
         last.current = { ...pos.current }
@@ -179,12 +237,13 @@ export default function BeeMascot3D() {
           position: 'absolute',
           top: 0,
           left: 0,
-          width: BEE_SIZE,
-          height: BEE_SIZE,
+          width: BASE_SIZE,
+          height: BASE_SIZE,
           willChange: 'transform',
           filter: 'drop-shadow(0 10px 12px rgba(20,14,4,.28))',
           opacity: ready ? 1 : 0,
           transition: 'opacity 0.5s ease',
+          transformOrigin: 'center center',
         }}
       >
         {ready && (
@@ -202,8 +261,8 @@ export default function BeeMascot3D() {
             disable-pan
             disable-tap
             style={{
-              width: BEE_SIZE,
-              height: BEE_SIZE,
+              width: BASE_SIZE,
+              height: BASE_SIZE,
               background: 'transparent',
               '--poster-color': 'transparent',
             } as React.CSSProperties}
