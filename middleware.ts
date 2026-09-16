@@ -1,7 +1,7 @@
 import { getToken } from 'next-auth/jwt'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifyShopToken } from '@/lib/shop/auth'
+import { verifyShopToken } from '@/lib/shop/verify-token'
 
 // Paths on the shop subdomain that require a valid shop-token
 const SHOP_AUTH_PATHS = ['/shop/konto', '/api/shop/orders']

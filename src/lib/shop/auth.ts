@@ -1,6 +1,9 @@
-import { SignJWT, jwtVerify } from 'jose'
+import { SignJWT } from 'jose'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { verifyShopToken } from './verify-token'
+
+export { verifyShopToken }
 
 const COOKIE_NAME = 'shop-token'
 const EXPIRY = '30d'
@@ -17,21 +20,6 @@ export async function signShopToken(customerId: string): Promise<string> {
     .setIssuedAt()
     .setExpirationTime(EXPIRY)
     .sign(getSecret())
-}
-
-export async function verifyShopToken(
-  token: string
-): Promise<{ sub: string } | null> {
-  if (!token) return null
-  try {
-    const { payload } = await jwtVerify(token, getSecret())
-    if (typeof payload.sub !== 'string') return null
-    // Reject special-purpose tokens (verify, reset) from being used as auth tokens
-    if (payload.purpose) return null
-    return { sub: payload.sub }
-  } catch {
-    return null
-  }
 }
 
 export function setShopCookie(
