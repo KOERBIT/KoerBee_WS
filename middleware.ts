@@ -1,7 +1,6 @@
-import { getToken } from 'next-auth/jwt'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { jwtVerify } from 'jose'
+import { jwtVerify, jwtDecrypt } from 'jose'
 
 async function verifyShopToken(token: string): Promise<{ sub: string } | null> {
   if (!token) return null
@@ -12,6 +11,28 @@ async function verifyShopToken(token: string): Promise<{ sub: string } | null> {
     if (typeof payload.sub !== 'string') return null
     if (payload.purpose) return null
     return { sub: payload.sub }
+  } catch {
+    return null
+  }
+}
+
+async function getNextAuthToken(req: NextRequest): Promise<Record<string, unknown> | null> {
+  const secret = process.env.NEXTAUTH_SECRET
+  if (!secret) return null
+  const cookieName = process.env.NODE_ENV === 'production'
+    ? '__Secure-next-auth.session-token'
+    : 'next-auth.session-token'
+  const token = req.cookies.get(cookieName)?.value
+  if (!token) return null
+  try {
+    const enc = new TextEncoder()
+    const signingKey = await crypto.subtle.importKey(
+      'raw', enc.encode(secret).slice(0, 32),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    )
+    const derived = new Uint8Array(await crypto.subtle.sign('HMAC', signingKey, enc.encode('NextAuth.js Generated Encryption Key')))
+    const { payload } = await jwtDecrypt(token, derived, { clockTolerance: 15 })
+    return payload as Record<string, unknown>
   } catch {
     return null
   }
@@ -93,10 +114,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  })
+  const token = await getNextAuthToken(request)
 
   if (!token) {
     const loginUrl = new URL('/login', request.url)
