@@ -150,20 +150,20 @@ export default function BeeMascot3D() {
         const d = getContainerCenter()
 
         // Figure-8 path with varying speed
-        const phase = t * 0.00025
+        const phase = t * 0.00012
         const x = d.cx + d.ax * Math.sin(phase)
         const y = d.cy + d.ay * Math.sin(phase * 1.7 + 1.1)
 
         // Depth simulation: bee "approaches" and "recedes"
         // Use a slow sine to create approach/recede cycles
-        const depthPhase = Math.sin(t * 0.00015)  // slow cycle
+        const depthPhase = Math.sin(t * 0.00008)  // slow cycle
         const depthTarget = lerp(MIN_SCALE, MAX_SCALE, (depthPhase + 1) / 2)
         targetScale.current = depthTarget
 
         // Velocity for steering
         const dt = 16
-        const nx = d.cx + d.ax * Math.sin((t + dt) * 0.00025)
-        const ny = d.cy + d.ay * Math.sin(((t + dt) * 0.00025) * 1.7 + 1.1)
+        const nx = d.cx + d.ax * Math.sin((t + dt) * 0.00012)
+        const ny = d.cy + d.ay * Math.sin(((t + dt) * 0.00012) * 1.7 + 1.1)
         steer(t, nx - x, ny - y, 3.2, 26, 18, true)
 
         // Smooth scale interpolation
@@ -253,7 +253,7 @@ export default function BeeMascot3D() {
             src="/bee-mascot-queen.glb"
             auto-rotate
             auto-rotate-delay="0"
-            rotation-per-second="-30deg"
+            rotation-per-second="-10deg"
             camera-orbit="0deg 75deg 4m"
             field-of-view="32deg"
             interaction-prompt="none"
