@@ -60,9 +60,16 @@ export async function middleware(request: NextRequest) {
 
   // --- Main domain (existing admin logic) ---
   if (
+    pathname === '/' ||
+    pathname.startsWith('/impressum') ||
+    pathname.startsWith('/datenschutz') ||
+    pathname.startsWith('/widerruf') ||
+    pathname.startsWith('/versand') ||
+    pathname.startsWith('/kontakt') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/health') ||
+    pathname.startsWith('/api/shop/products') ||
     pathname.startsWith('/_next/static') ||
     pathname.startsWith('/_next/image') ||
     pathname === '/favicon.ico' ||
