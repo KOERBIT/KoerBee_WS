@@ -253,7 +253,7 @@ export default function BeeMascot3D() {
             src="/bee-mascot-queen.glb"
             auto-rotate
             auto-rotate-delay="0"
-            rotation-per-second="30deg"
+            rotation-per-second="-30deg"
             camera-orbit="0deg 75deg 4m"
             field-of-view="32deg"
             interaction-prompt="none"
