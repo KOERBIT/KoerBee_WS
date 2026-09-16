@@ -2,8 +2,8 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react'
 
-const HALF = 40
-const BEE_SIZE = 80
+const HALF = 55
+const BEE_SIZE = 110
 
 type Mode = 'patrol' | 'flying' | 'landed'
 
@@ -195,8 +195,8 @@ export default function BeeMascot3D() {
             auto-rotate
             auto-rotate-delay="0"
             rotation-per-second="30deg"
-            camera-orbit="0deg 75deg 2.5m"
-            field-of-view="45deg"
+            camera-orbit="0deg 75deg 4m"
+            field-of-view="32deg"
             interaction-prompt="none"
             disable-zoom
             disable-pan
