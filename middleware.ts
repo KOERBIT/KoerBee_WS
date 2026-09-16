@@ -1,7 +1,21 @@
 import { getToken } from 'next-auth/jwt'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifyShopToken } from '@/lib/shop/verify-token'
+import { jwtVerify } from 'jose'
+
+async function verifyShopToken(token: string): Promise<{ sub: string } | null> {
+  if (!token) return null
+  try {
+    const secret = process.env.SHOP_JWT_SECRET
+    if (!secret) return null
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret))
+    if (typeof payload.sub !== 'string') return null
+    if (payload.purpose) return null
+    return { sub: payload.sub }
+  } catch {
+    return null
+  }
+}
 
 // Paths on the shop subdomain that require a valid shop-token
 const SHOP_AUTH_PATHS = ['/shop/konto', '/api/shop/orders']
@@ -92,8 +106,6 @@ export async function middleware(request: NextRequest) {
 
   return NextResponse.next()
 }
-
-export const runtime = 'nodejs'
 
 export const config = {
   matcher: [
