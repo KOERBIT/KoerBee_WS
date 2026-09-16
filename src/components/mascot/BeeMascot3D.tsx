@@ -2,8 +2,8 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react'
 
-const HALF = 59
-const BEE_SIZE = 118
+const HALF = 40
+const BEE_SIZE = 80
 
 type Mode = 'patrol' | 'flying' | 'landed'
 
@@ -75,12 +75,14 @@ export default function BeeMascot3D() {
     let targetPitch = clamp(-vy * mult, -capYaw * 0.7, capYaw * 0.7)
     let targetRoll = clamp(vx * mult * 0.4, -capRoll, capRoll)
     if (ambient) {
-      targetYaw += Math.sin(t * 0.0011) * 7
-      targetPitch += Math.sin(t * 0.0014 + 1) * 5
+      targetYaw += Math.sin(t * 0.0006) * 10
+      targetPitch += Math.sin(t * 0.0008 + 1) * 8
+      // Horizontal tilt like real flight — occasional banking
+      targetRoll += Math.sin(t * 0.0004) * 18 + Math.sin(t * 0.00095 + 2.5) * 10
     }
-    o.yaw += (targetYaw - o.yaw) * 0.12
-    o.pitch += (targetPitch - o.pitch) * 0.12
-    o.roll += (targetRoll - o.roll) * 0.12
+    o.yaw += (targetYaw - o.yaw) * 0.06
+    o.pitch += (targetPitch - o.pitch) * 0.06
+    o.roll += (targetRoll - o.roll) * 0.06
   }, [])
 
   const flyToCart = useCallback(() => {
@@ -111,11 +113,11 @@ export default function BeeMascot3D() {
     function tick(t: number) {
       if (mode.current === 'patrol') {
         const d = getContainerCenter()
-        const x = d.cx + d.ax * Math.sin(t * 0.00065)
-        const y = d.cy + d.ay * Math.sin(t * 0.00095 + 1.1)
-        const nx = d.cx + d.ax * Math.sin((t + 16) * 0.00065)
-        const ny = d.cy + d.ay * Math.sin((t + 16) * 0.00095 + 1.1)
-        steer(t, nx - x, ny - y, 3.2, 26, 12, true)
+        const x = d.cx + d.ax * Math.sin(t * 0.00028)
+        const y = d.cy + d.ay * Math.sin(t * 0.00042 + 1.1)
+        const nx = d.cx + d.ax * Math.sin((t + 16) * 0.00028)
+        const ny = d.cy + d.ay * Math.sin((t + 16) * 0.00042 + 1.1)
+        steer(t, nx - x, ny - y, 3.2, 26, 18, true)
         pos.current = { x, y }
         last.current = { x, y }
         apply(x, y)
