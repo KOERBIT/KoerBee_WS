@@ -191,7 +191,7 @@ export default function BeeMascot3D() {
           // @ts-expect-error model-viewer is a web component
           <model-viewer
             ref={viewerRef}
-            src="/bee-mascot.glb"
+            src="/bee-mascot-queen.glb"
             auto-rotate
             auto-rotate-delay="0"
             rotation-per-second="30deg"
