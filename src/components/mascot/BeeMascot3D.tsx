@@ -89,7 +89,7 @@ export default function BeeMascot3D() {
       // Calculate target azimuth: bee faces its movement direction
       // atan2 gives angle from velocity, map to camera orbit azimuth
       const targetFacing = vx > 0 ? -90 : 90
-      facing.current += (targetFacing - facing.current) * 0.03
+      facing.current += (targetFacing - facing.current) * 0.008
     }
 
     // Update model-viewer camera orbit to face movement direction
