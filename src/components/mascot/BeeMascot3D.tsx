@@ -36,6 +36,7 @@ export default function BeeMascot3D() {
   const ori = useRef({ yaw: 0, pitch: 0, roll: 0 })
   const scale = useRef(1)
   const targetScale = useRef(1)
+  const facing = useRef(0) // azimuth angle in degrees — 0 = front
   const mouse = useRef({ x: 0, y: 0 })
   const flight = useRef<Flight | null>(null)
   const landedUntil = useRef(0)
@@ -78,13 +79,29 @@ export default function BeeMascot3D() {
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
   }, [])
 
-  const apply = useCallback((x: number, y: number) => {
+  const apply = useCallback((x: number, y: number, vx?: number) => {
     if (!containerRef.current) return
     const o = ori.current
     const s = scale.current
+
+    // Update facing direction based on horizontal velocity
+    if (vx !== undefined && Math.abs(vx) > 0.01) {
+      // Calculate target azimuth: bee faces its movement direction
+      // atan2 gives angle from velocity, map to camera orbit azimuth
+      const targetFacing = vx > 0 ? -90 : 90
+      facing.current += (targetFacing - facing.current) * 0.03
+    }
+
+    // Update model-viewer camera orbit to face movement direction
+    const viewer = viewerRef.current
+    if (viewer && 'cameraOrbit' in viewer) {
+      (viewer as HTMLElement & { cameraOrbit: string }).cameraOrbit =
+        `${facing.current}deg 75deg 4m`
+    }
+
     const half = (BASE_SIZE * s) / 2
     containerRef.current.style.transform =
-      `translate3d(${x - half}px, ${y - half}px, 0) scale(${s}) rotateY(${o.yaw}deg) rotateX(${o.pitch}deg) rotateZ(${o.roll}deg)`
+      `translate3d(${x - half}px, ${y - half}px, 0) scale(${s}) rotateX(${o.pitch}deg) rotateZ(${o.roll}deg)`
   }, [])
 
   const steer = useCallback((t: number, vx: number, vy: number, mult: number, capYaw: number, capRoll: number, ambient: boolean) => {
@@ -164,14 +181,15 @@ export default function BeeMascot3D() {
         const dt = 16
         const nx = d.cx + d.ax * Math.sin((t + dt) * 0.00012)
         const ny = d.cy + d.ay * Math.sin(((t + dt) * 0.00012) * 1.7 + 1.1)
-        steer(t, nx - x, ny - y, 3.2, 26, 18, true)
+        const vx = nx - x
+        steer(t, vx, ny - y, 3.2, 26, 18, true)
 
         // Smooth scale interpolation
         scale.current += (targetScale.current - scale.current) * 0.03
 
         pos.current = { x, y }
         last.current = { x, y }
-        apply(x, y)
+        apply(x, y, vx)
       } else if (mode.current === 'flying' && flight.current) {
         const f = flight.current
         const p = Math.min(1, (t - f.start) / f.dur)
@@ -185,10 +203,11 @@ export default function BeeMascot3D() {
         targetScale.current = f.onDone ? lerp(scale.current, 0.5, 0.05) : lerp(scale.current, 1.0, 0.05)
         scale.current += (targetScale.current - scale.current) * 0.08
 
-        steer(t, x - last.current.x, y - last.current.y, 2.4, 34, 16, false)
+        const fvx = x - last.current.x
+        steer(t, fvx, y - last.current.y, 2.4, 34, 16, false)
         pos.current = { x, y }
         last.current = { x, y }
-        apply(x, y)
+        apply(x, y, fvx)
         if (p >= 1) {
           if (f.onDone) f.onDone()
           flight.current = null
@@ -251,9 +270,6 @@ export default function BeeMascot3D() {
           <model-viewer
             ref={viewerRef}
             src="/bee-mascot-queen.glb"
-            auto-rotate
-            auto-rotate-delay="0"
-            rotation-per-second="-10deg"
             camera-orbit="0deg 75deg 4m"
             field-of-view="32deg"
             interaction-prompt="none"
