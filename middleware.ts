@@ -1,9 +1,52 @@
-import { getToken } from 'next-auth/jwt'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifyShopToken } from '@/lib/shop/verify-token'
+import { jwtVerify, compactDecrypt } from 'jose'
 
-// Paths on the shop subdomain that require a valid shop-token
+// --- Inline token helpers (Edge-compatible, no @/ imports) ---
+
+async function verifyShopToken(token: string): Promise<{ sub: string } | null> {
+  if (!token) return null
+  try {
+    const secret = process.env.SHOP_JWT_SECRET
+    if (!secret) return null
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret))
+    if (typeof payload.sub !== 'string') return null
+    if (payload.purpose) return null
+    return { sub: payload.sub }
+  } catch {
+    return null
+  }
+}
+
+async function getNextAuthToken(req: NextRequest): Promise<boolean> {
+  const secret = process.env.NEXTAUTH_SECRET
+  if (!secret) return false
+  const cookieName = process.env.NODE_ENV === 'production'
+    ? '__Secure-next-auth.session-token'
+    : 'next-auth.session-token'
+  const token = req.cookies.get(cookieName)?.value
+  if (!token) return false
+  try {
+    const enc = new TextEncoder()
+    // Derive encryption key the same way NextAuth v4 does
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw', enc.encode(secret),
+      { name: 'HKDF' }, false, ['deriveKey']
+    )
+    const derivedKey = await crypto.subtle.deriveKey(
+      { name: 'HKDF', hash: 'SHA-256', salt: enc.encode(''), info: enc.encode('NextAuth.js Generated Encryption Key') },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 }, false, ['decrypt']
+    )
+    await compactDecrypt(token, derivedKey)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// --- Routing ---
+
 const SHOP_AUTH_PATHS = ['/shop/konto', '/api/shop/orders']
 
 function isShopHost(host: string): boolean {
@@ -16,7 +59,7 @@ function needsShopAuth(pathname: string): boolean {
   return SHOP_AUTH_PATHS.some((p) => pathname.startsWith(p))
 }
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') ?? ''
   const { pathname } = request.nextUrl
 
@@ -77,12 +120,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  })
+  const hasToken = await getNextAuthToken(request)
 
-  if (!token) {
+  if (!hasToken) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
