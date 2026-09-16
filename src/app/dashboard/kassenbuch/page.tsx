@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 type Tab = 'verkauf' | 'kommission' | 'paypal' | 'artikel' | 'ausgaben' | 'laeden' | 'uebersicht' | 'lagerkorrektionen'
 
 interface CommissionStore { id: string; name: string; createdAt: string }
-interface Product { id: string; name: string; unit: string; price: number; description: string | null; fillAmount: number | null; fillUnit: string | null; stockQuantity: number }
+interface Product { id: string; name: string; unit: string; price: number; description: string | null; fillAmount: number | null; fillUnit: string | null; stockQuantity: number; shopVisible?: boolean; shopName?: string | null; shopNameEn?: string | null; imageUrl?: string | null; shopPrice?: number | null; shopSortOrder?: number }
 interface SaleItem { id: string; product: Product; quantity: number; price: number; total: number }
 interface Sale { id: string; date: string; customerName: string | null; customerEmail?: string | null; total: number; notes: string | null; items: SaleItem[]; commissionStore?: CommissionStore | null; customer?: { email: string | null } | null; receipt?: { number: number; paymentMethod: string; emailedAt: string | null } | null }
 interface ConsignmentItem { id: string; product: Product; quantity: number; price: number; soldQuantity: number; returnedQuantity: number }
@@ -146,11 +146,27 @@ export default function KassenbuchPage() {
 
   // Product form
   const [showProduct, setShowProduct] = useState(false)
+  const [editProdId, setEditProdId] = useState<string | null>(null)
   const [prodName, setProdName] = useState('')
   const [prodUnit, setProdUnit] = useState('Stück')
   const [prodPrice, setProdPrice] = useState('')
   const [prodDesc, setProdDesc] = useState('')
   const [savingProd, setSavingProd] = useState(false)
+  // Shop fields
+  const [prodShopVisible, setProdShopVisible] = useState(false)
+  const [prodShopName, setProdShopName] = useState('')
+  const [prodImageUrl, setProdImageUrl] = useState('')
+  const [prodShopPrice, setProdShopPrice] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
+  // Image crop
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropScale, setCropScale] = useState(1)
+  const [cropX, setCropX] = useState(0)
+  const [cropY, setCropY] = useState(0)
+  const cropCanvasRef = useRef<HTMLCanvasElement>(null)
+  const cropImgRef = useRef<HTMLImageElement | null>(null)
+  const cropDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
 
   // Einbuchen
   const [stockProductId, setStockProductId] = useState<string | null>(null)
@@ -556,11 +572,35 @@ export default function KassenbuchPage() {
     }
   }
 
+  function resetProductForm() {
+    setEditProdId(null)
+    setProdName(''); setProdUnit('Stück'); setProdPrice(''); setProdDesc('')
+    setProdFillAmount(''); setProdFillUnit('g')
+    setProdShopVisible(false); setProdShopName(''); setProdImageUrl(''); setProdShopPrice('')
+  }
+
+  function openEditProduct(p: Product) {
+    setEditProdId(p.id)
+    setProdName(p.name)
+    setProdUnit(p.unit)
+    setProdPrice(String(p.price).replace('.', ','))
+    setProdDesc(p.description || '')
+    setProdFillAmount(p.fillAmount ? String(p.fillAmount).replace('.', ',') : '')
+    setProdFillUnit(p.fillUnit || 'g')
+    setProdShopVisible(p.shopVisible ?? false)
+    setProdShopName(p.shopName || '')
+    setProdImageUrl(p.imageUrl || '')
+    setProdShopPrice(p.shopPrice ? String(p.shopPrice).replace('.', ',') : '')
+    setShowProduct(true)
+  }
+
   async function saveProduct(e: React.FormEvent) {
     e.preventDefault()
     setSavingProd(true)
-    const res = await fetch('/api/kassenbuch/products', {
-      method: 'POST',
+    const url = editProdId ? `/api/kassenbuch/products/${editProdId}` : '/api/kassenbuch/products'
+    const method = editProdId ? 'PUT' : 'POST'
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: prodName,
@@ -569,6 +609,10 @@ export default function KassenbuchPage() {
         description: prodDesc,
         fillAmount: prodFillAmount ? parseDecimal(prodFillAmount) : null,
         fillUnit: prodFillAmount ? prodFillUnit : null,
+        shopVisible: prodShopVisible,
+        shopName: prodShopName || null,
+        imageUrl: prodImageUrl || null,
+        shopPrice: prodShopPrice ? parseDecimal(prodShopPrice) : null,
       }),
     })
     setSavingProd(false)
@@ -578,7 +622,7 @@ export default function KassenbuchPage() {
       return
     }
     setShowProduct(false)
-    setProdName(''); setProdPrice(''); setProdDesc(''); setProdFillAmount(''); setProdFillUnit('g')
+    resetProductForm()
     load()
   }
 
@@ -1168,7 +1212,7 @@ export default function KassenbuchPage() {
       {tab === 'artikel' && (
         <div>
           <div className="flex justify-end mb-4">
-            <button onClick={() => setShowProduct(true)}
+            <button onClick={() => { resetProductForm(); setShowProduct(true) }}
               className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[13px] font-semibold transition-colors">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Artikel anlegen
@@ -1191,15 +1235,26 @@ export default function KassenbuchPage() {
                 const isExpanded = stockProductId === p.id
                 return (
                   <div key={p.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                    <div className="px-5 py-4 flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-[14px] font-semibold text-zinc-900">{p.name}</p>
-                        <p className="text-[12px] text-zinc-400">
-                          {p.fillAmount && p.fillUnit ? `${p.fillAmount} ${p.fillUnit} · ` : ''}{fmt(p.price)}
-                          {p.description ? ` · ${p.description}` : ''}
-                        </p>
+                    <div className="px-5 py-4 flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        {p.imageUrl && (
+                          <div className="w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 border border-zinc-200">
+                            <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-[14px] font-semibold text-zinc-900 truncate">{p.name}</p>
+                            {p.shopVisible && <span className="flex-shrink-0 text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Shop</span>}
+                          </div>
+                          <p className="text-[12px] text-zinc-400 truncate">
+                            {p.fillAmount && p.fillUnit ? `${p.fillAmount} ${p.fillUnit} · ` : ''}{fmt(p.price)}
+                            {p.shopPrice ? ` (Shop: ${fmt(p.shopPrice)})` : ''}
+                            {p.description ? ` · ${p.description}` : ''}
+                          </p>
+                        </div>
                       </div>
-                      <div className={`border rounded-xl px-3 py-2 text-center min-w-[64px] ${stockColor}`}>
+                      <div className={`border rounded-xl px-3 py-2 text-center min-w-[64px] flex-shrink-0 ${stockColor}`}>
                         <p className="text-[18px] font-bold leading-none">{p.stockQuantity}</p>
                         <p className="text-[10px] font-medium mt-0.5">im Lager</p>
                       </div>
@@ -1210,6 +1265,12 @@ export default function KassenbuchPage() {
                         className="flex-1 text-[12px] font-semibold text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg py-2 transition-colors"
                       >
                         + Einbuchen
+                      </button>
+                      <button
+                        onClick={() => openEditProduct(p)}
+                        className="text-[12px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg px-3 py-2 transition-colors"
+                      >
+                        Bearbeiten
                       </button>
                       <button
                         onClick={() => deleteProduct(p.id)}
@@ -1714,14 +1775,14 @@ export default function KassenbuchPage() {
       {/* Modal: Neuer Artikel */}
       {showProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
-              <h2 className="text-[15px] font-semibold text-zinc-900">Artikel anlegen</h2>
-              <button onClick={() => setShowProduct(false)} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
+              <h2 className="text-[15px] font-semibold text-zinc-900">{editProdId ? 'Artikel bearbeiten' : 'Artikel anlegen'}</h2>
+              <button onClick={() => { setShowProduct(false); resetProductForm() }} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <form onSubmit={saveProduct} className="px-6 py-5 space-y-4">
+            <form onSubmit={saveProduct} className="px-6 py-5 space-y-4 overflow-y-auto">
               <div>
                 <label className="block text-[12px] font-medium text-zinc-500 mb-1">Name *</label>
                 <input value={prodName} onChange={e => setProdName(e.target.value)} required placeholder="z.B. Blütenhonig 500g"
@@ -1766,9 +1827,172 @@ export default function KassenbuchPage() {
                 <input value={prodDesc} onChange={e => setProdDesc(e.target.value)} placeholder="optional"
                   className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
               </div>
+              {/* Shop-Einstellungen */}
+              <div className="border-t border-zinc-100 pt-4 mt-2">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[12px] font-semibold text-amber-600 uppercase tracking-wide">Shop-Einstellungen</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={prodShopVisible} onChange={e => setProdShopVisible(e.target.checked)} className="sr-only peer" />
+                    <div className="w-9 h-5 bg-zinc-200 peer-focus:ring-2 peer-focus:ring-amber-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                    <span className="ml-2 text-[12px] text-zinc-500">Im Shop anzeigen</span>
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Shop-Name (falls anders als Artikelname)</label>
+                  <input value={prodShopName} onChange={e => setProdShopName(e.target.value)} placeholder="z.B. Blütenhonig aus Hüttenberg"
+                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                </div>
+                <div className="mt-3">
+                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Shop-Preis (€, falls anders als Kassenbuch-Preis)</label>
+                  <input type="text" inputMode="decimal" value={prodShopPrice} onChange={e => setProdShopPrice(e.target.value)} placeholder="optional"
+                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                </div>
+                <div className="mt-3">
+                  <label className="block text-[12px] font-medium text-zinc-500 mb-1">Produktbild</label>
+                  {cropSrc ? (
+                    /* ── Crop-Editor ── */
+                    <div className="space-y-2">
+                      <div
+                        className="relative rounded-lg overflow-hidden border border-amber-300 bg-zinc-900 cursor-grab active:cursor-grabbing select-none"
+                        style={{ height: 200 }}
+                        onMouseDown={e => {
+                          cropDragRef.current = { startX: e.clientX, startY: e.clientY, origX: cropX, origY: cropY }
+                          const onMove = (ev: MouseEvent) => {
+                            if (!cropDragRef.current) return
+                            setCropX(cropDragRef.current.origX + (ev.clientX - cropDragRef.current.startX))
+                            setCropY(cropDragRef.current.origY + (ev.clientY - cropDragRef.current.startY))
+                          }
+                          const onUp = () => { cropDragRef.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+                          window.addEventListener('mousemove', onMove)
+                          window.addEventListener('mouseup', onUp)
+                        }}
+                        onTouchStart={e => {
+                          const t = e.touches[0]
+                          cropDragRef.current = { startX: t.clientX, startY: t.clientY, origX: cropX, origY: cropY }
+                          const onMove = (ev: TouchEvent) => {
+                            if (!cropDragRef.current) return
+                            const touch = ev.touches[0]
+                            setCropX(cropDragRef.current.origX + (touch.clientX - cropDragRef.current.startX))
+                            setCropY(cropDragRef.current.origY + (touch.clientY - cropDragRef.current.startY))
+                          }
+                          const onUp = () => { cropDragRef.current = null; window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onUp) }
+                          window.addEventListener('touchmove', onMove, { passive: true })
+                          window.addEventListener('touchend', onUp)
+                        }}
+                      >
+                        <img
+                          src={cropSrc}
+                          alt="Crop"
+                          className="absolute pointer-events-none"
+                          style={{ transform: `translate(${cropX}px, ${cropY}px) scale(${cropScale})`, transformOrigin: 'top left', maxWidth: 'none' }}
+                          ref={el => { cropImgRef.current = el }}
+                          onLoad={e => {
+                            const img = e.target as HTMLImageElement
+                            const containerW = img.parentElement!.clientWidth
+                            const containerH = 200
+                            const fitScale = Math.max(containerW / img.naturalWidth, containerH / img.naturalHeight)
+                            setCropScale(fitScale)
+                            setCropX((containerW - img.naturalWidth * fitScale) / 2)
+                            setCropY((containerH - img.naturalHeight * fitScale) / 2)
+                          }}
+                        />
+                        {/* Crop overlay grid */}
+                        <div className="absolute inset-0 pointer-events-none" style={{ boxShadow: 'inset 0 0 0 2px rgba(251,191,36,.6)' }}>
+                          <div className="absolute left-1/3 top-0 bottom-0 w-px bg-amber-400/30" />
+                          <div className="absolute left-2/3 top-0 bottom-0 w-px bg-amber-400/30" />
+                          <div className="absolute top-1/3 left-0 right-0 h-px bg-amber-400/30" />
+                          <div className="absolute top-2/3 left-0 right-0 h-px bg-amber-400/30" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-zinc-400 w-5">−</span>
+                        <input type="range" min="0.1" max="3" step="0.05" value={cropScale}
+                          onChange={e => setCropScale(parseFloat(e.target.value))}
+                          className="flex-1 h-1 accent-amber-500" />
+                        <span className="text-[10px] text-zinc-400 w-5">+</span>
+                        <span className="text-[10px] text-zinc-400 w-12 text-right">{Math.round(cropScale * 100)}%</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 text-center">Ziehen zum Verschieben, Slider zum Zoomen</p>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => { setCropSrc(null); setCropFile(null) }}
+                          className="flex-1 text-[12px] font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg py-2 transition-colors">
+                          Abbrechen
+                        </button>
+                        <button type="button" disabled={uploadingImage} onClick={async () => {
+                          if (!cropImgRef.current || !cropFile) return
+                          setUploadingImage(true)
+                          try {
+                            const img = cropImgRef.current
+                            const container = img.parentElement!
+                            const cW = container.clientWidth
+                            const cH = 200
+                            // Output: 1200x800 (3:2)
+                            const outW = 1200
+                            const outH = 800
+                            const canvas = document.createElement('canvas')
+                            canvas.width = outW; canvas.height = outH
+                            const ctx = canvas.getContext('2d')!
+                            // Map crop area to source coordinates
+                            const sX = -cropX / cropScale
+                            const sY = -cropY / cropScale
+                            const sW = cW / cropScale
+                            const sH = cH / cropScale
+                            ctx.drawImage(img, sX, sY, sW, sH, 0, 0, outW, outH)
+                            const blob = await new Promise<Blob>(r => canvas.toBlob(b => r(b!), 'image/jpeg', 0.88))
+                            const fd = new FormData()
+                            fd.append('file', new File([blob], cropFile.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+                            fd.append('folder', 'produkte')
+                            const res = await fetch('/api/media', { method: 'POST', body: fd })
+                            if (res.ok) {
+                              const { url } = await res.json()
+                              setProdImageUrl(url)
+                              setCropSrc(null); setCropFile(null)
+                            } else {
+                              const err = await res.json().catch(() => ({}))
+                              alert(err.error || 'Upload fehlgeschlagen')
+                            }
+                          } catch { alert('Upload fehlgeschlagen') }
+                          setUploadingImage(false)
+                        }}
+                          className="flex-1 text-[12px] font-semibold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 rounded-lg py-2 transition-colors">
+                          {uploadingImage ? 'Wird hochgeladen…' : 'Zuschneiden & Hochladen'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : prodImageUrl ? (
+                    /* ── Uploaded preview ── */
+                    <div className="relative rounded-lg overflow-hidden border border-zinc-200 h-36 bg-zinc-100">
+                      <img src={prodImageUrl} alt="Vorschau" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => setProdImageUrl('')}
+                        className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 text-[11px]">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/40 px-2 py-1">
+                        <input value={prodImageUrl} readOnly className="w-full bg-transparent text-white text-[10px] outline-none" onClick={e => (e.target as HTMLInputElement).select()} />
+                      </div>
+                    </div>
+                  ) : (
+                    /* ── File picker ── */
+                    <label className="flex flex-col items-center justify-center h-32 rounded-xl border-2 border-dashed cursor-pointer transition-colors border-zinc-200 bg-zinc-50 hover:border-amber-300 hover:bg-amber-50/50">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 mb-1">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>
+                      </svg>
+                      <span className="text-[11px] text-zinc-400">Bild auswählen (max 10MB)</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setCropFile(file)
+                        setCropSrc(URL.createObjectURL(file))
+                        setCropScale(1); setCropX(0); setCropY(0)
+                        e.target.value = ''
+                      }} />
+                    </label>
+                  )}
+                </div>
+              </div>
               <button type="submit" disabled={savingProd || !prodName || !prodPrice}
                 className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-[14px] font-semibold transition-colors">
-                {savingProd ? 'Wird gespeichert…' : 'Artikel speichern'}
+                {savingProd ? 'Wird gespeichert…' : editProdId ? 'Änderungen speichern' : 'Artikel speichern'}
               </button>
             </form>
           </div>

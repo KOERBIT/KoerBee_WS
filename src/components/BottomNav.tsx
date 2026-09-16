@@ -43,6 +43,11 @@ const MORE_ITEMS = [
       <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
     </svg>
   )},
+  { label: 'Mediathek', href: '/dashboard/mediathek', icon: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>
+    </svg>
+  )},
   { label: 'NFC-Tags', href: '/dashboard/nfc', icon: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6.5 6.5a6 6 0 000 11M9 9a3 3 0 000 6"/>

@@ -220,6 +220,9 @@ export default function ShopLandingPage() {
             <Link href="/shop/konto" style={{ color: 'var(--shop-dim)', textDecoration: 'none', fontWeight: 500 }} className="hover:opacity-70 transition-opacity">
               {t.account}
             </Link>
+            <Link href="/dashboard" style={{ color: 'var(--shop-dim)', textDecoration: 'none', fontWeight: 500, fontSize: '.7rem', letterSpacing: '.08em', textTransform: 'uppercase' as const }} className="hover:opacity-70 transition-opacity">
+              {locale === 'de' ? 'Verwaltung' : 'Admin'}
+            </Link>
             <button
               onClick={toggleLocale}
               className="transition-opacity hover:opacity-70"

@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { name, unit, price, description, fillAmount, fillUnit } = await req.json()
+  const { name, unit, price, description, fillAmount, fillUnit, shopVisible, shopName, shopNameEn, descriptionEn, imageUrl, shopPrice, shopSortOrder } = await req.json()
   if (!name || price == null) return NextResponse.json({ error: 'Name und Preis fehlen' }, { status: 400 })
   const product = await prisma.product.create({
     data: {
@@ -27,6 +27,13 @@ export async function POST(req: NextRequest) {
       fillAmount: fillAmount ? parseFloat(fillAmount) : null,
       fillUnit: fillUnit || null,
       userId: session.user.id,
+      shopVisible: shopVisible ?? false,
+      shopName: shopName || null,
+      shopNameEn: shopNameEn || null,
+      descriptionEn: descriptionEn || null,
+      imageUrl: imageUrl || null,
+      shopPrice: shopPrice != null ? parseFloat(shopPrice) : null,
+      shopSortOrder: shopSortOrder ?? 0,
     },
   })
   return NextResponse.json(product, { status: 201 })

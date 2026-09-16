@@ -1,0 +1,22 @@
+# Large files
+Vorlage.glb
+KoerBee_Webshop_Hobbyimkerei_Hessen.docx
+
+# 3D model source files (not needed for deployment)
+Meshy_AI_chibi_bee_mascot_3d_0916075928_image-to-3d-texture.mtl
+Meshy_AI_chibi_bee_mascot_3d_0916075928_image-to-3d-texture.mtl.bak
+Meshy_AI_chibi_bee_mascot_3d_0916075928_image-to-3d-texture.obj
+Meshy_AI_chibi_bee_mascot_3d_0916075928_image-to-3d-texture.png
+Meshy_AI_chibi_bee_mascot_3d_0916075928_image-to-3d-texture_obj/
+Meshy_AI_chibi_bee_mascot_3d_0916075928_image-to-3d-texture_small.jpg
+Meshy_AI_chibi_bee_queen_flyin/
+
+# Claude worktrees
+.claude/worktrees/
+
+# Docs/prompts
+docs/
+koerbee-mascot.html
+
+# Superpowers
+.superpowers/

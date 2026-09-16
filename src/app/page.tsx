@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 
@@ -40,6 +40,194 @@ function FadeIn({ children, className = '', delay = 0 }: { children: React.React
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
+    </div>
+  )
+}
+
+/* ── Apple-style scroll-driven product showcase ── */
+function ProductShowcase({ product, index }: { product: ShopProduct; index: number }) {
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const [progress, setProgress] = useState(0)
+
+  const handleScroll = useCallback(() => {
+    const el = sectionRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const vh = window.innerHeight
+    // progress: 0 = section just entering bottom, 1 = centered, back to 0 = leaving top
+    const center = rect.top + rect.height / 2
+    const dist = Math.abs(center - vh / 2)
+    const maxDist = vh / 2 + rect.height / 2
+    const p = Math.max(0, 1 - dist / maxDist)
+    setProgress(p)
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [handleScroll])
+
+  const name = product.shopName ?? product.name
+  // Eased progress for smoother feel
+  const ease = progress * progress * (3 - 2 * progress) // smoothstep
+  const imgScale = 0.85 + ease * 0.15
+  const textOpacity = Math.max(0, (ease - 0.25) / 0.75)
+  const textY = (1 - ease) * 40
+  const cardRadius = 28 + (1 - ease) * 12
+  const isEven = index % 2 === 0
+
+  return (
+    <div
+      ref={sectionRef}
+      className="flex items-center justify-center px-4 sm:px-8"
+      style={{ minHeight: '85vh', scrollSnapAlign: 'center' }}
+    >
+      <div
+        className="relative w-full overflow-hidden"
+        style={{
+          maxWidth: 900,
+          borderRadius: cardRadius,
+          border: '1px solid var(--shop-border)',
+          background: 'var(--shop-panel)',
+          boxShadow: `0 ${4 + ease * 20}px ${20 + ease * 40}px rgba(0,0,0,${0.04 + ease * 0.06})`,
+          transform: `scale(${0.95 + ease * 0.05})`,
+          transition: 'box-shadow .3s',
+        }}
+      >
+        {/* Two-part layout: image + text, alternating sides */}
+        <div className={`flex flex-col ${isEven ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
+          {/* Image */}
+          <div
+            className="relative overflow-hidden md:w-1/2"
+            style={{ minHeight: 320 }}
+          >
+            {product.imageUrl ? (
+              <img
+                src={product.imageUrl}
+                alt={name}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{
+                  transform: `scale(${imgScale})`,
+                  transition: 'transform .1s linear',
+                }}
+              />
+            ) : (
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, var(--shop-cream) 0%, var(--shop-sky-bottom) 100%)',
+                  transform: `scale(${imgScale})`,
+                  transition: 'transform .1s linear',
+                }}
+              >
+                <span style={{ fontSize: 'clamp(4rem, 8vw, 7rem)', filter: `blur(${(1 - ease) * 2}px)` }}>
+                  {['🍯', '🐝', '🪻', '🌻'][index % 4]}
+                </span>
+              </div>
+            )}
+            {/* Gradient overlay toward text side */}
+            <div
+              className={`absolute inset-0 pointer-events-none hidden md:block`}
+              style={{
+                background: isEven
+                  ? 'linear-gradient(to right, transparent 60%, var(--shop-panel) 100%)'
+                  : 'linear-gradient(to left, transparent 60%, var(--shop-panel) 100%)',
+              }}
+            />
+            {/* Bottom gradient for mobile */}
+            <div
+              className="absolute inset-0 pointer-events-none md:hidden"
+              style={{
+                background: 'linear-gradient(to bottom, transparent 50%, var(--shop-panel) 100%)',
+              }}
+            />
+          </div>
+
+          {/* Text content */}
+          <div
+            className="relative md:w-1/2 flex flex-col justify-center p-8 sm:p-12"
+            style={{
+              opacity: textOpacity,
+              transform: `translateY(${textY}px)`,
+              transition: 'opacity .15s, transform .15s',
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "'Caveat', cursive",
+                fontWeight: 700,
+                fontSize: '1.1rem',
+                color: 'var(--shop-accent)',
+                marginBottom: 4,
+              }}
+            >
+              Produkt {String(index + 1).padStart(2, '0')}
+            </p>
+            <h3
+              style={{
+                fontWeight: 800,
+                fontSize: 'clamp(1.6rem, 3.5vw, 2.4rem)',
+                lineHeight: 1.15,
+                marginBottom: 16,
+                color: 'var(--shop-ink)',
+              }}
+            >
+              {name}
+            </h3>
+            {product.description && (
+              <p
+                style={{
+                  fontSize: '1rem',
+                  lineHeight: 1.7,
+                  color: 'var(--shop-dim)',
+                  marginBottom: 24,
+                  maxWidth: 380,
+                }}
+              >
+                {product.description}
+              </p>
+            )}
+            <div className="flex items-center gap-5 flex-wrap">
+              <span
+                style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontVariantNumeric: 'tabular-nums',
+                  fontWeight: 500,
+                  fontSize: '1.3rem',
+                }}
+              >
+                {(product.shopPrice ?? product.price).toLocaleString('de-DE', {
+                  style: 'currency',
+                  currency: 'EUR',
+                })}
+                <span
+                  className="ml-1"
+                  style={{ fontSize: '.75rem', color: 'var(--shop-dim)', fontWeight: 400 }}
+                >
+                  / {product.unit}
+                </span>
+              </span>
+              <Link
+                href="/shop/produkte"
+                className="transition-all duration-150 active:scale-[.92] hover:opacity-90"
+                style={{
+                  background: 'var(--shop-ink)',
+                  color: 'var(--shop-bg)',
+                  fontWeight: 700,
+                  fontSize: '.85rem',
+                  padding: '12px 24px',
+                  borderRadius: 999,
+                  textDecoration: 'none',
+                  display: 'inline-block',
+                }}
+              >
+                Zum Shop
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -198,9 +386,10 @@ export default function LandingPage() {
       </section>
 
       {/* ─── Produkte ─── */}
-      <section id="produkte" className="max-w-5xl mx-auto px-6 pb-20 w-full">
-        <FadeIn>
-          <div className="text-center mb-10">
+      <section id="produkte" className="w-full">
+        {/* Section header */}
+        <div className="text-center pt-10 pb-4 px-6">
+          <FadeIn>
             <p
               style={{
                 fontFamily: "'Caveat', cursive",
@@ -215,100 +404,34 @@ export default function LandingPage() {
             <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.4rem, 3vw, 1.9rem)' }}>
               Unsere Produkte
             </h2>
-          </div>
-        </FadeIn>
+          </FadeIn>
+        </div>
 
         {products.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {products.map((p, i) => {
-              const name = p.shopName ?? p.name
-              return (
-                <FadeIn key={p.id} delay={i * 80}>
-                  <div
-                    className="rounded-[20px] overflow-hidden flex flex-col transition-transform duration-300 hover:-translate-y-1"
-                    style={{
-                      background: 'var(--shop-panel)',
-                      border: '1px solid var(--shop-border)',
-                      boxShadow: 'var(--shop-shadow)',
-                    }}
-                  >
-                    {p.imageUrl ? (
-                      <div className="h-48" style={{ background: 'var(--shop-cream)' }}>
-                        <img src={p.imageUrl} alt={name} className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
-                      <div
-                        className="h-48 flex items-center justify-center text-5xl"
-                        style={{ background: 'var(--shop-cream)' }}
-                      >
-                        🍯
-                      </div>
-                    )}
-                    <div className="p-5 flex flex-col flex-1 gap-2">
-                      <h3 className="font-bold text-[.98rem]" style={{ color: 'var(--shop-ink)' }}>
-                        {name}
-                      </h3>
-                      {p.description && (
-                        <p
-                          className="text-[.78rem] leading-relaxed line-clamp-2"
-                          style={{ color: 'var(--shop-dim)' }}
-                        >
-                          {p.description}
-                        </p>
-                      )}
-                      <div className="mt-auto pt-3 flex items-center justify-between">
-                        <span
-                          style={{
-                            fontFamily: "'IBM Plex Mono', monospace",
-                            fontVariantNumeric: 'tabular-nums',
-                            fontWeight: 500,
-                            fontSize: '.92rem',
-                          }}
-                        >
-                          {(p.shopPrice ?? p.price).toLocaleString('de-DE', {
-                            style: 'currency',
-                            currency: 'EUR',
-                          })}
-                          <span className="text-xs ml-1" style={{ color: 'var(--shop-dim)' }}>
-                            / {p.unit}
-                          </span>
-                        </span>
-                        <Link
-                          href="/shop/produkte"
-                          className="transition-all duration-150 active:scale-[.92]"
-                          style={{
-                            background: 'var(--shop-ink)',
-                            color: 'var(--shop-bg)',
-                            fontWeight: 700,
-                            fontSize: '.78rem',
-                            padding: '8px 14px',
-                            borderRadius: 999,
-                            textDecoration: 'none',
-                          }}
-                        >
-                          Zum Shop
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </FadeIn>
-              )
-            })}
+          <div
+            className="flex flex-col gap-0"
+            style={{ scrollSnapType: 'y proximity' }}
+          >
+            {products.map((p, i) => (
+              <ProductShowcase key={p.id} product={p} index={i} />
+            ))}
           </div>
         ) : (
-          <FadeIn>
-            <div
-              className="text-center py-16 rounded-[20px]"
-              style={{
-                background: 'var(--shop-panel)',
-                border: '1px solid var(--shop-border)',
-                color: 'var(--shop-dim)',
-              }}
-            >
-              <p className="text-4xl mb-3">🐝</p>
-              <p>Produkte werden bald hinzugefügt.</p>
-            </div>
-          </FadeIn>
+          <div className="max-w-5xl mx-auto px-6 pb-20">
+            <FadeIn>
+              <div
+                className="text-center py-16 rounded-[20px]"
+                style={{
+                  background: 'var(--shop-panel)',
+                  border: '1px solid var(--shop-border)',
+                  color: 'var(--shop-dim)',
+                }}
+              >
+                <p className="text-4xl mb-3">🐝</p>
+                <p>Produkte werden bald hinzugefügt.</p>
+              </div>
+            </FadeIn>
+          </div>
         )}
       </section>
 

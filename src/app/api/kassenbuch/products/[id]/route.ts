@@ -7,7 +7,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
-  const { name, unit, price, description, fillAmount, fillUnit } = await req.json()
+  const { name, unit, price, description, fillAmount, fillUnit, shopVisible, shopName, shopNameEn, descriptionEn, imageUrl, shopPrice, shopSortOrder } = await req.json()
   const product = await prisma.product.findFirst({ where: { id, userId: session.user.id } })
   if (!product) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
   const updated = await prisma.product.update({
@@ -19,6 +19,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       description: description || null,
       fillAmount: fillAmount ? parseFloat(fillAmount) : null,
       fillUnit: fillUnit || null,
+      shopVisible: shopVisible ?? false,
+      shopName: shopName || null,
+      shopNameEn: shopNameEn || null,
+      descriptionEn: descriptionEn || null,
+      imageUrl: imageUrl || null,
+      shopPrice: shopPrice != null ? parseFloat(shopPrice) : null,
+      shopSortOrder: shopSortOrder ?? 0,
     },
   })
   return NextResponse.json(updated)
