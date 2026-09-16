@@ -260,11 +260,14 @@ export default function BeeMascot3D() {
             disable-zoom
             disable-pan
             disable-tap
+            loading="eager"
             style={{
               width: BASE_SIZE,
               height: BASE_SIZE,
               background: 'transparent',
               '--poster-color': 'transparent',
+              '--progress-bar-color': 'transparent',
+              '--progress-bar-height': '0',
             } as React.CSSProperties}
           />
         )}
