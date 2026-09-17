@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
+import { prisma } from '@/lib/prisma'
+import { getSmtpConfigForUser } from '@/lib/receipt/mail'
 
 export async function POST(req: Request) {
   try {
@@ -9,30 +11,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Alle Felder sind erforderlich.' }, { status: 400 })
     }
 
-    // Basic email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: 'Ungültige E-Mail-Adresse.' }, { status: 400 })
     }
 
-    // Rate limit: max message length
     if (message.length > 5000 || name.length > 200 || subject.length > 200) {
       return NextResponse.json({ error: 'Nachricht zu lang.' }, { status: 400 })
     }
 
+    // Use the admin user's stored SMTP credentials
+    const admin = await prisma.user.findFirst({ where: { role: 'admin' } })
+    if (!admin) {
+      return NextResponse.json({ error: 'Kein Admin-Konto konfiguriert.' }, { status: 500 })
+    }
+
+    const cfg = await getSmtpConfigForUser(admin.id)
+    if (!cfg) {
+      return NextResponse.json({ error: 'E-Mail-Versand nicht konfiguriert.' }, { status: 500 })
+    }
+
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'mail.gmx.net',
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+      host: cfg.host,
+      port: cfg.port,
+      secure: cfg.port === 465,
+      requireTLS: cfg.port !== 465,
+      auth: { user: cfg.user, pass: cfg.password },
     })
 
     await transporter.sendMail({
-      from: `"KörBee Kontaktformular" <${process.env.SMTP_USER}>`,
+      from: `"KörBee Kontaktformular" <${cfg.user}>`,
       replyTo: `"${name}" <${email}>`,
-      to: process.env.CONTACT_EMAIL || process.env.SMTP_USER,
+      to: cfg.user,
       subject: `[KörBee Kontakt] ${subject}`,
       text: `Neue Nachricht über das Kontaktformular:\n\nName: ${name}\nE-Mail: ${email}\nBetreff: ${subject}\n\n${message}`,
       html: `
