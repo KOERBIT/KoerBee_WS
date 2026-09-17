@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import LandingContent from '@/components/landing/LandingContent'
 
+export const dynamic = 'force-dynamic'
+
 export default async function LandingPage() {
   const [cmsEntries, blogPosts] = await Promise.all([
     prisma.cmsContent.findMany({ where: { locale: 'de' }, select: { key: true, value: true } }),

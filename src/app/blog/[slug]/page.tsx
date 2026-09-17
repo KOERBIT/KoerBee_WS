@@ -5,6 +5,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import TiptapRenderer from '@/components/cms/TiptapRenderer'
 
+export const dynamic = 'force-dynamic'
+
 interface Props { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
