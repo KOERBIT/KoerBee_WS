@@ -13,9 +13,7 @@ export const viewport: Viewport = {
 
 export default function BlogLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--shop-bg)', color: 'var(--shop-ink)', fontFamily: "'Manrope', system-ui, sans-serif" }}>
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Manrope:wght@400;500;600;700;800&display=swap" />
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--shop-bg)', color: 'var(--shop-ink)', fontFamily: 'var(--font-manrope), system-ui, sans-serif' }}>
       {children}
     </div>
   )

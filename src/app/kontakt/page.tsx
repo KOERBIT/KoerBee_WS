@@ -52,7 +52,7 @@ export default function KontaktPage() {
     background: 'var(--shop-bg)',
     color: 'var(--shop-ink)',
     fontSize: '.95rem',
-    fontFamily: "'Manrope', system-ui, sans-serif",
+    fontFamily: 'var(--font-manrope), system-ui, sans-serif',
     outline: 'none',
     transition: 'border-color 0.2s, box-shadow 0.2s',
   }
@@ -63,21 +63,16 @@ export default function KontaktPage() {
       style={{
         background: 'var(--shop-bg)',
         color: 'var(--shop-ink)',
-        fontFamily: "'Manrope', system-ui, sans-serif",
+        fontFamily: 'var(--font-manrope), system-ui, sans-serif',
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Manrope:wght@400;500;600;700;800&display=swap"
-      />
 
       {/* Header */}
       <header className="px-6 py-5">
         <div className="max-w-3xl mx-auto flex items-center gap-2.5">
           <Link href="/" className="flex items-center gap-2.5" style={{ textDecoration: 'none' }}>
             <Image src="/Koerbee_Logo.png" alt="KörBee" width={32} height={32} className="rounded-lg" style={{ objectFit: 'contain' }} />
-            <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.6rem', color: 'var(--shop-ink)' }}>
+            <span style={{ fontFamily: 'var(--font-caveat), cursive', fontWeight: 700, fontSize: '1.6rem', color: 'var(--shop-ink)' }}>
               KörBee
             </span>
           </Link>
@@ -248,7 +243,7 @@ export default function KontaktPage() {
                           border: 'none',
                           cursor: status === 'sending' ? 'not-allowed' : 'pointer',
                           transition: 'background 0.2s',
-                          fontFamily: "'Manrope', system-ui, sans-serif",
+                          fontFamily: 'var(--font-manrope), system-ui, sans-serif',
                         }}
                       >
                         {status === 'sending' ? 'Wird gesendet...' : 'Nachricht senden'}
@@ -268,7 +263,7 @@ export default function KontaktPage() {
           <div className="flex items-baseline gap-2">
             <Link href="/" className="flex items-center gap-2" style={{ textDecoration: 'none' }}>
               <Image src="/Koerbee_Logo.png" alt="KörBee" width={24} height={24} className="rounded-md" style={{ objectFit: 'contain' }} />
-              <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.4rem', color: 'var(--shop-ink)' }}>
+              <span style={{ fontFamily: 'var(--font-caveat), cursive', fontWeight: 700, fontSize: '1.4rem', color: 'var(--shop-ink)' }}>
                 KörBee
               </span>
             </Link>

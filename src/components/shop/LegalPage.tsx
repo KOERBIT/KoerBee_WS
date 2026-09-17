@@ -24,14 +24,9 @@ export default function LegalPage({
       style={{
         background: 'var(--shop-bg)',
         color: 'var(--shop-ink)',
-        fontFamily: "'Manrope', system-ui, sans-serif",
+        fontFamily: 'var(--font-manrope), system-ui, sans-serif',
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Manrope:wght@400;500;600;700;800&display=swap"
-      />
 
       {/* Header */}
       <header className="px-6 py-5">
@@ -40,7 +35,7 @@ export default function LegalPage({
             <Image src="/Koerbee_Logo.png" alt="KörBee" width={32} height={32} className="rounded-lg" style={{ objectFit: 'contain' }} />
             <span
               style={{
-                fontFamily: "'Caveat', cursive",
+                fontFamily: 'var(--font-caveat), cursive',
                 fontWeight: 700,
                 fontSize: '1.6rem',
                 color: 'var(--shop-ink)',
@@ -109,7 +104,7 @@ export default function LegalPage({
               <Image src="/Koerbee_Logo.png" alt="KörBee" width={24} height={24} className="rounded-md" style={{ objectFit: 'contain' }} />
               <span
                 style={{
-                  fontFamily: "'Caveat', cursive",
+                  fontFamily: 'var(--font-caveat), cursive',
                   fontWeight: 700,
                   fontSize: '1.4rem',
                   color: 'var(--shop-ink)',

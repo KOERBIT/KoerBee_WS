@@ -171,7 +171,7 @@ function ProductShowcase({ product, index }: { product: ShopProduct; index: numb
           >
             <p
               style={{
-                fontFamily: "'Caveat', cursive",
+                fontFamily: 'var(--font-caveat), cursive',
                 fontWeight: 700,
                 fontSize: '1.1rem',
                 color: 'var(--shop-accent)',
@@ -207,7 +207,7 @@ function ProductShowcase({ product, index }: { product: ShopProduct; index: numb
             <div className="flex items-center gap-5 flex-wrap">
               <span
                 style={{
-                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontFamily: 'var(--font-ibm-plex-mono), monospace',
                   fontVariantNumeric: 'tabular-nums',
                   fontWeight: 500,
                   fontSize: '1.3rem',
@@ -275,15 +275,9 @@ export default function LandingContent({ cms, blogPosts }: Props) {
       style={{
         background: 'var(--shop-bg)',
         color: 'var(--shop-ink)',
-        fontFamily: "'Manrope', system-ui, sans-serif",
+        fontFamily: 'var(--font-manrope), system-ui, sans-serif',
       }}
     >
-      {/* Google Fonts */}
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap"
-      />
 
       {/* 3D Bee */}
       <BeeMascot />
@@ -313,7 +307,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
               <Image src="/Koerbee_Logo.png" alt="KörBee" width={48} height={48} className="rounded-xl" style={{ objectFit: 'contain' }} />
               <p
                 style={{
-                  fontFamily: "'Caveat', cursive",
+                  fontFamily: 'var(--font-caveat), cursive',
                   fontWeight: 700,
                   fontSize: 'clamp(1.3rem, 3vw, 1.8rem)',
                   color: 'var(--shop-accent)',
@@ -380,7 +374,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
           >
             <p
               style={{
-                fontFamily: "'Caveat', cursive",
+                fontFamily: 'var(--font-caveat), cursive',
                 fontWeight: 700,
                 fontSize: '1.6rem',
                 color: 'var(--shop-accent)',
@@ -418,7 +412,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
           <FadeIn>
             <p
               style={{
-                fontFamily: "'Caveat', cursive",
+                fontFamily: 'var(--font-caveat), cursive',
                 fontWeight: 700,
                 fontSize: '1.3rem',
                 color: 'var(--shop-accent)',
@@ -466,7 +460,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
         <section className="max-w-5xl mx-auto px-6 py-16">
           <FadeIn>
             <div className="text-center mb-8">
-              <p style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.3rem', color: 'var(--shop-accent)', marginBottom: 4 }}>
+              <p style={{ fontFamily: 'var(--font-caveat), cursive', fontWeight: 700, fontSize: '1.3rem', color: 'var(--shop-accent)', marginBottom: 4 }}>
                 Aktuelles
               </p>
               <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.4rem, 3vw, 1.9rem)' }}>Neuigkeiten</h2>
@@ -514,7 +508,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
             <Image src="/Koerbee_Logo.png" alt="KörBee" width={28} height={28} className="rounded-md" style={{ objectFit: 'contain' }} />
             <span
               style={{
-                fontFamily: "'Caveat', cursive",
+                fontFamily: 'var(--font-caveat), cursive',
                 fontWeight: 700,
                 fontSize: '1.4rem',
                 color: 'var(--shop-ink)',
