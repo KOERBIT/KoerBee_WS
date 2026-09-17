@@ -50,6 +50,21 @@ export default function ImpressumPage() {
           marginBottom: 8,
         }}
       >
+        Umsatzsteuer
+      </h2>
+      <p>
+        Kleinunternehmer gemäß § 19 UStG. Es wird keine Umsatzsteuer erhoben.
+      </p>
+
+      <h2
+        style={{
+          fontWeight: 700,
+          fontSize: '1.1rem',
+          color: 'var(--shop-ink)',
+          marginTop: 32,
+          marginBottom: 8,
+        }}
+      >
         Verantwortlich für den Inhalt
       </h2>
       <p>
@@ -69,9 +84,24 @@ export default function ImpressumPage() {
           marginBottom: 8,
         }}
       >
-        Rechtsgrundlage
+        Streitbeilegung
       </h2>
-      <p>§ 5 Digitale-Dienste-Gesetz (DDG)</p>
+      <p>
+        Plattform der EU-Kommission zur Online-Streitbeilegung:{' '}
+        <a
+          href="https://ec.europa.eu/consumers/odr/"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'var(--shop-accent)', textDecoration: 'none' }}
+        >
+          https://ec.europa.eu/consumers/odr/
+        </a>
+      </p>
+      <p>
+        Wir sind nicht bereit und nicht verpflichtet, an
+        Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
+        teilzunehmen.
+      </p>
 
       <h2
         style={{
