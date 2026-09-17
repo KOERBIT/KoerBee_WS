@@ -137,6 +137,8 @@ export default function ShopLandingPage() {
   const [products, setProducts] = useState<ShopProduct[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [justAdded, setJustAdded] = useState<string | null>(null)
+  const [latestPost, setLatestPost] = useState<{ title: string; slug: string; publishedAt: string } | null>(null)
+  const [bannerDismissed, setBannerDismissed] = useState(false)
   const t = T[locale]
 
   useEffect(() => {
@@ -147,6 +149,20 @@ export default function ShopLandingPage() {
       .then((r) => r.json())
       .then((data) => setProducts(Array.isArray(data) ? data.slice(0, 4) : []))
       .catch(() => {})
+
+    fetch('/api/cms/blog?limit=1')
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const post = data[0]
+          // Only show if less than 30 days old
+          const age = Date.now() - new Date(post.publishedAt).getTime()
+          if (age < 30 * 24 * 60 * 60 * 1000) setLatestPost(post)
+        }
+      })
+      .catch(() => {})
+
+    setBannerDismissed(localStorage.getItem('shop-news-dismissed') === 'true')
   }, [])
 
   const toggleLocale = () => {
@@ -248,6 +264,25 @@ export default function ShopLandingPage() {
           </div>
         </nav>
       </header>
+
+      {/* News banner */}
+      {latestPost && !bannerDismissed && (
+        <div className="mx-4 mt-2">
+          <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-2.5 rounded-2xl" style={{ background: 'var(--shop-cream)', border: '1px solid var(--shop-border)' }}>
+            <Link href={`/blog/${latestPost.slug}`} className="flex items-center gap-2 text-[13px] font-medium" style={{ color: 'var(--shop-ink)', textDecoration: 'none' }}>
+              <span style={{ color: 'var(--shop-accent)' }}>Neu:</span>
+              <span className="truncate">{latestPost.title}</span>
+            </Link>
+            <button
+              onClick={() => { setBannerDismissed(true); localStorage.setItem('shop-news-dismissed', 'true') }}
+              className="text-zinc-400 hover:text-zinc-600 ml-2 shrink-0"
+              style={{ fontSize: '1.1rem', lineHeight: 1 }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Hero / Diorama */}
       <section
