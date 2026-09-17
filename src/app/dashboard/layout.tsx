@@ -1,8 +1,24 @@
+import type { Metadata, Viewport } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import BottomNav from '@/components/BottomNav'
+
+export const metadata: Metadata = {
+  title: 'KörBee — Imkerei-Verwaltung',
+  description: 'Verwalte deine Bienenvölker, Standorte und Inspektionen',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'KörBee Imker',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#f59e0b',
+}
 
 export default async function DashboardLayout({
   children,

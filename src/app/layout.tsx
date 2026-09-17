@@ -32,14 +32,8 @@ const ibmPlexMono = IBM_Plex_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'KörBee — Imkerei-Verwaltung',
-  description: 'Verwalte deine Bienenvölker, Standorte und Inspektionen',
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'KörBee Imker',
-  },
+  title: 'KörBee — Imkerei',
+  description: 'Honig, Wachs & mehr — direkt vom Imker aus Hüttenberg',
 }
 
 export const viewport: Viewport = {

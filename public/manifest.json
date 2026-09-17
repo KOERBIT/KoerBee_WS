@@ -3,7 +3,7 @@
   "short_name": "KörBee Imker",
   "description": "Verwalte deine Bienenvölker, Standorte und Inspektionen",
   "start_url": "/dashboard",
-  "scope": "/dashboard",
+  "scope": "/",
   "id": "/dashboard",
   "display": "standalone",
   "background_color": "#f5f5f7",
