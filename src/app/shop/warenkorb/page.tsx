@@ -242,6 +242,22 @@ export default function WarenkorbPage() {
           </>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="mt-auto px-4 py-8" style={{ fontSize: '.78rem', color: 'var(--shop-dim)' }}>
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="flex items-center gap-2" style={{ color: 'var(--shop-ink)' }}>
+            <Image src="/Koerbee_Logo.png" alt="KörBee" width={24} height={24} className="rounded-md" style={{ objectFit: 'contain' }} />
+            <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.3rem' }}>KörBee</span>
+          </span>
+          <div className="flex gap-6">
+            <Link href="/kontakt" style={{ color: 'var(--shop-dim)', textDecoration: 'none' }} className="hover:opacity-70 transition-opacity">{locale === 'de' ? 'Kontakt' : 'Contact'}</Link>
+            <Link href="/impressum" style={{ color: 'var(--shop-dim)', textDecoration: 'none' }} className="hover:opacity-70 transition-opacity">{locale === 'de' ? 'Impressum' : 'Imprint'}</Link>
+            <Link href="/datenschutz" style={{ color: 'var(--shop-dim)', textDecoration: 'none' }} className="hover:opacity-70 transition-opacity">{locale === 'de' ? 'Datenschutz' : 'Privacy'}</Link>
+            <Link href="/widerruf" style={{ color: 'var(--shop-dim)', textDecoration: 'none' }} className="hover:opacity-70 transition-opacity">{locale === 'de' ? 'Widerruf' : 'Withdrawal'}</Link>
+          </div>
+        </div>
+      </footer>
     </>
   )
 }

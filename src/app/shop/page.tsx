@@ -345,8 +345,8 @@ export default function ShopLandingPage() {
             <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.3rem' }}>KörBee</span>
           </span>
           <div className="flex gap-6">
-            <span>{t.contact}</span>
-            <span>{t.imprint}</span>
+            <Link href="/kontakt" style={{ color: 'var(--shop-dim)', textDecoration: 'none' }} className="hover:opacity-70 transition-opacity">{t.contact}</Link>
+            <Link href="/impressum" style={{ color: 'var(--shop-dim)', textDecoration: 'none' }} className="hover:opacity-70 transition-opacity">{t.imprint}</Link>
           </div>
         </div>
       </footer>
