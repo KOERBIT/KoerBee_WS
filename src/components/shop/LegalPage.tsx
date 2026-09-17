@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 
 const footerLinks = [
@@ -33,8 +34,9 @@ export default function LegalPage({
 
       {/* Header */}
       <header className="px-6 py-5">
-        <div className="max-w-3xl mx-auto flex items-baseline gap-2">
-          <Link href="/" style={{ textDecoration: 'none' }}>
+        <div className="max-w-3xl mx-auto flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5" style={{ textDecoration: 'none' }}>
+            <Image src="/Koerbee_Logo.png" alt="KörBee" width={32} height={32} className="rounded-lg" style={{ objectFit: 'contain' }} />
             <span
               style={{
                 fontFamily: "'Caveat', cursive",
@@ -102,7 +104,8 @@ export default function LegalPage({
       >
         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-baseline gap-2">
-            <Link href="/" style={{ textDecoration: 'none' }}>
+            <Link href="/" className="flex items-center gap-2" style={{ textDecoration: 'none' }}>
+              <Image src="/Koerbee_Logo.png" alt="KörBee" width={24} height={24} className="rounded-md" style={{ objectFit: 'contain' }} />
               <span
                 style={{
                   fontFamily: "'Caveat', cursive",

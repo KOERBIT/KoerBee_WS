@@ -144,16 +144,19 @@ export default function Sidebar() {
     <aside className="w-60 shrink-0 flex flex-col h-screen sticky top-0 bg-white border-r border-zinc-100">
       {/* Logo */}
       <div className="px-5 py-6 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0">
+        <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-zinc-50">
           <Image
-            src="/Koerbee_Logo.jpg"
+            src="/Koerbee_Logo.png"
             alt="KörBee Logo"
             width={36}
             height={36}
-            className="object-cover w-full h-full"
+            className="object-contain w-full h-full"
           />
         </div>
-        <span className="text-[15px] font-semibold tracking-tight text-zinc-900">KörBee</span>
+        <div className="flex flex-col">
+          <span className="text-[15px] font-semibold tracking-tight text-zinc-900">KörBee</span>
+          <span className="text-[10px] font-medium tracking-widest uppercase text-zinc-400">Verwaltung</span>
+        </div>
       </div>
 
       {/* Nav */}

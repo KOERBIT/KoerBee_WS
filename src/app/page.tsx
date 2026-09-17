@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 
@@ -282,17 +283,19 @@ export default function LandingPage() {
         />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 z-10">
           <FadeIn>
-            <p
-              className="mb-2"
-              style={{
-                fontFamily: "'Caveat', cursive",
-                fontWeight: 700,
-                fontSize: 'clamp(1.3rem, 3vw, 1.8rem)',
-                color: 'var(--shop-accent)',
-              }}
-            >
-              KörBee Imkerei
-            </p>
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <Image src="/Koerbee_Logo.png" alt="KörBee" width={48} height={48} className="rounded-xl" style={{ objectFit: 'contain' }} />
+              <p
+                style={{
+                  fontFamily: "'Caveat', cursive",
+                  fontWeight: 700,
+                  fontSize: 'clamp(1.3rem, 3vw, 1.8rem)',
+                  color: 'var(--shop-accent)',
+                }}
+              >
+                KörBee Imkerei
+              </p>
+            </div>
           </FadeIn>
           <FadeIn delay={100}>
             <h1
@@ -445,7 +448,8 @@ export default function LandingPage() {
         }}
       >
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-center gap-2.5">
+            <Image src="/Koerbee_Logo.png" alt="KörBee" width={28} height={28} className="rounded-md" style={{ objectFit: 'contain' }} />
             <span
               style={{
                 fontFamily: "'Caveat', cursive",

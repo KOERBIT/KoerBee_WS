@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 
 type Locale = 'de' | 'en'
@@ -179,13 +180,23 @@ export default function ShopLandingPage() {
             borderRadius: 999, boxShadow: 'var(--shop-shadow)',
           }}
         >
-          <Link href="/shop" className="flex items-baseline gap-2" style={{ textDecoration: 'none' }}>
-            <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.9rem', lineHeight: 1, color: 'var(--shop-ink)' }}>
-              {t.title}
-            </span>
-            <small style={{ fontFamily: "'Manrope', sans-serif", fontSize: '.6rem', fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--shop-dim)' }}>
-              {t.subtitle}
-            </small>
+          <Link href="/shop" className="flex items-center gap-2.5" style={{ textDecoration: 'none' }}>
+            <Image
+              src="/Koerbee_Logo.png"
+              alt="KörBee Logo"
+              width={36}
+              height={36}
+              className="rounded-lg"
+              style={{ objectFit: 'contain' }}
+            />
+            <div className="flex flex-col">
+              <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.5rem', lineHeight: 1, color: 'var(--shop-ink)' }}>
+                {t.title}
+              </span>
+              <small style={{ fontFamily: "'Manrope', sans-serif", fontSize: '.55rem', fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--shop-dim)' }}>
+                {t.subtitle}
+              </small>
+            </div>
           </Link>
           <div className="flex items-center gap-4 text-sm">
             <Link href="/shop/produkte" style={{ color: 'var(--shop-dim)', textDecoration: 'none', fontWeight: 500 }} className="hover:opacity-70 transition-opacity">
@@ -294,8 +305,9 @@ export default function ShopLandingPage() {
       {/* Footer */}
       <footer className="mt-auto px-4 py-8" style={{ fontSize: '.78rem', color: 'var(--shop-dim)' }}>
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.3rem', color: 'var(--shop-ink)' }}>
-            KörBee
+          <span className="flex items-center gap-2" style={{ color: 'var(--shop-ink)' }}>
+            <Image src="/Koerbee_Logo.png" alt="KörBee" width={24} height={24} className="rounded-md" style={{ objectFit: 'contain' }} />
+            <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.3rem' }}>KörBee</span>
           </span>
           <div className="flex gap-6">
             <span>{t.contact}</span>
