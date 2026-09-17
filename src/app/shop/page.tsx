@@ -190,44 +190,44 @@ export default function ShopLandingPage() {
       {/* Header — pill nav */}
       <header className="sticky top-0 z-50 px-4 pt-3 pb-2">
         <nav
-          className="max-w-3xl mx-auto flex items-center justify-between gap-3 px-5 py-2.5"
+          className="max-w-3xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-5 py-2"
           style={{
             background: 'var(--shop-panel)', border: '1px solid var(--shop-border)',
             borderRadius: 999, boxShadow: 'var(--shop-shadow)',
           }}
         >
-          <Link href="/" className="flex items-center gap-2.5" style={{ textDecoration: 'none' }}>
+          <Link href="/" className="flex items-center gap-2 shrink-0" style={{ textDecoration: 'none' }}>
             <Image
               src="/Koerbee_Logo.png"
               alt="KörBee Logo"
-              width={36}
-              height={36}
-              className="rounded-lg"
+              width={30}
+              height={30}
+              className="rounded-lg sm:w-9 sm:h-9"
               style={{ objectFit: 'contain' }}
             />
             <div className="flex flex-col">
-              <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.5rem', lineHeight: 1, color: 'var(--shop-ink)' }}>
+              <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.3rem', lineHeight: 1, color: 'var(--shop-ink)' }}>
                 {t.title}
               </span>
-              <small style={{ fontFamily: "'Manrope', sans-serif", fontSize: '.55rem', fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--shop-dim)' }}>
+              <small className="hidden sm:block" style={{ fontFamily: "'Manrope', sans-serif", fontSize: '.55rem', fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--shop-dim)' }}>
                 {t.subtitle}
               </small>
             </div>
           </Link>
-          <div className="flex items-center gap-4 text-sm">
-            <Link href="/shop/produkte" style={{ color: 'var(--shop-dim)', textDecoration: 'none', fontWeight: 500 }} className="hover:opacity-70 transition-opacity">
+          <div className="flex items-center gap-2 sm:gap-4 text-sm">
+            <Link href="/shop/produkte" style={{ color: 'var(--shop-dim)', textDecoration: 'none', fontWeight: 500, fontSize: '.85rem' }} className="hidden sm:inline hover:opacity-70 transition-opacity">
               {t.products}
             </Link>
             <Link
               href="/shop/warenkorb"
               id="cart-icon"
-              className="relative flex items-center justify-center transition-opacity hover:opacity-70"
+              className="relative flex items-center justify-center transition-opacity hover:opacity-70 shrink-0"
               style={{
-                width: 40, height: 40, borderRadius: '50%',
+                width: 36, height: 36, borderRadius: '50%',
                 background: 'var(--shop-panel-2)', border: '1px solid var(--shop-border)',
               }}
             >
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--shop-ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--shop-ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="21" r="1" /><circle cx="19" cy="21" r="1" />
                 <path d="M2.5 3h2l2.6 12.6a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6" />
               </svg>
@@ -244,19 +244,26 @@ export default function ShopLandingPage() {
                 </span>
               )}
             </Link>
-            <Link href="/shop/konto" style={{ color: 'var(--shop-dim)', textDecoration: 'none', fontWeight: 500 }} className="hover:opacity-70 transition-opacity">
+            <Link href="/shop/konto" style={{ color: 'var(--shop-dim)', textDecoration: 'none', fontWeight: 500, fontSize: '.85rem' }} className="hidden sm:inline hover:opacity-70 transition-opacity">
               {t.account}
             </Link>
-            <Link href="/dashboard" style={{ color: 'var(--shop-dim)', textDecoration: 'none', fontWeight: 500, fontSize: '.7rem', letterSpacing: '.08em', textTransform: 'uppercase' as const }} className="hover:opacity-70 transition-opacity">
-              {locale === 'de' ? 'Verwaltung' : 'Admin'}
+            <Link href="/shop/produkte" style={{ color: 'var(--shop-dim)', textDecoration: 'none' }} className="sm:hidden hover:opacity-70 transition-opacity shrink-0" aria-label={t.products}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+            </Link>
+            <Link href="/shop/konto" style={{ color: 'var(--shop-dim)', textDecoration: 'none' }} className="sm:hidden hover:opacity-70 transition-opacity shrink-0" aria-label={t.account}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4"/><path d="M6 20v-1a6 6 0 0112 0v1"/>
+              </svg>
             </Link>
             <button
               onClick={toggleLocale}
-              className="transition-opacity hover:opacity-70"
+              className="transition-opacity hover:opacity-70 shrink-0"
               style={{
-                fontSize: '.7rem', fontWeight: 700, letterSpacing: '.08em',
+                fontSize: '.65rem', fontWeight: 700, letterSpacing: '.06em',
                 border: '1px solid var(--shop-border)', borderRadius: 999,
-                padding: '5px 10px', background: 'transparent', color: 'var(--shop-dim)', cursor: 'pointer',
+                padding: '4px 8px', background: 'transparent', color: 'var(--shop-dim)', cursor: 'pointer',
               }}
             >
               {locale === 'de' ? 'EN' : 'DE'}
