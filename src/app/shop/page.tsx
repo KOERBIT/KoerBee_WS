@@ -180,7 +180,7 @@ export default function ShopLandingPage() {
             borderRadius: 999, boxShadow: 'var(--shop-shadow)',
           }}
         >
-          <Link href="/shop" className="flex items-center gap-2.5" style={{ textDecoration: 'none' }}>
+          <Link href="/" className="flex items-center gap-2.5" style={{ textDecoration: 'none' }}>
             <Image
               src="/Koerbee_Logo.png"
               alt="KörBee Logo"

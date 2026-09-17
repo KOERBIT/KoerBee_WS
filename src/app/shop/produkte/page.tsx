@@ -91,7 +91,7 @@ export default function ProduktePage() {
             borderRadius: 999, boxShadow: 'var(--shop-shadow)',
           }}
         >
-          <Link href="/shop" className="flex items-center gap-2" style={{ textDecoration: 'none' }}>
+          <Link href="/" className="flex items-center gap-2" style={{ textDecoration: 'none' }}>
             <Image src="/Koerbee_Logo.png" alt="KörBee" width={32} height={32} className="rounded-lg" style={{ objectFit: 'contain' }} />
             <span style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: '1.5rem', lineHeight: 1, color: 'var(--shop-ink)' }}>
               KörBee
