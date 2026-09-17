@@ -31,6 +31,8 @@ model User {
   paypalCredential PayPalCredential?
   mailCredential   MailCredential?
   anthropicCredential AnthropicCredential?
+  cmsContents      CmsContent[]
+  blogPosts        BlogPost[]
   accounts         Account[]
   sessions         Session[]
 }
@@ -489,6 +491,50 @@ model AnthropicCredential {
   model     String   @default("claude-haiku-4-5")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// CMS
+enum BlogCategory {
+  NEWS
+  SAISON
+  REZEPT
+  TIPP
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model CmsContent {
+  id        String   @id @default(cuid())
+  key       String
+  value     String   @db.Text
+  locale    String   @default("de")
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([key, locale])
+}
+
+model BlogPost {
+  id             String       @id @default(cuid())
+  title          String
+  slug           String       @unique
+  content        Json
+  excerpt        String?      @db.Text
+  coverImage     String?
+  category       BlogCategory @default(NEWS)
+  tags           String[]     @default([])
+  status         BlogStatus   @default(DRAFT)
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // NextAuth required models
