@@ -42,11 +42,11 @@ function LoginForm() {
       <div className="flex flex-col items-center mb-8">
         <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg mb-4">
           <Image
-            src="/Koerbee_Logo.jpg"
+            src="/Koerbee_Logo.png"
             alt="KörBee Logo"
             width={80}
             height={80}
-            className="object-cover w-full h-full"
+            className="object-contain w-full h-full"
           />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">KörBee</h1>
