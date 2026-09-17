@@ -65,6 +65,19 @@ const MORE_ITEMS = [
       <path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><line x1="10" y1="6" x2="18" y2="6"/><line x1="10" y1="10" x2="18" y2="10"/><line x1="10" y1="14" x2="14" y2="14"/>
     </svg>
   )},
+  { label: 'Shop', href: '/shop', external: true, icon: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 6h15l-1.5 9H7.5L6 6z"/>
+      <path d="M6 6L5 2H2"/>
+      <circle cx="9" cy="19" r="1.5"/>
+      <circle cx="18" cy="19" r="1.5"/>
+      <ellipse cx="14" cy="3.5" rx="2.2" ry="1.5"/>
+      <line x1="12.2" y1="2.5" x2="11.5" y2="1.5"/>
+      <line x1="15.8" y1="2.5" x2="16.5" y2="1.5"/>
+      <line x1="12" y1="3.5" x2="11" y2="4.5"/>
+      <line x1="16" y1="3.5" x2="17" y2="4.5"/>
+    </svg>
+  )},
   { label: 'Einstellungen', href: '/dashboard/settings', icon: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/>
@@ -174,8 +187,11 @@ export default function BottomNav() {
                   )
                 }
 
+                const isExternal = (item as any).external
+
                 return (
                   <Link key={item.href} href={item.href!}
+                    {...(isExternal ? { target: '_blank' } : {})}
                     onClick={() => setShowMore(false)}
                     className={`flex flex-col items-center gap-2 px-3 py-3 rounded-2xl transition-colors ${active ? 'bg-amber-50 text-amber-600' : 'text-zinc-500 hover:bg-zinc-50'}`}>
                     {item.icon}

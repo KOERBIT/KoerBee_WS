@@ -198,6 +198,33 @@ export default function Sidebar() {
         })}
       </nav>
 
+      {/* Shop Link */}
+      <div className="px-3 mb-2">
+        <Link
+          href="/shop"
+          target="_blank"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            {/* Einkaufswagen */}
+            <path d="M6 6h15l-1.5 9H7.5L6 6z" />
+            <path d="M6 6L5 2H2" />
+            <circle cx="9" cy="19" r="1.5" />
+            <circle cx="18" cy="19" r="1.5" />
+            {/* Kleine Biene auf dem Wagen */}
+            <ellipse cx="14" cy="3.5" rx="2.2" ry="1.5" />
+            <line x1="12.2" y1="2.5" x2="11.5" y2="1.5" />
+            <line x1="15.8" y1="2.5" x2="16.5" y2="1.5" />
+            <line x1="12" y1="3.5" x2="11" y2="4.5" />
+            <line x1="16" y1="3.5" x2="17" y2="4.5" />
+          </svg>
+          Zum Shop
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-auto opacity-40">
+            <path d="M7 17L17 7M17 7H7M17 7v10" />
+          </svg>
+        </Link>
+      </div>
+
       {/* Bottom: Settings + Logout */}
       <div className="px-3 pb-6 space-y-0.5">
         <Link
