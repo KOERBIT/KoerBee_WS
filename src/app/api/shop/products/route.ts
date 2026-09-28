@@ -24,12 +24,16 @@ export async function GET() {
     orderBy: { shopSortOrder: 'asc' },
   })
 
-  // Schwellenwert aus den Shop-Settings des Besitzers holen
+  // Schwellenwert aus den Shop-Settings des Besitzers holen (fehlertolerant falls Tabelle noch nicht existiert)
   const ownerId = products[0]?.userId
   let stockLowThreshold = 5
   if (ownerId) {
-    const settings = await prisma.shopSettings.findUnique({ where: { userId: ownerId } })
-    if (settings) stockLowThreshold = settings.stockLowThreshold
+    try {
+      const settings = await prisma.shopSettings.findUnique({ where: { userId: ownerId } })
+      if (settings) stockLowThreshold = settings.stockLowThreshold
+    } catch {
+      // Tabelle existiert noch nicht — Default verwenden
+    }
   }
 
   // userId nicht an den Client senden

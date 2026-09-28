@@ -7,11 +7,14 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const settings = await prisma.shopSettings.findUnique({
-    where: { userId: session.user.id },
-  })
-
-  return NextResponse.json(settings ?? { stockLowThreshold: 5 })
+  try {
+    const settings = await prisma.shopSettings.findUnique({
+      where: { userId: session.user.id },
+    })
+    return NextResponse.json(settings ?? { stockLowThreshold: 5 })
+  } catch {
+    return NextResponse.json({ stockLowThreshold: 5 })
+  }
 }
 
 export async function PUT(req: NextRequest) {
@@ -21,11 +24,14 @@ export async function PUT(req: NextRequest) {
   const { stockLowThreshold } = await req.json()
   const threshold = Math.max(1, Math.floor(Number(stockLowThreshold) || 5))
 
-  const settings = await prisma.shopSettings.upsert({
-    where: { userId: session.user.id },
-    update: { stockLowThreshold: threshold },
-    create: { userId: session.user.id, stockLowThreshold: threshold },
-  })
-
-  return NextResponse.json(settings)
+  try {
+    const settings = await prisma.shopSettings.upsert({
+      where: { userId: session.user.id },
+      update: { stockLowThreshold: threshold },
+      create: { userId: session.user.id, stockLowThreshold: threshold },
+    })
+    return NextResponse.json(settings)
+  } catch {
+    return NextResponse.json({ error: 'Tabelle noch nicht erstellt — bitte npx prisma db push ausführen' }, { status: 503 })
+  }
 }
