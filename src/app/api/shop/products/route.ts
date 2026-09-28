@@ -18,9 +18,22 @@ export async function GET() {
       fillAmount: true,
       fillUnit: true,
       shopSortOrder: true,
+      stockQuantity: true,
+      userId: true,
     },
     orderBy: { shopSortOrder: 'asc' },
   })
 
-  return NextResponse.json(products)
+  // Schwellenwert aus den Shop-Settings des Besitzers holen
+  const ownerId = products[0]?.userId
+  let stockLowThreshold = 5
+  if (ownerId) {
+    const settings = await prisma.shopSettings.findUnique({ where: { userId: ownerId } })
+    if (settings) stockLowThreshold = settings.stockLowThreshold
+  }
+
+  // userId nicht an den Client senden
+  const cleaned = products.map(({ userId: _, ...p }) => p)
+
+  return NextResponse.json({ products: cleaned, stockLowThreshold })
 }

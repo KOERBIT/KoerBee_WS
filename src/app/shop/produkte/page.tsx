@@ -9,7 +9,62 @@ type Locale = 'de' | 'en'
 interface ShopProduct {
   id: string; name: string; shopName: string | null; shopNameEn: string | null
   description: string | null; descriptionEn: string | null; imageUrl: string | null
-  price: number; shopPrice: number | null; unit: string
+  price: number; shopPrice: number | null; unit: string; stockQuantity: number
+}
+
+type StockLevel = 'available' | 'low' | 'out'
+
+function getStockLevel(qty: number, threshold: number): StockLevel {
+  if (qty >= threshold) return 'available'
+  if (qty > 0) return 'low'
+  return 'out'
+}
+
+const STOCK_INFO: Record<StockLevel, { color: string; bg: string; shadow: string; pulse: boolean; de: string; en: string }> = {
+  available: { color: '#34C759', bg: 'rgba(52,199,89,.12)', shadow: '0 0 8px rgba(52,199,89,.4)', pulse: true, de: 'Auf Lager', en: 'In stock' },
+  low:       { color: '#FF9500', bg: 'rgba(255,149,0,.12)', shadow: '0 0 8px rgba(255,149,0,.4)', pulse: true, de: 'Nur noch wenige', en: 'Only a few left' },
+  out:       { color: '#8E8E93', bg: 'rgba(142,142,147,.10)', shadow: 'none', pulse: false, de: 'Auf Anfrage', en: 'On request' },
+}
+
+function StockBadge({ qty, locale, threshold }: { qty: number; locale: Locale; threshold: number }) {
+  const level = getStockLevel(qty, threshold)
+  const info = STOCK_INFO[level]
+  const label = locale === 'de' ? info.de : info.en
+
+  return (
+    <div
+      className="absolute top-3 right-3 flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-full"
+      title={label}
+      style={{
+        background: 'rgba(255,255,255,.72)',
+        backdropFilter: 'blur(16px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+        border: '1px solid rgba(255,255,255,.45)',
+        boxShadow: '0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04)',
+      }}
+    >
+      <img
+        src="/bee-stock-badge.png" alt="" width={20} height={20}
+        className="rounded-full"
+        style={{ objectFit: 'cover', boxShadow: '0 0 0 1px rgba(0,0,0,.06)' }}
+      />
+      <span className="relative flex h-2 w-2">
+        {info.pulse && (
+          <span
+            className="absolute inset-0 rounded-full animate-[stock-ping_2s_cubic-bezier(0,0,0.2,1)_infinite]"
+            style={{ background: info.color, opacity: 0.4 }}
+          />
+        )}
+        <span
+          className="relative inline-flex rounded-full h-2 w-2"
+          style={{ background: info.color, boxShadow: info.shadow }}
+        />
+      </span>
+      <span style={{ fontSize: '.65rem', fontWeight: 600, color: info.color, letterSpacing: '.01em' }}>
+        {label}
+      </span>
+    </div>
+  )
 }
 interface CartItem { productId: string; quantity: number }
 
@@ -53,6 +108,7 @@ function RevealCard({ children, delay }: { children: React.ReactNode; delay: num
 export default function ProduktePage() {
   const [locale, setLocale] = useState<Locale>('de')
   const [products, setProducts] = useState<ShopProduct[]>([])
+  const [stockThreshold, setStockThreshold] = useState(5)
   const [cart, setCart] = useState<CartItem[]>([])
   const [justAdded, setJustAdded] = useState<string | null>(null)
   const t = L[locale]
@@ -60,7 +116,14 @@ export default function ProduktePage() {
   useEffect(() => {
     setLocale(getLocale())
     setCart(getCart())
-    fetch('/api/shop/products').then(r => r.json()).then(d => setProducts(Array.isArray(d) ? d : [])).catch(() => {})
+    fetch('/api/shop/products').then(r => r.json()).then(d => {
+      if (d && Array.isArray(d.products)) {
+        setProducts(d.products)
+        setStockThreshold(d.stockLowThreshold ?? 5)
+      } else if (Array.isArray(d)) {
+        setProducts(d)
+      }
+    }).catch(() => {})
   }, [])
 
   const pName = (p: ShopProduct) => locale === 'en' ? p.shopNameEn ?? p.shopName ?? p.name : p.shopName ?? p.name
@@ -143,13 +206,16 @@ export default function ProduktePage() {
                   className="rounded-[20px] overflow-hidden flex flex-col transition-transform duration-300 hover:-translate-y-1"
                   style={{ background: 'var(--shop-panel)', border: '1px solid var(--shop-border)', boxShadow: 'var(--shop-shadow)' }}
                 >
-                  {p.imageUrl ? (
-                    <div className="h-52" style={{ background: 'var(--shop-cream)' }}>
-                      <img src={p.imageUrl} alt={pName(p)} className="w-full h-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="h-52 flex items-center justify-center text-5xl" style={{ background: 'var(--shop-cream)' }}>🍯</div>
-                  )}
+                  <div className="relative">
+                    {p.imageUrl ? (
+                      <div className="h-52" style={{ background: 'var(--shop-cream)' }}>
+                        <img src={p.imageUrl} alt={pName(p)} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="h-52 flex items-center justify-center text-5xl" style={{ background: 'var(--shop-cream)' }}>🍯</div>
+                    )}
+                    <StockBadge qty={p.stockQuantity} locale={locale} threshold={stockThreshold} />
+                  </div>
                   <div className="p-5 flex flex-col flex-1 gap-2">
                     <h3 className="font-bold text-lg" style={{ color: 'var(--shop-ink)' }}>{pName(p)}</h3>
                     {pDesc(p) && <p className="text-sm leading-relaxed" style={{ color: 'var(--shop-dim)' }}>{pDesc(p)}</p>}

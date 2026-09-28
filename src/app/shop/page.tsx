@@ -54,6 +54,62 @@ interface ShopProduct {
   price: number
   shopPrice: number | null
   unit: string
+  stockQuantity: number
+}
+
+type StockLevel = 'available' | 'low' | 'out'
+
+function getStockLevel(qty: number, threshold: number): StockLevel {
+  if (qty >= threshold) return 'available'
+  if (qty > 0) return 'low'
+  return 'out'
+}
+
+const STOCK_INFO: Record<StockLevel, { color: string; bg: string; shadow: string; pulse: boolean; de: string; en: string }> = {
+  available: { color: '#34C759', bg: 'rgba(52,199,89,.12)', shadow: '0 0 8px rgba(52,199,89,.4)', pulse: true, de: 'Auf Lager', en: 'In stock' },
+  low:       { color: '#FF9500', bg: 'rgba(255,149,0,.12)', shadow: '0 0 8px rgba(255,149,0,.4)', pulse: true, de: 'Nur noch wenige', en: 'Only a few left' },
+  out:       { color: '#8E8E93', bg: 'rgba(142,142,147,.10)', shadow: 'none', pulse: false, de: 'Auf Anfrage', en: 'On request' },
+}
+
+function StockBadge({ qty, locale, threshold }: { qty: number; locale: Locale; threshold: number }) {
+  const level = getStockLevel(qty, threshold)
+  const info = STOCK_INFO[level]
+  const label = locale === 'de' ? info.de : info.en
+
+  return (
+    <div
+      className="absolute top-3 right-3 flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-full"
+      title={label}
+      style={{
+        background: 'rgba(255,255,255,.72)',
+        backdropFilter: 'blur(16px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+        border: '1px solid rgba(255,255,255,.45)',
+        boxShadow: '0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04)',
+      }}
+    >
+      <img
+        src="/bee-stock-badge.png" alt="" width={20} height={20}
+        className="rounded-full"
+        style={{ objectFit: 'cover', boxShadow: '0 0 0 1px rgba(0,0,0,.06)' }}
+      />
+      <span className="relative flex h-2 w-2">
+        {info.pulse && (
+          <span
+            className="absolute inset-0 rounded-full animate-[stock-ping_2s_cubic-bezier(0,0,0.2,1)_infinite]"
+            style={{ background: info.color, opacity: 0.4 }}
+          />
+        )}
+        <span
+          className="relative inline-flex rounded-full h-2 w-2"
+          style={{ background: info.color, boxShadow: info.shadow }}
+        />
+      </span>
+      <span style={{ fontSize: '.65rem', fontWeight: 600, color: info.color, letterSpacing: '.01em' }}>
+        {label}
+      </span>
+    </div>
+  )
 }
 
 interface CartItem { productId: string; quantity: number }
@@ -68,9 +124,9 @@ function getCart(): CartItem[] {
 }
 function saveCart(cart: CartItem[]) { localStorage.setItem('shop-cart', JSON.stringify(cart)) }
 
-function ProductCard({ p, locale, t, onAdd, justAdded }: {
+function ProductCard({ p, locale, t, onAdd, justAdded, threshold }: {
   p: ShopProduct; locale: Locale; t: Record<string, string>
-  onAdd: (id: string) => void; justAdded: string | null
+  onAdd: (id: string) => void; justAdded: string | null; threshold: number
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -96,15 +152,18 @@ function ProductCard({ p, locale, t, onAdd, justAdded }: {
         className="rounded-[20px] overflow-hidden flex flex-col transition-transform duration-300 hover:-translate-y-1"
         style={{ background: 'var(--shop-panel)', border: '1px solid var(--shop-border)', boxShadow: 'var(--shop-shadow)' }}
       >
-        {p.imageUrl ? (
-          <div className="h-44" style={{ background: 'var(--shop-cream)' }}>
-            <img src={p.imageUrl} alt={name} className="w-full h-full object-cover" />
-          </div>
-        ) : (
-          <div className="h-44 flex items-center justify-center text-5xl" style={{ background: 'var(--shop-cream)' }}>
-            🍯
-          </div>
-        )}
+        <div className="relative">
+          {p.imageUrl ? (
+            <div className="h-44" style={{ background: 'var(--shop-cream)' }}>
+              <img src={p.imageUrl} alt={name} className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="h-44 flex items-center justify-center text-5xl" style={{ background: 'var(--shop-cream)' }}>
+              🍯
+            </div>
+          )}
+          <StockBadge qty={p.stockQuantity} locale={locale} threshold={threshold} />
+        </div>
         <div className="p-5 flex flex-col flex-1 gap-2">
           <h3 className="font-bold text-[.98rem]" style={{ color: 'var(--shop-ink)' }}>{name}</h3>
           {desc && <p className="text-[.78rem] leading-relaxed line-clamp-2" style={{ color: 'var(--shop-dim)' }}>{desc}</p>}
@@ -135,6 +194,7 @@ function ProductCard({ p, locale, t, onAdd, justAdded }: {
 export default function ShopLandingPage() {
   const [locale, setLocale] = useState<Locale>('de')
   const [products, setProducts] = useState<ShopProduct[]>([])
+  const [stockThreshold, setStockThreshold] = useState(5)
   const [cart, setCart] = useState<CartItem[]>([])
   const [justAdded, setJustAdded] = useState<string | null>(null)
   const [latestPost, setLatestPost] = useState<{ title: string; slug: string; publishedAt: string } | null>(null)
@@ -147,7 +207,14 @@ export default function ShopLandingPage() {
     setCart(getCart())
     fetch('/api/shop/products')
       .then((r) => r.json())
-      .then((data) => setProducts(Array.isArray(data) ? data.slice(0, 4) : []))
+      .then((data) => {
+        if (data && Array.isArray(data.products)) {
+          setProducts(data.products.slice(0, 4))
+          setStockThreshold(data.stockLowThreshold ?? 5)
+        } else if (Array.isArray(data)) {
+          setProducts(data.slice(0, 4))
+        }
+      })
       .catch(() => {})
 
     fetch('/api/cms/blog?limit=1')
@@ -338,7 +405,7 @@ export default function ShopLandingPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {products.map((p) => (
-              <ProductCard key={p.id} p={p} locale={locale} t={t} onAdd={addToCart} justAdded={justAdded} />
+              <ProductCard key={p.id} p={p} locale={locale} t={t} onAdd={addToCart} justAdded={justAdded} threshold={stockThreshold} />
             ))}
           </div>
         </section>

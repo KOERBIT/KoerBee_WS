@@ -71,6 +71,14 @@ input, select, textarea {
 @keyframes landBounce { 0% { transform: scale(1,1); } 28% { transform: scale(1.16,.8); } 54% { transform: scale(.91,1.11); } 76% { transform: scale(1.04,.97); } 100% { transform: scale(1,1); } }
 @keyframes badgePop { 0% { transform: scale(1); } 50% { transform: scale(1.35); } 100% { transform: scale(1); } }
 
+/* Stock availability badge pulse — langsamer + weicher als Tailwinds animate-ping */
+@keyframes stock-ping {
+  0% { transform: scale(1); opacity: .45; }
+  50% { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bee-wing, .bee-antenna-l, .bee-antenna-r, .bee-bounce { animation: none !important; }
+  [class*="stock-ping"] { animation: none !important; }
 }

@@ -177,6 +177,10 @@ export default function KassenbuchPage() {
   const [prodFillAmount, setProdFillAmount] = useState('')
   const [prodFillUnit, setProdFillUnit] = useState('g')
 
+  // Shop-Schwellenwert
+  const [stockLowThreshold, setStockLowThreshold] = useState(5)
+  const [savingThreshold, setSavingThreshold] = useState(false)
+
   // Stock Corrections
   const [stockCorrections, setStockCorrections] = useState<StockCorrection[]>([])
   const [showStockCorrection, setShowStockCorrection] = useState(false)
@@ -203,18 +207,20 @@ export default function KassenbuchPage() {
   const [linkError, setLinkError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const [p, s, c, e, stores] = await Promise.all([
+    const [p, s, c, e, stores, shopSettings] = await Promise.all([
       fetch('/api/kassenbuch/products').then(r => r.json()),
       fetch('/api/kassenbuch/sales').then(r => r.json()),
       fetch('/api/kassenbuch/consignments').then(r => r.json()),
       fetch('/api/kassenbuch/expenses').then(r => r.json()),
       fetch('/api/kassenbuch/commission-stores').then(r => r.json()),
+      fetch('/api/kassenbuch/shop-settings').then(r => r.json()).catch(() => ({ stockLowThreshold: 5 })),
     ])
     setProducts(p)
     setSales(s)
     setConsignments(c)
     setExpenses(e)
     setCommissionStores(stores)
+    setStockLowThreshold(shopSettings.stockLowThreshold ?? 5)
     setLoading(false)
   }, [])
 
@@ -1211,9 +1217,49 @@ export default function KassenbuchPage() {
       {/* ARTIKEL */}
       {tab === 'artikel' && (
         <div>
-          <div className="flex justify-end mb-4">
+          <div className="flex items-center justify-between mb-4 gap-3">
+            {/* Schwellenwert */}
+            <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm px-4 py-2 border border-zinc-100">
+              <span className="text-[12px] font-medium text-zinc-500 whitespace-nowrap">Verfügbarkeits-Grenze</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    const next = Math.max(1, stockLowThreshold - 1)
+                    setStockLowThreshold(next)
+                    setSavingThreshold(true)
+                    fetch('/api/kassenbuch/shop-settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stockLowThreshold: next }) })
+                      .finally(() => setSavingThreshold(false))
+                  }}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-sm font-medium transition-colors"
+                >
+                  −
+                </button>
+                <span className="text-[15px] font-bold text-zinc-900 w-8 text-center tabular-nums">{stockLowThreshold}</span>
+                <button
+                  onClick={() => {
+                    const next = stockLowThreshold + 1
+                    setStockLowThreshold(next)
+                    setSavingThreshold(true)
+                    fetch('/api/kassenbuch/shop-settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stockLowThreshold: next }) })
+                      .finally(() => setSavingThreshold(false))
+                  }}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-sm font-medium transition-colors"
+                >
+                  +
+                </button>
+              </div>
+              {savingThreshold && <span className="text-[10px] text-zinc-400">...</span>}
+              <div className="flex items-center gap-1.5 ml-1">
+                <span className="w-2 h-2 rounded-full" style={{ background: '#34C759' }} />
+                <span className="text-[10px] text-zinc-400">≥ {stockLowThreshold}</span>
+                <span className="w-2 h-2 rounded-full ml-1" style={{ background: '#FF9500' }} />
+                <span className="text-[10px] text-zinc-400">1–{stockLowThreshold - 1}</span>
+                <span className="w-2 h-2 rounded-full ml-1" style={{ background: '#8E8E93' }} />
+                <span className="text-[10px] text-zinc-400">0</span>
+              </div>
+            </div>
             <button onClick={() => { resetProductForm(); setShowProduct(true) }}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[13px] font-semibold transition-colors">
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[13px] font-semibold transition-colors shrink-0">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Artikel anlegen
             </button>
@@ -1229,7 +1275,7 @@ export default function KassenbuchPage() {
               {products.map(p => {
                 const stockColor = p.stockQuantity === 0
                   ? 'bg-rose-50 border-rose-200 text-rose-600'
-                  : p.stockQuantity <= 5
+                  : p.stockQuantity < stockLowThreshold
                     ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
                     : 'bg-green-50 border-green-200 text-green-700'
                 const isExpanded = stockProductId === p.id

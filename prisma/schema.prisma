@@ -31,6 +31,7 @@ model User {
   paypalCredential PayPalCredential?
   mailCredential   MailCredential?
   anthropicCredential AnthropicCredential?
+  shopSettings     ShopSettings?
   cmsContents      CmsContent[]
   blogPosts        BlogPost[]
   accounts         Account[]
@@ -491,6 +492,16 @@ model AnthropicCredential {
   model     String   @default("claude-haiku-4-5")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Shop-Einstellungen (Schwellenwerte für Lageranzeige)
+model ShopSettings {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stockLowThreshold Int      @default(5) // Ab hier wird "Wenig" angezeigt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 // CMS
