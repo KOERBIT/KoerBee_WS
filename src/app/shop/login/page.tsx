@@ -6,8 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 type Locale = 'de' | 'en'
 const L = {
-  de: { title: 'Anmelden', email: 'E-Mail-Adresse', password: 'Passwort', submit: 'Einloggen', no_account: 'Noch kein Konto?', register: 'Jetzt registrieren', forgot: 'Passwort vergessen?', error: 'E-Mail oder Passwort falsch', verified: 'E-Mail bestätigt! Du kannst dich jetzt einloggen.' },
-  en: { title: 'Sign In', email: 'Email address', password: 'Password', submit: 'Sign in', no_account: 'No account yet?', register: 'Register now', forgot: 'Forgot password?', error: 'Invalid email or password', verified: 'Email verified! You can now sign in.' },
+  de: { title: 'Anmelden', email: 'E-Mail-Adresse', password: 'Passwort', submit: 'Einloggen', no_account: 'Noch kein Konto?', register: 'Jetzt registrieren', forgot: 'Passwort vergessen?', error: 'E-Mail oder Passwort falsch', verified: 'E-Mail bestätigt! Du kannst dich jetzt einloggen.', verify_error_expired: 'Der Bestätigungslink ist abgelaufen. Bitte registriere dich erneut.', verify_error_invalid: 'Ungültiger Bestätigungslink.', verify_error_missing: 'Bestätigungslink fehlt.' },
+  en: { title: 'Sign In', email: 'Email address', password: 'Password', submit: 'Sign in', no_account: 'No account yet?', register: 'Register now', forgot: 'Forgot password?', error: 'Invalid email or password', verified: 'Email verified! You can now sign in.', verify_error_expired: 'The verification link has expired. Please register again.', verify_error_invalid: 'Invalid verification link.', verify_error_missing: 'Verification link missing.' },
 }
 
 export default function ShopLoginPage() {
@@ -23,6 +23,7 @@ function ShopLoginForm() {
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') ?? '/shop/konto'
   const verified = searchParams.get('verified')
+  const verifyError = searchParams.get('verify_error')
   const [locale, setLocale] = useState<Locale>('de')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -53,6 +54,7 @@ function ShopLoginForm() {
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-bold text-zinc-800 text-center mb-6">{t.title}</h1>
         {verified && <p className="mb-4 text-green-600 text-sm text-center bg-green-50 border border-green-200 rounded-xl p-3">{t.verified}</p>}
+        {verifyError && <p className="mb-4 text-rose-600 text-sm text-center bg-rose-50 border border-rose-200 rounded-xl p-3">{(t as Record<string, string>)[`verify_error_${verifyError}`] ?? t.verify_error_invalid}</p>}
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-1">{t.email}</label>

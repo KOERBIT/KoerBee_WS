@@ -265,7 +265,13 @@ export default function LandingContent({ cms, blogPosts }: Props) {
   useEffect(() => {
     fetch('/api/shop/products')
       .then((r) => r.json())
-      .then((data) => setProducts(Array.isArray(data) ? data : []))
+      .then((data) => {
+        if (data && Array.isArray(data.products)) {
+          setProducts(data.products)
+        } else if (Array.isArray(data)) {
+          setProducts(data)
+        }
+      })
       .catch(() => {})
   }, [])
 

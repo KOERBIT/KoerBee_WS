@@ -36,7 +36,10 @@ export default function WarenkorbPage() {
   useEffect(() => {
     setLocale(getLocale())
     setCart(getCart())
-    fetch('/api/shop/products').then(r => r.json()).then(d => setProducts(Array.isArray(d) ? d : [])).catch(() => {})
+    fetch('/api/shop/products').then(r => r.json()).then(d => {
+      if (d && Array.isArray(d.products)) setProducts(d.products)
+      else if (Array.isArray(d)) setProducts(d)
+    }).catch(() => {})
     fetch('/api/shop/auth/me').then(r => setIsLoggedIn(r.ok)).catch(() => setIsLoggedIn(false))
   }, [])
 

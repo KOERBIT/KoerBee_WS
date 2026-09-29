@@ -504,6 +504,19 @@ model ShopSettings {
   updatedAt         DateTime @updatedAt
 }
 
+// Shop-Analytics: einfaches Pageview-Tracking
+model ShopPageView {
+  id        String   @id @default(cuid())
+  path      String   // z.B. /shop, /shop/produkte, /shop/warenkorb
+  referrer  String?
+  userAgent String?
+  country   String?  // aus Vercel-Headern
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+}
+
 // CMS
 enum BlogCategory {
   NEWS
