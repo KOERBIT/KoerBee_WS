@@ -633,9 +633,18 @@ export default function KassenbuchPage() {
   }
 
   async function deleteProduct(id: string) {
-    if (!confirm('Artikel löschen?')) return
-    await fetch(`/api/kassenbuch/products/${id}`, { method: 'DELETE' })
-    load()
+    if (!confirm('Artikel wirklich löschen?')) return
+    try {
+      const res = await fetch(`/api/kassenbuch/products/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        alert(data.error || 'Fehler beim Löschen')
+        return
+      }
+      load()
+    } catch {
+      alert('Fehler beim Löschen des Artikels')
+    }
   }
 
   async function stockIn(productId: string) {
