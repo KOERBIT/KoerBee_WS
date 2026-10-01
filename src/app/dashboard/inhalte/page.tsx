@@ -50,22 +50,43 @@ function FormatToolbar({ textareaRef, value, onChange }: {
   }
 
   const btn = 'px-2 py-1 rounded-lg text-[12px] font-semibold hover:bg-zinc-200 transition-colors text-zinc-600'
+  const sep = <div className="w-px h-5 bg-zinc-200 mx-0.5 self-center" />
 
   return (
-    <div className="flex gap-1 mb-1.5 flex-wrap">
+    <div className="flex gap-1 mb-1.5 flex-wrap items-center bg-zinc-50 rounded-xl px-2 py-1.5 border border-zinc-200">
+      <button type="button" className={btn} onClick={() => prefix('# ')} title="Grosse Überschrift">
+        <span style={{ fontSize: '14px' }}>H1</span>
+      </button>
+      <button type="button" className={btn} onClick={() => prefix('## ')} title="Mittlere Überschrift">
+        <span style={{ fontSize: '12px' }}>H2</span>
+      </button>
+      <button type="button" className={btn} onClick={() => prefix('### ')} title="Kleine Überschrift">
+        <span style={{ fontSize: '10px' }}>H3</span>
+      </button>
+      {sep}
       <button type="button" className={btn} onClick={() => wrap('**', '**')} title="Fett">
         <b>F</b>
       </button>
       <button type="button" className={btn} onClick={() => wrap('*', '*')} title="Kursiv">
         <i>K</i>
       </button>
+      <button type="button" className={btn} onClick={() => wrap('~~', '~~')} title="Durchgestrichen">
+        <s>D</s>
+      </button>
+      {sep}
       <button type="button" className={btn} onClick={() => prefix('- ')} title="Aufzählung">
         &bull; Liste
       </button>
-      <button type="button" className={btn} onClick={() => prefix('### ')} title="Zwischenüberschrift">
-        H3
+      <button type="button" className={btn} onClick={() => prefix('1. ')} title="Nummerierte Liste">
+        1. Liste
       </button>
-      <span className="text-[10px] text-zinc-400 self-center ml-2">Markdown-Formatierung</span>
+      {sep}
+      <button type="button" className={btn} onClick={() => wrap('<small>', '</small>')} title="Kleingedruckt">
+        <span style={{ fontSize: '9px' }}>Klein</span>
+      </button>
+      <button type="button" className={btn} onClick={() => wrap('<big>', '</big>')} title="Grösserer Text">
+        <span style={{ fontSize: '14px' }}>Gross</span>
+      </button>
     </div>
   )
 }

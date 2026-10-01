@@ -88,7 +88,12 @@ input, select, textarea {
 .prose-landing p:last-child { margin-bottom: 0; }
 .prose-landing strong { font-weight: 700; }
 .prose-landing em { font-style: italic; }
+.prose-landing del { text-decoration: line-through; opacity: 0.6; }
 .prose-landing ul { list-style: disc; padding-left: 1.25em; margin: 0.5em 0; }
 .prose-landing ol { list-style: decimal; padding-left: 1.25em; margin: 0.5em 0; }
 .prose-landing li { margin: 0.2em 0; }
+.prose-landing h1 { font-weight: 800; font-size: 1.5em; margin: 0.6em 0 0.3em; }
+.prose-landing h2 { font-weight: 700; font-size: 1.25em; margin: 0.7em 0 0.3em; }
 .prose-landing h3 { font-weight: 700; font-size: 1.1em; margin: 0.8em 0 0.3em; }
+.prose-landing small { font-size: 0.8em; }
+.prose-landing big { font-size: 1.2em; }
