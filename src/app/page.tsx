@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import LandingContent from '@/components/landing/LandingContent'
+import HoneyDripBackground from '@/components/shop/HoneyDripBackground'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,5 +18,10 @@ export default async function LandingPage() {
   const cms: Record<string, string> = {}
   for (const e of cmsEntries) cms[e.key] = e.value
 
-  return <LandingContent cms={cms} blogPosts={blogPosts} />
+  return (
+    <>
+      <HoneyDripBackground />
+      <LandingContent cms={cms} blogPosts={blogPosts} />
+    </>
+  )
 }
