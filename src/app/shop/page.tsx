@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -108,6 +108,49 @@ function StockBadge({ qty, locale, threshold }: { qty: number; locale: Locale; t
       <span style={{ fontSize: '.65rem', fontWeight: 600, color: info.color, letterSpacing: '.01em' }}>
         {label}
       </span>
+    </div>
+  )
+}
+
+function HoneyDripBackground() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [offsetY, setOffsetY] = useState(0)
+
+  const handleScroll = useCallback(() => {
+    setOffsetY(window.scrollY)
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [handleScroll])
+
+  return (
+    <div
+      className="fixed top-0 right-0 h-screen pointer-events-none z-0 hidden lg:block"
+      style={{
+        width: 'clamp(220px, 22vw, 380px)',
+        maskImage: 'linear-gradient(to left, rgba(0,0,0,.6) 0%, rgba(0,0,0,.25) 65%, transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,.6) 0%, rgba(0,0,0,.25) 65%, transparent 100%)',
+      }}
+    >
+      <video
+        ref={videoRef}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="metadata"
+        className="w-full object-cover"
+        style={{
+          height: '130%',
+          transform: `translateY(${offsetY * -0.15}px)`,
+          willChange: 'transform',
+          filter: 'saturate(1.3) brightness(1.1) contrast(1.05)',
+        }}
+      >
+        <source src="/honey-drip-compressed.mp4" type="video/mp4" />
+      </video>
     </div>
   )
 }
@@ -254,6 +297,8 @@ export default function ShopLandingPage() {
 
   return (
     <>
+      <HoneyDripBackground />
+
       {/* Header — pill nav */}
       <header className="sticky top-0 z-50 px-4 pt-3 pb-2">
         <nav
@@ -361,7 +406,7 @@ export default function ShopLandingPage() {
       {/* Hero / Diorama */}
       <section
         id="shop-hero"
-        className="relative mx-4 mt-4 overflow-hidden"
+        className="relative z-10 mx-4 mt-4 overflow-hidden"
         style={{
           height: 320, borderRadius: 26,
           border: '1px solid rgba(24,21,15,.12)',
@@ -398,7 +443,7 @@ export default function ShopLandingPage() {
 
       {/* Product highlights */}
       {products.length > 0 && (
-        <section className="max-w-4xl mx-auto px-4 py-16">
+        <section className="relative z-10 max-w-4xl mx-auto px-4 py-16">
           <div className="flex items-baseline justify-between px-1 mb-6">
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{t.highlights}</h2>
             <span style={{ fontSize: '.8rem', color: 'var(--shop-dim)' }}>{products.length} {locale === 'de' ? 'Produkte' : 'Products'}</span>
@@ -412,7 +457,7 @@ export default function ShopLandingPage() {
       )}
 
       {/* Footer */}
-      <footer className="mt-auto px-4 py-8" style={{ fontSize: '.78rem', color: 'var(--shop-dim)' }}>
+      <footer className="relative z-10 mt-auto px-4 py-8" style={{ fontSize: '.78rem', color: 'var(--shop-dim)' }}>
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="flex items-center gap-2" style={{ color: 'var(--shop-ink)' }}>
             <Image src="/Koerbee_Logo.png" alt="KörBee" width={24} height={24} className="rounded-md" style={{ objectFit: 'contain' }} />
