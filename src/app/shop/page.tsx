@@ -129,8 +129,9 @@ function HoneyDripBackground() {
 
   return (
     <div
-      className="fixed top-0 right-0 h-screen pointer-events-none z-0 hidden md:block"
+      className="fixed top-0 right-0 h-screen pointer-events-none hidden md:block"
       style={{
+        zIndex: 1,
         width: 'clamp(220px, 22vw, 380px)',
         maskImage: 'linear-gradient(to left, rgba(0,0,0,.6) 0%, rgba(0,0,0,.25) 65%, transparent 100%)',
         WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,.6) 0%, rgba(0,0,0,.25) 65%, transparent 100%)',
@@ -142,7 +143,7 @@ function HoneyDripBackground() {
         loop
         muted
         playsInline
-        preload="metadata"
+        preload="auto"
         className="w-full object-cover"
         style={{
           height: '130%',
@@ -309,8 +310,6 @@ export default function ShopLandingPage() {
 
   return (
     <>
-      <HoneyDripBackground />
-
       {/* Header — pill nav */}
       <header className="sticky top-0 z-50 px-4 pt-3 pb-2">
         <nav

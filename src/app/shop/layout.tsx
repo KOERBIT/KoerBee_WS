@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import BeeMascot from '@/components/mascot/BeeMascot'
 import ShopTracker from '@/components/shop/ShopTracker'
+import HoneyDripBackground from '@/components/shop/HoneyDripBackground'
 
 export const metadata: Metadata = {
   title: 'Imkerei-Shop | KörBee',
@@ -23,10 +24,13 @@ export const viewport: Viewport = {
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--shop-bg)', color: 'var(--shop-ink)', fontFamily: 'var(--font-manrope), system-ui, sans-serif' }}>
-      {children}
-      <BeeMascot />
-      <ShopTracker />
-    </div>
+    <>
+      <HoneyDripBackground />
+      <div className="relative min-h-screen flex flex-col" style={{ background: 'var(--shop-bg)', color: 'var(--shop-ink)', fontFamily: 'var(--font-manrope), system-ui, sans-serif' }}>
+        {children}
+        <BeeMascot />
+        <ShopTracker />
+      </div>
+    </>
   )
 }
