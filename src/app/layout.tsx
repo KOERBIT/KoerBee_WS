@@ -33,7 +33,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: 'KörBee — Imkerei',
-  description: 'Honig, Wachs & mehr — direkt vom Imker aus Hüttenberg',
+  description: 'Honig direkt vom Imker — KörBee Imkerei',
 }
 
 export const viewport: Viewport = {

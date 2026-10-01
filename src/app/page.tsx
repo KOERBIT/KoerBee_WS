@@ -1,8 +1,28 @@
+import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import LandingContent from '@/components/landing/LandingContent'
 import HoneyDripBackground from '@/components/shop/HoneyDripBackground'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const entries = await prisma.cmsContent.findMany({ where: { locale: 'de' }, select: { key: true, value: true } })
+  const cms: Record<string, string> = {}
+  for (const e of entries) cms[e.key] = e.value
+
+  const title = cms['hero.title'] || 'KörBee — Imkerei'
+  const description = (cms['hero.text'] || 'Honig direkt vom Imker').replace(/[*#_~`<>]/g, '').replace(/\n/g, ' ').trim()
+
+  return {
+    title: `KörBee — ${title}`,
+    description,
+    openGraph: {
+      title: `KörBee — ${title}`,
+      description,
+      type: 'website',
+    },
+  }
+}
 
 export default async function LandingPage() {
   const [cmsEntries, blogPosts] = await Promise.all([
