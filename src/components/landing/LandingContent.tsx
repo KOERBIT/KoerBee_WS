@@ -4,8 +4,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import { marked } from 'marked'
 
 const BeeMascot = dynamic(() => import('@/components/mascot/BeeMascot3D'), { ssr: false })
+
+function renderMarkdown(text: string): string {
+  return marked.parse(text, { async: false, breaks: true }) as string
+}
 
 interface ShopProduct {
   id: string
@@ -192,7 +197,8 @@ function ProductShowcase({ product, index }: { product: ShopProduct; index: numb
               {name}
             </h3>
             {product.description && (
-              <p
+              <div
+                className="prose-landing"
                 style={{
                   fontSize: '1rem',
                   lineHeight: 1.7,
@@ -200,9 +206,8 @@ function ProductShowcase({ product, index }: { product: ShopProduct; index: numb
                   marginBottom: 24,
                   maxWidth: 380,
                 }}
-              >
-                {product.description}
-              </p>
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(product.description) }}
+              />
             )}
             <div className="flex items-center gap-5 flex-wrap">
               <span
@@ -337,14 +342,11 @@ export default function LandingContent({ cms, blogPosts }: Props) {
             </h1>
           </FadeIn>
           <FadeIn delay={200}>
-            <p
-              className="max-w-lg"
+            <div
+              className="max-w-lg prose-landing"
               style={{ fontSize: '1.08rem', color: '#43391f', lineHeight: 1.6, marginBottom: 28 }}
-            >
-              {heroText.split('\n').map((line, i) => (
-                <span key={i}>{line}{i < heroText.split('\n').length - 1 && <br />}</span>
-              ))}
-            </p>
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(heroText) }}
+            />
           </FadeIn>
           <FadeIn delay={300}>
             <a
@@ -398,15 +400,16 @@ export default function LandingContent({ cms, blogPosts }: Props) {
             >
               {aboutTitle}
             </h2>
-            <p style={{ fontSize: '1rem', lineHeight: 1.7, color: 'var(--shop-dim)' }}>
-              {aboutText1}
-            </p>
-            <p
-              className="mt-4"
+            <div
+              className="prose-landing"
               style={{ fontSize: '1rem', lineHeight: 1.7, color: 'var(--shop-dim)' }}
-            >
-              {aboutText2}
-            </p>
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(aboutText1) }}
+            />
+            <div
+              className="mt-4 prose-landing"
+              style={{ fontSize: '1rem', lineHeight: 1.7, color: 'var(--shop-dim)' }}
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(aboutText2) }}
+            />
           </div>
         </FadeIn>
       </section>

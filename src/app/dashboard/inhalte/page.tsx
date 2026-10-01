@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 
 const CMS_KEYS = [
@@ -14,6 +14,84 @@ const CMS_KEYS = [
   { key: 'products.label', label: 'Produkte — Label', multiline: false, placeholder: 'Aus dem Stock' },
   { key: 'products.title', label: 'Produkte — Überschrift', multiline: false, placeholder: 'Unsere Produkte' },
 ]
+
+function FormatToolbar({ textareaRef, value, onChange }: {
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>
+  value: string
+  onChange: (v: string) => void
+}) {
+  const wrap = (before: string, after: string) => {
+    const ta = textareaRef.current
+    if (!ta) return
+    const start = ta.selectionStart
+    const end = ta.selectionEnd
+    const selected = value.slice(start, end)
+    const newVal = value.slice(0, start) + before + selected + after + value.slice(end)
+    onChange(newVal)
+    requestAnimationFrame(() => {
+      ta.focus()
+      ta.selectionStart = start + before.length
+      ta.selectionEnd = end + before.length
+    })
+  }
+
+  const prefix = (pfx: string) => {
+    const ta = textareaRef.current
+    if (!ta) return
+    const start = ta.selectionStart
+    // Find the beginning of the current line
+    const lineStart = value.lastIndexOf('\n', start - 1) + 1
+    const newVal = value.slice(0, lineStart) + pfx + value.slice(lineStart)
+    onChange(newVal)
+    requestAnimationFrame(() => {
+      ta.focus()
+      ta.selectionStart = ta.selectionEnd = start + pfx.length
+    })
+  }
+
+  const btn = 'px-2 py-1 rounded-lg text-[12px] font-semibold hover:bg-zinc-200 transition-colors text-zinc-600'
+
+  return (
+    <div className="flex gap-1 mb-1.5 flex-wrap">
+      <button type="button" className={btn} onClick={() => wrap('**', '**')} title="Fett">
+        <b>F</b>
+      </button>
+      <button type="button" className={btn} onClick={() => wrap('*', '*')} title="Kursiv">
+        <i>K</i>
+      </button>
+      <button type="button" className={btn} onClick={() => prefix('- ')} title="Aufzählung">
+        &bull; Liste
+      </button>
+      <button type="button" className={btn} onClick={() => prefix('### ')} title="Zwischenüberschrift">
+        H3
+      </button>
+      <span className="text-[10px] text-zinc-400 self-center ml-2">Markdown-Formatierung</span>
+    </div>
+  )
+}
+
+function RichTextarea({ value, onChange, placeholder, inputClass }: {
+  value: string
+  onChange: (v: string) => void
+  placeholder: string
+  inputClass: string
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  return (
+    <div>
+      <FormatToolbar textareaRef={ref} value={value} onChange={onChange} />
+      <textarea
+        ref={ref}
+        rows={5}
+        className={inputClass + ' resize-y'}
+        placeholder={placeholder}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+      />
+    </div>
+  )
+}
 
 type Locale = 'de' | 'en'
 
@@ -105,12 +183,11 @@ export default function InhaltePage() {
                 {label}
               </label>
               {multiline ? (
-                <textarea
-                  rows={4}
-                  className={inputClass}
-                  placeholder={placeholder}
+                <RichTextarea
                   value={values[key] ?? ''}
-                  onChange={e => handleChange(key, e.target.value)}
+                  onChange={v => handleChange(key, v)}
+                  placeholder={placeholder}
+                  inputClass={inputClass}
                 />
               ) : (
                 <input

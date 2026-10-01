@@ -170,6 +170,44 @@ function getCart(): CartItem[] {
 }
 function saveCart(cart: CartItem[]) { localStorage.setItem('shop-cart', JSON.stringify(cart)) }
 
+function ExpandableDesc({ text, locale }: { text: string; locale: Locale }) {
+  const ref = useRef<HTMLParagraphElement>(null)
+  const [clamped, setClamped] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  const checkClamp = useCallback(() => {
+    const el = ref.current
+    if (el) setClamped(el.scrollHeight > el.clientHeight + 2)
+  }, [])
+
+  useEffect(() => {
+    checkClamp()
+    window.addEventListener('resize', checkClamp)
+    return () => window.removeEventListener('resize', checkClamp)
+  }, [checkClamp, text])
+
+  return (
+    <div>
+      <p
+        ref={ref}
+        className={`text-[.8rem] leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}
+        style={{ color: 'var(--shop-ink)', opacity: 0.7 }}
+      >
+        {text}
+      </p>
+      {(clamped || expanded) && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mt-1 text-[.72rem] font-medium hover:opacity-70 transition-opacity"
+          style={{ color: 'var(--shop-accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+        >
+          {expanded ? (locale === 'de' ? 'Weniger' : 'Less') : (locale === 'de' ? 'Mehr lesen' : 'Read more')}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function ProductCard({ p, locale, t, onAdd, justAdded, threshold }: {
   p: ShopProduct; locale: Locale; t: Record<string, string>
   onAdd: (id: string) => void; justAdded: string | null; threshold: number
@@ -222,7 +260,7 @@ function ProductCard({ p, locale, t, onAdd, justAdded, threshold }: {
               </span>
             )}
           </div>
-          {desc && <p className="text-[.8rem] leading-relaxed line-clamp-3" style={{ color: 'var(--shop-ink)', opacity: 0.7 }}>{desc}</p>}
+          {desc && <ExpandableDesc text={desc} locale={locale} />}
           <div className="mt-auto pt-3 flex items-center justify-between">
             <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontVariantNumeric: 'tabular-nums', fontWeight: 500, fontSize: '.92rem' }}>
               {(p.shopPrice ?? p.price).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
