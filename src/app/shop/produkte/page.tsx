@@ -10,6 +10,7 @@ interface ShopProduct {
   id: string; name: string; shopName: string | null; shopNameEn: string | null
   description: string | null; descriptionEn: string | null; imageUrl: string | null
   price: number; shopPrice: number | null; unit: string; stockQuantity: number
+  fillAmount: number | null; fillUnit: string | null
 }
 
 type StockLevel = 'available' | 'low' | 'out'
@@ -217,8 +218,18 @@ export default function ProduktePage() {
                     <StockBadge qty={p.stockQuantity} locale={locale} threshold={stockThreshold} />
                   </div>
                   <div className="p-5 flex flex-col flex-1 gap-2">
-                    <h3 className="font-bold text-lg" style={{ color: 'var(--shop-ink)' }}>{pName(p)}</h3>
-                    {pDesc(p) && <p className="text-sm leading-relaxed" style={{ color: 'var(--shop-dim)' }}>{pDesc(p)}</p>}
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="font-bold text-lg" style={{ color: 'var(--shop-ink)' }}>{pName(p)}</h3>
+                      {p.fillAmount != null && p.fillUnit && (
+                        <span
+                          className="shrink-0 px-2 py-0.5 rounded-full"
+                          style={{ fontSize: '.7rem', fontWeight: 600, background: 'var(--shop-cream)', color: 'var(--shop-dim)', border: '1px solid var(--shop-border)' }}
+                        >
+                          {p.fillAmount}{p.fillUnit}
+                        </span>
+                      )}
+                    </div>
+                    {pDesc(p) && <p className="text-[.82rem] leading-relaxed" style={{ color: 'var(--shop-ink)', opacity: 0.75 }}>{pDesc(p)}</p>}
                     <div className="mt-auto pt-4 flex items-center justify-between">
                       <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontVariantNumeric: 'tabular-nums', fontWeight: 500, fontSize: '.95rem' }}>
                         {(p.shopPrice ?? p.price).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}

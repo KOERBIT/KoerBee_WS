@@ -1879,8 +1879,8 @@ export default function KassenbuchPage() {
               </div>
               <div>
                 <label className="block text-[12px] font-medium text-zinc-500 mb-1">Beschreibung</label>
-                <input value={prodDesc} onChange={e => setProdDesc(e.target.value)} placeholder="optional"
-                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                <textarea value={prodDesc} onChange={e => setProdDesc(e.target.value)} placeholder="optional" rows={4}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-y" />
               </div>
               {/* Shop-Einstellungen */}
               <div className="border-t border-zinc-100 pt-4 mt-2">

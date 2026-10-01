@@ -55,6 +55,8 @@ interface ShopProduct {
   shopPrice: number | null
   unit: string
   stockQuantity: number
+  fillAmount: number | null
+  fillUnit: string | null
 }
 
 type StockLevel = 'available' | 'low' | 'out'
@@ -127,7 +129,7 @@ function HoneyDripBackground() {
 
   return (
     <div
-      className="fixed top-0 right-0 h-screen pointer-events-none z-0 hidden lg:block"
+      className="fixed top-0 right-0 h-screen pointer-events-none z-0 hidden md:block"
       style={{
         width: 'clamp(220px, 22vw, 380px)',
         maskImage: 'linear-gradient(to left, rgba(0,0,0,.6) 0%, rgba(0,0,0,.25) 65%, transparent 100%)',
@@ -208,8 +210,18 @@ function ProductCard({ p, locale, t, onAdd, justAdded, threshold }: {
           <StockBadge qty={p.stockQuantity} locale={locale} threshold={threshold} />
         </div>
         <div className="p-5 flex flex-col flex-1 gap-2">
-          <h3 className="font-bold text-[.98rem]" style={{ color: 'var(--shop-ink)' }}>{name}</h3>
-          {desc && <p className="text-[.78rem] leading-relaxed line-clamp-2" style={{ color: 'var(--shop-dim)' }}>{desc}</p>}
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="font-bold text-[.98rem]" style={{ color: 'var(--shop-ink)' }}>{name}</h3>
+            {p.fillAmount != null && p.fillUnit && (
+              <span
+                className="shrink-0 px-2 py-0.5 rounded-full"
+                style={{ fontSize: '.65rem', fontWeight: 600, background: 'var(--shop-cream)', color: 'var(--shop-dim)', border: '1px solid var(--shop-border)' }}
+              >
+                {p.fillAmount}{p.fillUnit}
+              </span>
+            )}
+          </div>
+          {desc && <p className="text-[.8rem] leading-relaxed line-clamp-3" style={{ color: 'var(--shop-ink)', opacity: 0.7 }}>{desc}</p>}
           <div className="mt-auto pt-3 flex items-center justify-between">
             <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontVariantNumeric: 'tabular-nums', fontWeight: 500, fontSize: '.92rem' }}>
               {(p.shopPrice ?? p.price).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
