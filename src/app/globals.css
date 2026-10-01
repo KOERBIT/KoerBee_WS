@@ -97,3 +97,5 @@ input, select, textarea {
 .prose-landing h3 { font-weight: 700; font-size: 1.1em; margin: 0.8em 0 0.3em; }
 .prose-landing small { font-size: 0.8em; }
 .prose-landing big { font-size: 1.2em; }
+.prose-landing .font-handwriting { font-family: var(--font-caveat), cursive; font-weight: 700; }
+.prose-landing .font-mono { font-family: var(--font-ibm-plex-mono), monospace; font-size: 0.9em; }

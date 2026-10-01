@@ -87,6 +87,13 @@ function FormatToolbar({ textareaRef, value, onChange }: {
       <button type="button" className={btn} onClick={() => wrap('<big>', '</big>')} title="Grösserer Text">
         <span style={{ fontSize: '14px' }}>Gross</span>
       </button>
+      {sep}
+      <button type="button" className={btn} onClick={() => wrap('<span class="font-handwriting">', '</span>')} title="Handschrift (Caveat)">
+        <span style={{ fontFamily: 'cursive' }}>Handschrift</span>
+      </button>
+      <button type="button" className={btn} onClick={() => wrap('<span class="font-mono">', '</span>')} title="Monospace">
+        <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>Mono</span>
+      </button>
     </div>
   )
 }
