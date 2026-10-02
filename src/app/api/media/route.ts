@@ -25,9 +25,11 @@ export async function POST(req: NextRequest) {
   const file = formData.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'Keine Datei' }, { status: 400 })
 
-  // Max 10MB
-  if (file.size > 10 * 1024 * 1024) {
-    return NextResponse.json({ error: 'Datei zu groß (max 10MB)' }, { status: 400 })
+  // Max 50MB for videos, 10MB for other files
+  const isVideo = /\.(mp4|webm|mov|avi)$/i.test(file.name)
+  const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024
+  if (file.size > maxSize) {
+    return NextResponse.json({ error: `Datei zu groß (max ${isVideo ? '50' : '10'}MB)` }, { status: 400 })
   }
 
   const folder = (formData.get('folder') as string) || 'media'

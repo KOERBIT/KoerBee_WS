@@ -40,7 +40,7 @@ export default async function LandingPage() {
 
   return (
     <>
-      <HoneyDripBackground />
+      <HoneyDripBackground videoUrl={cms['hero.video'] || undefined} />
       <LandingContent cms={cms} blogPosts={blogPosts} />
     </>
   )

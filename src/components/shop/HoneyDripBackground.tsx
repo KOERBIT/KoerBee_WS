@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-export default function HoneyDripBackground() {
+export default function HoneyDripBackground({ videoUrl }: { videoUrl?: string }) {
   const [offsetY, setOffsetY] = useState(0)
 
   const handleScroll = useCallback(() => {
@@ -13,6 +13,9 @@ export default function HoneyDripBackground() {
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
+
+  const src = videoUrl || '/honey-drip-compressed.mp4'
+  const type = src.endsWith('.webm') ? 'video/webm' : 'video/mp4'
 
   return (
     <div
@@ -25,6 +28,7 @@ export default function HoneyDripBackground() {
       }}
     >
       <video
+        key={src}
         autoPlay
         loop
         muted
@@ -38,7 +42,7 @@ export default function HoneyDripBackground() {
           filter: 'saturate(1.3) brightness(1.1) contrast(1.05)',
         }}
       >
-        <source src="/honey-drip-compressed.mp4" type="video/mp4" />
+        <source src={src} type={type} />
       </video>
     </div>
   )

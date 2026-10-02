@@ -123,12 +123,22 @@ function RichTextarea({ value, onChange, placeholder, inputClass }: {
 
 type Locale = 'de' | 'en'
 
+interface BlobMedia {
+  url: string
+  pathname: string
+  size: number
+}
+
+const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov']
+
 export default function InhaltePage() {
   const [locale, setLocale] = useState<Locale>('de')
   const [values, setValues] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [videos, setVideos] = useState<BlobMedia[]>([])
+  const [videosLoading, setVideosLoading] = useState(false)
 
   const loadContent = useCallback(async (loc: Locale) => {
     setLoading(true)
@@ -143,9 +153,27 @@ export default function InhaltePage() {
     }
   }, [])
 
+  const loadVideos = useCallback(async () => {
+    setVideosLoading(true)
+    try {
+      const res = await fetch('/api/media', { credentials: 'include' })
+      if (res.ok) {
+        const all: BlobMedia[] = await res.json()
+        const filtered = all.filter(m => {
+          const ext = m.pathname.split('.').pop()?.toLowerCase() ?? ''
+          return VIDEO_EXTENSIONS.includes(ext)
+        })
+        setVideos(filtered)
+      }
+    } finally {
+      setVideosLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     void loadContent(locale)
-  }, [locale, loadContent])
+    void loadVideos()
+  }, [locale, loadContent, loadVideos])
 
   const handleChange = (key: string, value: string) => {
     setValues(prev => ({ ...prev, [key]: value }))
@@ -154,12 +182,16 @@ export default function InhaltePage() {
   const handleSave = async () => {
     setSaving(true)
     try {
+      const keysToSave = [
+        ...CMS_KEYS.map(({ key }) => ({ key, value: values[key] ?? '' })),
+        { key: 'hero.video', value: values['hero.video'] ?? '' },
+      ]
       await Promise.all(
-        CMS_KEYS.map(({ key }) =>
+        keysToSave.map(({ key, value }) =>
           fetch('/api/cms/content', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key, value: values[key] ?? '', locale }),
+            body: JSON.stringify({ key, value, locale }),
           })
         )
       )
@@ -198,6 +230,84 @@ export default function InhaltePage() {
             {loc === 'de' ? '🇩🇪 Deutsch' : '🇬🇧 English'}
           </button>
         ))}
+      </div>
+
+      {/* Video Selection */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm mb-8">
+        <label className="block text-[13px] font-semibold text-zinc-700 mb-3">
+          Hintergrund-Video
+        </label>
+        <p className="text-[12px] text-zinc-400 mb-4">
+          Wähle das Video, das auf der Startseite im Hintergrund abgespielt wird.
+        </p>
+        {videosLoading ? (
+          <div className="text-zinc-400 text-sm py-6 text-center">Lade Videos…</div>
+        ) : videos.length === 0 ? (
+          <div className="text-zinc-400 text-sm py-6 text-center">Keine Videos gefunden.</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Default local video option */}
+            <button
+              type="button"
+              onClick={() => handleChange('hero.video', '')}
+              className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${
+                !values['hero.video']
+                  ? 'border-amber-500 ring-2 ring-amber-200'
+                  : 'border-zinc-200 hover:border-zinc-300'
+              }`}
+            >
+              <video
+                src="/honey-drip-compressed.mp4"
+                muted
+                loop
+                playsInline
+                autoPlay
+                className="w-full h-32 object-cover"
+              />
+              <div className="p-2">
+                <p className="text-[12px] font-medium text-zinc-700 truncate">Standard-Video (lokal)</p>
+                {!values['hero.video'] && (
+                  <span className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">Aktiv</span>
+                )}
+              </div>
+            </button>
+            {/* Blob videos */}
+            {videos.map(v => {
+              const isSelected = values['hero.video'] === v.url
+              const filename = v.pathname.split('/').pop() ?? v.pathname
+              const shortName = filename.replace(/^\d+-/, '').replace(/[-_]/g, ' ').replace(/\.\w+$/, '')
+              return (
+                <button
+                  key={v.url}
+                  type="button"
+                  onClick={() => handleChange('hero.video', v.url)}
+                  className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${
+                    isSelected
+                      ? 'border-amber-500 ring-2 ring-amber-200'
+                      : 'border-zinc-200 hover:border-zinc-300'
+                  }`}
+                >
+                  <video
+                    src={v.url}
+                    muted
+                    loop
+                    playsInline
+                    autoPlay
+                    className="w-full h-32 object-cover"
+                  />
+                  <div className="p-2">
+                    <p className="text-[12px] font-medium text-zinc-700 truncate" title={filename}>{shortName}</p>
+                    <p className="text-[10px] text-zinc-400">{(v.size / 1024 / 1024).toFixed(1)} MB</p>
+                    {isSelected && (
+                      <span className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">Aktiv</span>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
+        <p className="text-[11px] text-zinc-400 mt-2 font-mono">hero.video</p>
       </div>
 
       {/* Fields */}
