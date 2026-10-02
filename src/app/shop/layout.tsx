@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from 'next'
 import BeeMascot from '@/components/mascot/BeeMascot'
 import ShopTracker from '@/components/shop/ShopTracker'
 import HoneyDripBackground from '@/components/shop/HoneyDripBackground'
+import { prisma } from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Imkerei-Shop | KörBee',
@@ -22,10 +25,15 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-export default function ShopLayout({ children }: { children: React.ReactNode }) {
+export default async function ShopLayout({ children }: { children: React.ReactNode }) {
+  const videoEntry = await prisma.cmsContent.findUnique({
+    where: { key_locale: { key: 'hero.video', locale: 'de' } },
+    select: { value: true },
+  })
+
   return (
     <>
-      <HoneyDripBackground />
+      <HoneyDripBackground videoUrl={videoEntry?.value || undefined} />
       <div className="relative min-h-screen flex flex-col" style={{ background: 'var(--shop-bg)', color: 'var(--shop-ink)', fontFamily: 'var(--font-manrope), system-ui, sans-serif' }}>
         {children}
         <BeeMascot />
