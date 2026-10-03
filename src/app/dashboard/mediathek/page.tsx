@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { uploadMedia, isVideoPath } from '@/lib/media/upload'
 
 interface MediaItem {
   url: string
@@ -12,7 +13,7 @@ interface MediaItem {
 export default function MediathekPage() {
   const [items, setItems] = useState<MediaItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState(false)
+  const [uploading, setUploading] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -24,23 +25,20 @@ export default function MediathekPage() {
 
   useEffect(() => { load() }, [])
 
-  async function upload(file: File, folder: string) {
-    setUploading(true)
-    const fd = new FormData()
-    fd.append('file', file)
-    fd.append('folder', folder)
-    const res = await fetch('/api/media', { method: 'POST', body: fd })
-    if (res.ok) {
+  async function upload(file: File) {
+    const folder = file.type.startsWith('video/') ? 'videos' : 'media'
+    setUploading('0%')
+    try {
+      await uploadMedia(file, folder, p => setUploading(`${p}%`))
       await load()
-    } else {
-      const err = await res.json().catch(() => ({}))
-      alert(err.error || 'Upload fehlgeschlagen')
+    } catch (e) {
+      alert((e as Error).message || 'Upload fehlgeschlagen')
     }
-    setUploading(false)
+    setUploading(null)
   }
 
   async function remove(url: string) {
-    if (!confirm('Bild unwiderruflich löschen?')) return
+    if (!confirm('Datei unwiderruflich löschen?')) return
     await fetch('/api/media', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -75,29 +73,29 @@ export default function MediathekPage() {
         <div>
           <h1 className="text-xl font-bold text-zinc-900">Mediathek</h1>
           <p className="text-[13px] text-zinc-500 mt-1">
-            {items.length} {items.length === 1 ? 'Bild' : 'Bilder'} gespeichert
+            {items.length} {items.length === 1 ? 'Datei' : 'Dateien'} gespeichert
           </p>
         </div>
         <div className="flex gap-2">
-          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+          <input ref={fileRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple className="hidden"
             onChange={async e => {
               const files = e.target.files
               if (!files) return
               for (const f of Array.from(files)) {
-                await upload(f, 'media')
+                await upload(f)
               }
               e.target.value = ''
             }}
           />
           <button
             onClick={() => fileRef.current?.click()}
-            disabled={uploading}
+            disabled={uploading !== null}
             className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl px-4 py-2.5 text-[13px] font-semibold transition-colors"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            {uploading ? 'Wird hochgeladen…' : 'Bild hochladen'}
+            {uploading !== null ? `Wird hochgeladen… ${uploading}` : 'Hochladen'}
           </button>
         </div>
       </div>
@@ -107,21 +105,25 @@ export default function MediathekPage() {
       ) : items.length === 0 ? (
         <div className="text-center py-20">
           <div className="text-4xl mb-3">📷</div>
-          <p className="text-zinc-500 text-[14px]">Noch keine Bilder hochgeladen.</p>
-          <p className="text-zinc-400 text-[12px] mt-1">Lade Bilder hoch für Produkte oder Seiteninhalt.</p>
+          <p className="text-zinc-500 text-[14px]">Noch keine Dateien hochgeladen.</p>
+          <p className="text-zinc-400 text-[12px] mt-1">Lade Bilder oder Videos hoch für Produkte oder Seiteninhalt.</p>
         </div>
       ) : (
         Object.entries(grouped).map(([folder, folderItems]) => (
           <div key={folder} className="mb-8">
             <h2 className="text-[13px] font-semibold text-zinc-500 uppercase tracking-wide mb-3">
-              {folder === 'produkte' ? '🍯 Produkte' : folder === 'media' ? '📷 Allgemein' : `📁 ${folder}`}
+              {folder === 'produkte' ? '🍯 Produkte' : folder === 'media' ? '📷 Allgemein' : folder === 'videos' ? '🎬 Videos' : `📁 ${folder}`}
               <span className="ml-2 text-zinc-400 font-normal normal-case">({folderItems.length})</span>
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {folderItems.map(item => (
                 <div key={item.url} className="group relative bg-white rounded-xl border border-zinc-200 overflow-hidden hover:shadow-md transition-shadow">
                   <div className="aspect-square bg-zinc-100">
-                    <img src={item.url} alt={item.pathname} className="w-full h-full object-cover" />
+                    {isVideoPath(item.pathname) ? (
+                      <video src={item.url} muted loop playsInline autoPlay preload="metadata" className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={item.url} alt={item.pathname} className="w-full h-full object-cover" />
+                    )}
                   </div>
                   <div className="p-2.5">
                     <p className="text-[11px] text-zinc-500 truncate">{item.pathname.split('/').pop()}</p>

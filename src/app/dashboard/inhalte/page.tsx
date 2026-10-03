@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { uploadMedia, isVideoPath } from '@/lib/media/upload'
 
 const CMS_KEYS = [
   { key: 'hero.title', label: 'Hero Überschrift', multiline: false, placeholder: 'Frisch vom Stock.' },
@@ -129,8 +130,6 @@ interface BlobMedia {
   size: number
 }
 
-const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov']
-
 export default function InhaltePage() {
   const [locale, setLocale] = useState<Locale>('de')
   const [values, setValues] = useState<Record<string, string>>({})
@@ -139,6 +138,8 @@ export default function InhaltePage() {
   const [saving, setSaving] = useState(false)
   const [videos, setVideos] = useState<BlobMedia[]>([])
   const [videosLoading, setVideosLoading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  const videoFileRef = useRef<HTMLInputElement>(null)
 
   const loadContent = useCallback(async (loc: Locale) => {
     setLoading(true)
@@ -159,11 +160,7 @@ export default function InhaltePage() {
       const res = await fetch('/api/media', { credentials: 'include' })
       if (res.ok) {
         const all: BlobMedia[] = await res.json()
-        const filtered = all.filter(m => {
-          const ext = m.pathname.split('.').pop()?.toLowerCase() ?? ''
-          return VIDEO_EXTENSIONS.includes(ext)
-        })
-        setVideos(filtered)
+        setVideos(all.filter(m => isVideoPath(m.pathname)))
       }
     } finally {
       setVideosLoading(false)
@@ -177,6 +174,19 @@ export default function InhaltePage() {
 
   const handleChange = (key: string, value: string) => {
     setValues(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleVideoUpload = async (file: File) => {
+    setUploadProgress(0)
+    try {
+      const blob = await uploadMedia(file, 'videos', setUploadProgress)
+      await loadVideos()
+      handleChange('hero.video', blob.url)
+    } catch (e) {
+      alert((e as Error).message || 'Upload fehlgeschlagen')
+    } finally {
+      setUploadProgress(null)
+    }
   }
 
   const handleSave = async () => {
@@ -234,16 +244,42 @@ export default function InhaltePage() {
 
       {/* Video Selection */}
       <div className="bg-white rounded-2xl p-5 shadow-sm mb-8">
-        <label className="block text-[13px] font-semibold text-zinc-700 mb-3">
-          Hintergrund-Video
-        </label>
-        <p className="text-[12px] text-zinc-400 mb-4">
-          Wähle das Video, das auf der Startseite im Hintergrund abgespielt wird.
-        </p>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <label className="block text-[13px] font-semibold text-zinc-700 mb-1">
+              Hintergrund-Video
+            </label>
+            <p className="text-[12px] text-zinc-400">
+              Wähle das Video, das auf der Startseite im Hintergrund abgespielt wird.
+            </p>
+          </div>
+          <input
+            ref={videoFileRef}
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime"
+            className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              if (file) void handleVideoUpload(file)
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => videoFileRef.current?.click()}
+            disabled={uploadProgress !== null}
+            className="shrink-0 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl px-4 py-2 text-[13px] font-semibold transition-colors"
+          >
+            {uploadProgress !== null ? `Lädt… ${uploadProgress}%` : '+ Video hochladen'}
+          </button>
+        </div>
+        {uploadProgress !== null && (
+          <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden mb-4">
+            <div className="h-full bg-amber-500 transition-all" style={{ width: `${uploadProgress}%` }} />
+          </div>
+        )}
         {videosLoading ? (
           <div className="text-zinc-400 text-sm py-6 text-center">Lade Videos…</div>
-        ) : videos.length === 0 ? (
-          <div className="text-zinc-400 text-sm py-6 text-center">Keine Videos gefunden.</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Default local video option */}
