@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 
 export default function HoneyDripBackground({ videoUrl }: { videoUrl?: string }) {
   const [offsetY, setOffsetY] = useState(0)
+  // Falls das gewählte Video nicht (mehr) existiert → Standard-Video
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
 
   const handleScroll = useCallback(() => {
     setOffsetY(window.scrollY)
@@ -14,7 +16,7 @@ export default function HoneyDripBackground({ videoUrl }: { videoUrl?: string })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
-  const src = videoUrl || '/honey-drip-compressed.mp4'
+  const src = videoUrl && videoUrl !== failedUrl ? videoUrl : '/honey-drip-compressed.mp4'
   const type = src.endsWith('.webm') ? 'video/webm' : 'video/mp4'
 
   return (
@@ -42,7 +44,7 @@ export default function HoneyDripBackground({ videoUrl }: { videoUrl?: string })
           filter: 'saturate(1.3) brightness(1.1) contrast(1.05)',
         }}
       >
-        <source src={src} type={type} />
+        <source src={src} type={type} onError={() => setFailedUrl(videoUrl ?? null)} />
       </video>
     </div>
   )

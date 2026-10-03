@@ -124,6 +124,8 @@ function RichTextarea({ value, onChange, placeholder, inputClass }: {
 
 type Locale = 'de' | 'en'
 
+const DEFAULT_VIDEO = '/honey-drip-compressed.mp4'
+
 interface BlobMedia {
   url: string
   pathname: string
@@ -139,6 +141,9 @@ export default function InhaltePage() {
   const [videos, setVideos] = useState<BlobMedia[]>([])
   const [videosLoading, setVideosLoading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  // Shop & Startseite lesen das Video sprachunabhängig aus locale "de"
+  const [liveVideo, setLiveVideo] = useState('')
+  const [videoBusy, setVideoBusy] = useState<string | null>(null)
   const videoFileRef = useRef<HTMLInputElement>(null)
 
   const loadContent = useCallback(async (loc: Locale) => {
@@ -157,10 +162,17 @@ export default function InhaltePage() {
   const loadVideos = useCallback(async () => {
     setVideosLoading(true)
     try {
-      const res = await fetch('/api/media', { credentials: 'include' })
-      if (res.ok) {
-        const all: BlobMedia[] = await res.json()
+      const [mediaRes, cmsRes] = await Promise.all([
+        fetch('/api/media', { credentials: 'include' }),
+        fetch('/api/cms/content?locale=de'),
+      ])
+      if (mediaRes.ok) {
+        const all: BlobMedia[] = await mediaRes.json()
         setVideos(all.filter(m => isVideoPath(m.pathname)))
+      }
+      if (cmsRes.ok) {
+        const cms: Record<string, string> = await cmsRes.json()
+        setLiveVideo(cms['hero.video'] ?? '')
       }
     } finally {
       setVideosLoading(false)
@@ -169,19 +181,65 @@ export default function InhaltePage() {
 
   useEffect(() => {
     void loadContent(locale)
+  }, [locale, loadContent])
+
+  useEffect(() => {
     void loadVideos()
-  }, [locale, loadContent, loadVideos])
+  }, [loadVideos])
 
   const handleChange = (key: string, value: string) => {
     setValues(prev => ({ ...prev, [key]: value }))
   }
 
+  const setVideoLive = async (url: string) => {
+    const res = await fetch('/api/cms/content', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'hero.video', value: url, locale: 'de' }),
+    })
+    if (!res.ok) throw new Error('Live schalten fehlgeschlagen')
+    setLiveVideo(url)
+  }
+
+  const handleGoLive = async (url: string) => {
+    setVideoBusy(url)
+    try {
+      await setVideoLive(url)
+    } catch (e) {
+      alert((e as Error).message)
+    } finally {
+      setVideoBusy(null)
+    }
+  }
+
+  const handleVideoDelete = async (url: string) => {
+    const isLive = url === liveVideo
+    const msg = isLive
+      ? 'Dieses Video ist gerade live. Löschen und auf das Standard-Video zurückschalten?'
+      : 'Video unwiderruflich löschen?'
+    if (!confirm(msg)) return
+    setVideoBusy(url)
+    try {
+      if (isLive) await setVideoLive('')
+      const res = await fetch('/api/media', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      if (!res.ok) throw new Error('Löschen fehlgeschlagen')
+      setVideos(prev => prev.filter(v => v.url !== url))
+    } catch (e) {
+      alert((e as Error).message)
+    } finally {
+      setVideoBusy(null)
+    }
+  }
+
   const handleVideoUpload = async (file: File) => {
     setUploadProgress(0)
     try {
-      const blob = await uploadMedia(file, 'videos', setUploadProgress)
+      await uploadMedia(file, 'videos', setUploadProgress)
       await loadVideos()
-      handleChange('hero.video', blob.url)
     } catch (e) {
       alert((e as Error).message || 'Upload fehlgeschlagen')
     } finally {
@@ -192,10 +250,7 @@ export default function InhaltePage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const keysToSave = [
-        ...CMS_KEYS.map(({ key }) => ({ key, value: values[key] ?? '' })),
-        { key: 'hero.video', value: values['hero.video'] ?? '' },
-      ]
+      const keysToSave = CMS_KEYS.map(({ key }) => ({ key, value: values[key] ?? '' }))
       await Promise.all(
         keysToSave.map(({ key, value }) =>
           fetch('/api/cms/content', {
@@ -250,7 +305,7 @@ export default function InhaltePage() {
               Hintergrund-Video
             </label>
             <p className="text-[12px] text-zinc-400">
-              Wähle das Video, das auf der Startseite im Hintergrund abgespielt wird.
+              „Live schalten“ übernimmt das Video sofort für Startseite und Shop (für alle Sprachen).
             </p>
           </div>
           <input
@@ -282,63 +337,55 @@ export default function InhaltePage() {
           <div className="text-zinc-400 text-sm py-6 text-center">Lade Videos…</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Default local video option */}
-            <button
-              type="button"
-              onClick={() => handleChange('hero.video', '')}
-              className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${
-                !values['hero.video']
-                  ? 'border-amber-500 ring-2 ring-amber-200'
-                  : 'border-zinc-200 hover:border-zinc-300'
-              }`}
-            >
-              <video
-                src="/honey-drip-compressed.mp4"
-                muted
-                loop
-                playsInline
-                autoPlay
-                className="w-full h-32 object-cover"
-              />
-              <div className="p-2">
-                <p className="text-[12px] font-medium text-zinc-700 truncate">Standard-Video (lokal)</p>
-                {!values['hero.video'] && (
-                  <span className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">Aktiv</span>
-                )}
-              </div>
-            </button>
-            {/* Blob videos */}
-            {videos.map(v => {
-              const isSelected = values['hero.video'] === v.url
-              const filename = v.pathname.split('/').pop() ?? v.pathname
-              const shortName = filename.replace(/^\d+-/, '').replace(/[-_]/g, ' ').replace(/\.\w+$/, '')
+            {[
+              { url: '', src: DEFAULT_VIDEO, name: 'Standard-Video (lokal)', title: undefined, size: null as number | null },
+              ...videos.map(v => {
+                const filename = v.pathname.split('/').pop() ?? v.pathname
+                const name = filename.replace(/^\d+-/, '').replace(/[-_]/g, ' ').replace(/\.\w+$/, '')
+                return { url: v.url, src: v.url, name, title: filename, size: v.size }
+              }),
+            ].map(v => {
+              const isLive = liveVideo === v.url
+              const busy = videoBusy === v.url
               return (
-                <button
-                  key={v.url}
-                  type="button"
-                  onClick={() => handleChange('hero.video', v.url)}
-                  className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${
-                    isSelected
-                      ? 'border-amber-500 ring-2 ring-amber-200'
-                      : 'border-zinc-200 hover:border-zinc-300'
+                <div
+                  key={v.url || 'default'}
+                  className={`relative rounded-xl overflow-hidden border-2 transition-all ${
+                    isLive ? 'border-amber-500 ring-2 ring-amber-200' : 'border-zinc-200'
                   }`}
                 >
-                  <video
-                    src={v.url}
-                    muted
-                    loop
-                    playsInline
-                    autoPlay
-                    className="w-full h-32 object-cover"
-                  />
+                  <video src={v.src} muted loop playsInline autoPlay preload="metadata" className="w-full h-32 object-cover" />
                   <div className="p-2">
-                    <p className="text-[12px] font-medium text-zinc-700 truncate" title={filename}>{shortName}</p>
-                    <p className="text-[10px] text-zinc-400">{(v.size / 1024 / 1024).toFixed(1)} MB</p>
-                    {isSelected && (
-                      <span className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">Aktiv</span>
+                    <p className="text-[12px] font-medium text-zinc-700 truncate" title={v.title}>{v.name}</p>
+                    {v.size !== null && (
+                      <p className="text-[10px] text-zinc-400">{(v.size / 1024 / 1024).toFixed(1)} MB</p>
                     )}
+                    <div className="flex items-center gap-2 mt-2">
+                      {isLive ? (
+                        <span className="text-[11px] bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-semibold">● Live</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void handleGoLive(v.url)}
+                          disabled={videoBusy !== null}
+                          className="text-[11px] bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white px-3 py-1 rounded-lg font-semibold transition-colors"
+                        >
+                          {busy ? '…' : 'Live schalten'}
+                        </button>
+                      )}
+                      {v.url && (
+                        <button
+                          type="button"
+                          onClick={() => void handleVideoDelete(v.url)}
+                          disabled={videoBusy !== null}
+                          className="ml-auto text-[11px] text-red-600 hover:bg-red-50 disabled:opacity-50 px-2.5 py-1 rounded-lg font-medium transition-colors"
+                        >
+                          {busy ? '…' : 'Löschen'}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </button>
+                </div>
               )
             })}
           </div>
