@@ -1973,7 +1973,7 @@ export default function KassenbuchPage() {
                           <span className="text-[10px] text-zinc-400 w-5">+</span>
                           <input type="number" min={1} max={300} step={1} value={Math.round(cropScale * 100)}
                             onChange={e => setCropScale(Math.max(0.01, parseInt(e.target.value) || 1) / 100)}
-                            className="w-12 text-[10px] text-zinc-400 text-right bg-zinc-800 border border-zinc-600 rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
+                            className="w-12 text-[10px] text-zinc-400 text-right bg-zinc-50 border border-zinc-200 rounded px-1 py-0.5 text-zinc-700 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
                           <span className="text-[10px] text-zinc-400">%</span>
                         </div>
                       ) : (
@@ -1985,7 +1985,7 @@ export default function KassenbuchPage() {
                               className="flex-1 h-1 accent-amber-500" />
                             <input type="number" min={1} max={300} step={1} value={Math.round(cropScaleX * 100)}
                               onChange={e => setCropScaleX(Math.max(0.01, parseInt(e.target.value) || 1) / 100)}
-                              className="w-12 text-[10px] text-zinc-400 text-right bg-zinc-800 border border-zinc-600 rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
+                              className="w-12 text-[10px] text-zinc-400 text-right bg-zinc-50 border border-zinc-200 rounded px-1 py-0.5 text-zinc-700 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
                             <span className="text-[10px] text-zinc-400">%</span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1995,7 +1995,7 @@ export default function KassenbuchPage() {
                               className="flex-1 h-1 accent-amber-500" />
                             <input type="number" min={1} max={300} step={1} value={Math.round(cropScaleY * 100)}
                               onChange={e => setCropScaleY(Math.max(0.01, parseInt(e.target.value) || 1) / 100)}
-                              className="w-12 text-[10px] text-zinc-400 text-right bg-zinc-800 border border-zinc-600 rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
+                              className="w-12 text-[10px] text-zinc-400 text-right bg-zinc-50 border border-zinc-200 rounded px-1 py-0.5 text-zinc-700 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
                             <span className="text-[10px] text-zinc-400">%</span>
                           </div>
                         </div>
