@@ -162,6 +162,9 @@ export default function KassenbuchPage() {
   const [cropSrc, setCropSrc] = useState<string | null>(null)
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropScale, setCropScale] = useState(1)
+  const [cropScaleX, setCropScaleX] = useState(1)
+  const [cropScaleY, setCropScaleY] = useState(1)
+  const [cropSplitAxis, setCropSplitAxis] = useState(false)
   const [cropX, setCropX] = useState(0)
   const [cropY, setCropY] = useState(0)
   const cropCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -1939,7 +1942,7 @@ export default function KassenbuchPage() {
                           src={cropSrc}
                           alt="Crop"
                           className="absolute pointer-events-none"
-                          style={{ transform: `translate(${cropX}px, ${cropY}px) scale(${cropScale})`, transformOrigin: 'top left', maxWidth: 'none' }}
+                          style={{ transform: `translate(${cropX}px, ${cropY}px) scale(${cropSplitAxis ? cropScaleX : cropScale}, ${cropSplitAxis ? cropScaleY : cropScale})`, transformOrigin: 'top left', maxWidth: 'none' }}
                           ref={el => { cropImgRef.current = el }}
                           onLoad={e => {
                             const img = e.target as HTMLImageElement
@@ -1947,6 +1950,8 @@ export default function KassenbuchPage() {
                             const containerH = 200
                             const fitScale = Math.max(containerW / img.naturalWidth, containerH / img.naturalHeight)
                             setCropScale(fitScale)
+                            setCropScaleX(fitScale)
+                            setCropScaleY(fitScale)
                             setCropX((containerW - img.naturalWidth * fitScale) / 2)
                             setCropY((containerH - img.naturalHeight * fitScale) / 2)
                           }}
@@ -1959,15 +1964,54 @@ export default function KassenbuchPage() {
                           <div className="absolute top-2/3 left-0 right-0 h-px bg-amber-400/30" />
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-zinc-400 w-5">−</span>
-                        <input type="range" min="0.1" max="3" step="0.05" value={cropScale}
-                          onChange={e => setCropScale(parseFloat(e.target.value))}
-                          className="flex-1 h-1 accent-amber-500" />
-                        <span className="text-[10px] text-zinc-400 w-5">+</span>
-                        <span className="text-[10px] text-zinc-400 w-12 text-right">{Math.round(cropScale * 100)}%</span>
+                      {!cropSplitAxis ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-zinc-400 w-5">−</span>
+                          <input type="range" min="0.01" max="3" step="0.01" value={cropScale}
+                            onChange={e => setCropScale(parseFloat(e.target.value))}
+                            className="flex-1 h-1 accent-amber-500" />
+                          <span className="text-[10px] text-zinc-400 w-5">+</span>
+                          <input type="number" min={1} max={300} step={1} value={Math.round(cropScale * 100)}
+                            onChange={e => setCropScale(Math.max(0.01, parseInt(e.target.value) || 1) / 100)}
+                            className="w-12 text-[10px] text-zinc-400 text-right bg-zinc-800 border border-zinc-600 rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
+                          <span className="text-[10px] text-zinc-400">%</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-zinc-400 w-5">X</span>
+                            <input type="range" min="0.01" max="3" step="0.01" value={cropScaleX}
+                              onChange={e => setCropScaleX(parseFloat(e.target.value))}
+                              className="flex-1 h-1 accent-amber-500" />
+                            <input type="number" min={1} max={300} step={1} value={Math.round(cropScaleX * 100)}
+                              onChange={e => setCropScaleX(Math.max(0.01, parseInt(e.target.value) || 1) / 100)}
+                              className="w-12 text-[10px] text-zinc-400 text-right bg-zinc-800 border border-zinc-600 rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
+                            <span className="text-[10px] text-zinc-400">%</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-zinc-400 w-5">Y</span>
+                            <input type="range" min="0.01" max="3" step="0.01" value={cropScaleY}
+                              onChange={e => setCropScaleY(parseFloat(e.target.value))}
+                              className="flex-1 h-1 accent-amber-500" />
+                            <input type="number" min={1} max={300} step={1} value={Math.round(cropScaleY * 100)}
+                              onChange={e => setCropScaleY(Math.max(0.01, parseInt(e.target.value) || 1) / 100)}
+                              className="w-12 text-[10px] text-zinc-400 text-right bg-zinc-800 border border-zinc-600 rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
+                            <span className="text-[10px] text-zinc-400">%</span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] text-zinc-400">Ziehen zum Verschieben, Slider zum Zoomen</p>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input type="checkbox" checked={cropSplitAxis} onChange={e => {
+                            const split = e.target.checked
+                            setCropSplitAxis(split)
+                            if (split) { setCropScaleX(cropScale); setCropScaleY(cropScale) }
+                            else { setCropScale(cropScaleX) }
+                          }} className="w-3 h-3 accent-amber-500" />
+                          <span className="text-[10px] text-zinc-400">X/Y getrennt</span>
+                        </label>
                       </div>
-                      <p className="text-[10px] text-zinc-400 text-center">Ziehen zum Verschieben, Slider zum Zoomen</p>
                       <div className="flex gap-2">
                         <button type="button" onClick={() => { setCropSrc(null); setCropFile(null) }}
                           className="flex-1 text-[12px] font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg py-2 transition-colors">
@@ -1988,10 +2032,12 @@ export default function KassenbuchPage() {
                             canvas.width = outW; canvas.height = outH
                             const ctx = canvas.getContext('2d')!
                             // Map crop area to source coordinates
-                            const sX = -cropX / cropScale
-                            const sY = -cropY / cropScale
-                            const sW = cW / cropScale
-                            const sH = cH / cropScale
+                            const scX = cropSplitAxis ? cropScaleX : cropScale
+                            const scY = cropSplitAxis ? cropScaleY : cropScale
+                            const sX = -cropX / scX
+                            const sY = -cropY / scY
+                            const sW = cW / scX
+                            const sH = cH / scY
                             ctx.drawImage(img, sX, sY, sW, sH, 0, 0, outW, outH)
                             const blob = await new Promise<Blob>(r => canvas.toBlob(b => r(b!), 'image/jpeg', 0.88))
                             const fd = new FormData()
@@ -2016,12 +2062,30 @@ export default function KassenbuchPage() {
                     </div>
                   ) : prodImageUrl ? (
                     /* ── Uploaded preview ── */
-                    <div className="relative rounded-lg overflow-hidden border border-zinc-200 h-36 bg-zinc-100">
+                    <div className="relative rounded-lg overflow-hidden border border-zinc-200 h-36 bg-zinc-100 group">
                       <img src={prodImageUrl} alt="Vorschau" className="w-full h-full object-cover" />
-                      <button type="button" onClick={() => setProdImageUrl('')}
-                        className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 text-[11px]">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      </button>
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        <button type="button" onClick={async () => {
+                          // Load existing image into crop editor
+                          try {
+                            const res = await fetch(prodImageUrl)
+                            const blob = await res.blob()
+                            const file = new File([blob], 'bestehendes-bild.jpg', { type: blob.type })
+                            setCropFile(file)
+                            setCropSrc(URL.createObjectURL(blob))
+                            setCropScale(1); setCropScaleX(1); setCropScaleY(1); setCropSplitAxis(false); setCropX(0); setCropY(0)
+                          } catch { alert('Bild konnte nicht geladen werden') }
+                        }}
+                          className="w-6 h-6 flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 text-[11px]"
+                          title="Bild bearbeiten">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                        </button>
+                        <button type="button" onClick={() => setProdImageUrl('')}
+                          className="w-6 h-6 flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 text-[11px]"
+                          title="Bild entfernen">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                      </div>
                       <div className="absolute bottom-0 left-0 right-0 bg-black/40 px-2 py-1">
                         <input value={prodImageUrl} readOnly className="w-full bg-transparent text-white text-[10px] outline-none" onClick={e => (e.target as HTMLInputElement).select()} />
                       </div>
@@ -2038,7 +2102,7 @@ export default function KassenbuchPage() {
                         if (!file) return
                         setCropFile(file)
                         setCropSrc(URL.createObjectURL(file))
-                        setCropScale(1); setCropX(0); setCropY(0)
+                        setCropScale(1); setCropScaleX(1); setCropScaleY(1); setCropSplitAxis(false); setCropX(0); setCropY(0)
                         e.target.value = ''
                       }} />
                     </label>

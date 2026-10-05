@@ -195,7 +195,7 @@ function ProductCard({ p, locale, t, onAdd, justAdded, threshold }: {
         <div className="relative">
           {p.imageUrl ? (
             <div className="h-44" style={{ background: 'var(--shop-cream)' }}>
-              <img src={p.imageUrl} alt={name} className="w-full h-full object-cover" />
+              <img src={p.imageUrl} alt={name} className="w-full h-full object-contain" />
             </div>
           ) : (
             <div className="h-44 flex items-center justify-center text-5xl" style={{ background: 'var(--shop-cream)' }}>

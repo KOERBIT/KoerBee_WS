@@ -248,7 +248,7 @@ export default function ProduktePage() {
                   <div className="relative">
                     {p.imageUrl ? (
                       <div className="h-52" style={{ background: 'var(--shop-cream)' }}>
-                        <img src={p.imageUrl} alt={pName(p)} className="w-full h-full object-cover" />
+                        <img src={p.imageUrl} alt={pName(p)} className="w-full h-full object-contain" />
                       </div>
                     ) : (
                       <div className="h-52 flex items-center justify-center text-5xl" style={{ background: 'var(--shop-cream)' }}>🍯</div>
