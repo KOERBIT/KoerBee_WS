@@ -15,6 +15,10 @@ const CONFIG = {
   maxNicken: 20,
   maxNeigung: 15,
   maxDrehung: 150,
+  kopfMaxGieren: 45,
+  kopfMaxNicken: 20,
+  kopfBlickBis: 100,
+  kopfGeradeAb: 130,
 }
 
 const rad = THREE.MathUtils.degToRad
@@ -122,7 +126,74 @@ export default function BeeMascot3D() {
           const mat = (k as THREE.Mesh).material as THREE.MeshStandardMaterial
           if (mat.transparent) mat.depthWrite = false
         }
+        if ((k as THREE.SkinnedMesh).isSkinnedMesh) {
+          (k as THREE.SkinnedMesh).frustumCulled = false
+        }
       })
+
+      // --- Head tracking (bone "Kopf") ---
+      const kopfBone = gltf.scene.getObjectByName('Kopf') as THREE.Bone | undefined
+      let kopfRuhe: THREE.Quaternion | null = null
+      let kopfP: THREE.Quaternion | null = null
+      let kopfGieren = 0
+      let kopfNicken = 0
+      const _v = new THREE.Vector3()
+      const _q = new THREE.Quaternion()
+      const _d = new THREE.Quaternion()
+      const _e = new THREE.Euler(0, 0, 0, 'YXZ')
+      const VORNE = new THREE.Vector3(0, 0, 1)
+
+      if (kopfBone && (kopfBone as THREE.Bone).isBone) {
+        gltf.scene.updateMatrixWorld(true)
+        kopfRuhe = kopfBone.quaternion.clone()
+        kopfP = gltf.scene
+          .getWorldQuaternion(new THREE.Quaternion())
+          .invert()
+          .multiply(
+            kopfBone.parent!.getWorldQuaternion(new THREE.Quaternion()),
+          )
+      }
+
+      function kopfDrehen(dt: number) {
+        if (!kopfRuhe || !kopfP || !kopfBone) return
+        biene.updateMatrixWorld(true)
+        const lokal = kamera.position
+          .clone()
+          .sub(kopfBone.getWorldPosition(_v))
+          .applyQuaternion(
+            gltf.scene.getWorldQuaternion(_q).invert(),
+          )
+        const winkel = THREE.MathUtils.radToDeg(lokal.angleTo(VORNE))
+        const blick = klemme(
+          (o.kopfGeradeAb - winkel) / (o.kopfGeradeAb - o.kopfBlickBis),
+          0,
+          1,
+        )
+        const zielGieren =
+          blick *
+          klemme(
+            Math.atan2(lokal.x, lokal.z),
+            -rad(o.kopfMaxGieren),
+            rad(o.kopfMaxGieren),
+          )
+        const zielNicken =
+          blick *
+          klemme(
+            Math.atan2(lokal.y, Math.hypot(lokal.x, lokal.z)),
+            -rad(o.kopfMaxNicken),
+            rad(o.kopfMaxNicken),
+          )
+        const k = Math.min(1, dt * 4)
+        kopfGieren += (zielGieren - kopfGieren) * k
+        kopfNicken += (zielNicken - kopfNicken) * k
+        _d.setFromEuler(_e.set(-kopfNicken, kopfGieren, 0, 'YXZ'))
+        kopfBone.quaternion
+          .copy(kopfP)
+          .invert()
+          .multiply(_d)
+          .multiply(kopfP)
+          .multiply(kopfRuhe)
+      }
 
       // --- State ---
       biene.position.copy(pixelZuWelt(-80, innerHeight * 0.3, -6))
@@ -251,6 +322,9 @@ export default function BeeMascot3D() {
         // Hover bobbing
         schweben.position.y = 0.05 * Math.sin(zeit * 2 * Math.PI * 1.0)
         schweben.rotation.x = rad(4) * Math.cos(zeit * 2 * Math.PI * 1.0)
+
+        // Head tracking toward viewer
+        kopfDrehen(dt)
 
         renderer.render(szene, kamera)
       })
