@@ -99,3 +99,17 @@ input, select, textarea {
 .prose-landing big { font-size: 1.2em; }
 .prose-landing .font-handwriting { font-family: var(--font-caveat), cursive; font-weight: 700; }
 .prose-landing .font-mono { font-family: var(--font-ibm-plex-mono), monospace; font-size: 0.9em; }
+
+/* 3D product tile hover effect */
+.product-tile-3d {
+  transition: transform 0.35s cubic-bezier(.22,.68,0,1.1), box-shadow 0.35s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.product-tile-3d:hover {
+  transform: perspective(800px) rotateX(-2deg) rotateY(2deg) translateY(-4px);
+  box-shadow: 0 18px 40px rgba(24,21,15,.13), 0 4px 12px rgba(24,21,15,.06) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-tile-3d:hover { transform: none; }
+}

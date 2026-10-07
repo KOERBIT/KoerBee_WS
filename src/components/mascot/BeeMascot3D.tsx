@@ -352,10 +352,9 @@ export default function BeeMascot3D({ modell = '/biene.glb' }: BeeMascot3DProps)
       // Fly toward target — like original biene.js freiFliegen
       function fliegeZu(zielPos: THREE.Vector3, dt: number, tempo: number) {
         const zumZiel = zielPos.clone().sub(biene.position)
-        const wunsch = zumZiel.normalize().multiplyScalar(tempo)
-        // Original uses dt * 1.2 lerp — but we also need distance-based
-        // aggressiveness: steer harder when close to avoid circling
         const dist = zumZiel.length()
+        const wunsch = zumZiel.normalize().multiplyScalar(tempo)
+        // Steer harder when close to avoid circling the target
         const aggressiv = dist < 2 ? 4 : 1.2
         geschw.lerp(wunsch, Math.min(1, dt * aggressiv))
         geschw.setLength(tempo)

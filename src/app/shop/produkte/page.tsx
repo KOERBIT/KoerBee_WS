@@ -242,7 +242,7 @@ export default function ProduktePage() {
             {products.map((p, i) => (
               <RevealCard key={p.id} delay={i * 80}>
                 <div
-                  className="rounded-[20px] overflow-hidden flex flex-col transition-transform duration-300 hover:-translate-y-1"
+                  className="product-tile-3d rounded-[20px] overflow-hidden flex flex-col"
                   style={{ background: 'var(--shop-panel)', border: '1px solid var(--shop-border)', boxShadow: 'var(--shop-shadow)' }}
                 >
                   <div className="relative">
