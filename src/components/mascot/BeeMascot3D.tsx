@@ -18,6 +18,8 @@ const CONFIG = {
   kopfMaxNicken: 20,
   kopfBlickBis: 100,
   kopfGeradeAb: 130,
+  fuehlerWippen: 8,
+  fuehlerFrequenz: 1.7,
 }
 
 const rad = THREE.MathUtils.degToRad
@@ -131,33 +133,57 @@ export default function BeeMascot3D({ modell = '/biene.glb' }: BeeMascot3DProps)
         }
       })
 
-      // --- Head tracking (bone "Kopf") ---
-      const kopfBone = gltf.scene.getObjectByName('Kopf') as THREE.Bone | undefined
-      let kopfRuhe: THREE.Quaternion | null = null
-      let kopfP: THREE.Quaternion | null = null
-      let kopfGieren = 0
-      let kopfNicken = 0
-      const _v = new THREE.Vector3()
-      const _q = new THREE.Quaternion()
+      // --- Bone helper (generalized for head, antennae, etc.) ---
       const _d = new THREE.Quaternion()
       const _e = new THREE.Euler(0, 0, 0, 'YXZ')
+      const _v = new THREE.Vector3()
+      const _q = new THREE.Quaternion()
       const VORNE = new THREE.Vector3(0, 0, 1)
+      gltf.scene.updateMatrixWorld(true)
 
-      if (kopfBone && (kopfBone as THREE.Bone).isBone) {
-        gltf.scene.updateMatrixWorld(true)
-        kopfRuhe = kopfBone.quaternion.clone()
-        kopfP = gltf.scene
-          .getWorldQuaternion(new THREE.Quaternion())
-          .invert()
-          .multiply(kopfBone.parent!.getWorldQuaternion(new THREE.Quaternion()))
+      type BoneHandle = {
+        bone: THREE.Bone
+        setze: (nicken: number, gieren: number, rollen?: number) => void
+      }
+      function knochenSetup(name: string): BoneHandle | null {
+        const k = gltf.scene.getObjectByName(name)
+        if (!k || !(k as THREE.Bone).isBone) return null
+        const bone = k as THREE.Bone
+        const ruhe = bone.quaternion.clone()
+        const P = gltf.scene.getWorldQuaternion(new THREE.Quaternion()).invert()
+          .multiply(bone.parent!.getWorldQuaternion(new THREE.Quaternion()))
+        const Pi = P.clone().invert()
+        return {
+          bone,
+          setze(nicken: number, gieren: number, rollen = 0) {
+            _d.setFromEuler(_e.set(-nicken, gieren, rollen, 'YXZ'))
+            bone.quaternion.copy(Pi).multiply(_d).multiply(P).multiply(ruhe)
+          },
+        }
+      }
+
+      const kopfK = knochenSetup('Kopf')
+      const fuehlerHandles = [knochenSetup('Fuehler_L'), knochenSetup('Fuehler_R')]
+      let kopfGieren = 0
+      let kopfNicken = 0
+
+      function fuehlerWippen() {
+        fuehlerHandles.forEach((f, i) => {
+          if (!f) return
+          const w = zeit * o.fuehlerFrequenz * 2 * Math.PI + i * 1.3
+          f.setze(
+            rad(o.fuehlerWippen) * Math.sin(w),
+            rad(o.fuehlerWippen) * 0.5 * Math.sin(w * 0.7 + 0.5),
+          )
+        })
       }
 
       function kopfDrehen(dt: number) {
-        if (!kopfRuhe || !kopfP || !kopfBone) return
+        if (!kopfK) return
         biene.updateMatrixWorld(true)
         const lokal = kamera.position
           .clone()
-          .sub(kopfBone.getWorldPosition(_v))
+          .sub(kopfK.bone.getWorldPosition(_v))
           .applyQuaternion(gltf.scene.getWorldQuaternion(_q).invert())
         const winkel = THREE.MathUtils.radToDeg(lokal.angleTo(VORNE))
         const blick = klemme(
@@ -168,8 +194,7 @@ export default function BeeMascot3D({ modell = '/biene.glb' }: BeeMascot3DProps)
         const k = Math.min(1, dt * 4)
         kopfGieren += (zG - kopfGieren) * k
         kopfNicken += (zN - kopfNicken) * k
-        _d.setFromEuler(_e.set(-kopfNicken, kopfGieren, 0, 'YXZ'))
-        kopfBone.quaternion.copy(kopfP).invert().multiply(_d).multiply(kopfP).multiply(kopfRuhe)
+        kopfK.setze(kopfNicken, kopfGieren)
       }
 
       // =====================================================================
@@ -431,8 +456,9 @@ export default function BeeMascot3D({ modell = '/biene.glb' }: BeeMascot3DProps)
         schweben.position.y = 0.05 * Math.sin(zeit * 2 * Math.PI * 1.0)
         schweben.rotation.x = rad(4) * Math.cos(zeit * 2 * Math.PI * 1.0)
 
-        // Head tracking toward viewer
+        // Head tracking + antennae
         kopfDrehen(dt)
+        fuehlerWippen()
 
         renderer.render(szene, kamera)
       })

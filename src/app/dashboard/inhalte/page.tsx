@@ -250,7 +250,10 @@ export default function InhaltePage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const keysToSave = CMS_KEYS.map(({ key }) => ({ key, value: values[key] ?? '' }))
+      const keysToSave = [
+        ...CMS_KEYS.map(({ key }) => ({ key, value: values[key] ?? '' })),
+        { key: 'mascot.modell', value: values['mascot.modell'] ?? '/biene.glb' },
+      ]
       await Promise.all(
         keysToSave.map(({ key, value }) =>
           fetch('/api/cms/content', {
@@ -391,6 +394,22 @@ export default function InhaltePage() {
           </div>
         )}
         <p className="text-[11px] text-zinc-400 mt-2 font-mono">hero.video</p>
+      </div>
+
+      {/* Mascot model selector */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <label className="block text-[13px] font-semibold text-zinc-700 mb-2">
+          Maskottchen-Modell
+        </label>
+        <select
+          className={inputClass}
+          value={values['mascot.modell'] ?? '/biene.glb'}
+          onChange={e => handleChange('mascot.modell', e.target.value)}
+        >
+          <option value="/biene.glb">Chibi-Königin (V2)</option>
+          <option value="/biene-realistisch.glb">Realistische Biene (V3)</option>
+        </select>
+        <p className="text-[11px] text-zinc-400 mt-1.5 font-mono">mascot.modell</p>
       </div>
 
       {/* Fields */}

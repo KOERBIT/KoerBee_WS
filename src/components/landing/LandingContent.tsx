@@ -291,7 +291,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
     >
 
       {/* 3D Bee */}
-      <BeeMascot />
+      <BeeMascot modell={cms['mascot.modell'] || undefined} />
 
       {/* ─── Hero ─── */}
       <section

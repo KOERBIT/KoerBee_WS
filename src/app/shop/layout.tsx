@@ -26,17 +26,29 @@ export const viewport: Viewport = {
 }
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
-  const videoEntry = await prisma.cmsContent.findUnique({
-    where: { key_locale: { key: 'hero.video', locale: 'de' } },
-    select: { value: true },
-  })
+  let videoUrl: string | undefined
+  let mascotModell: string | undefined
+  try {
+    const [videoEntry, mascotEntry] = await Promise.all([
+      prisma.cmsContent.findUnique({
+        where: { key_locale: { key: 'hero.video', locale: 'de' } },
+        select: { value: true },
+      }),
+      prisma.cmsContent.findUnique({
+        where: { key_locale: { key: 'mascot.modell', locale: 'de' } },
+        select: { value: true },
+      }),
+    ])
+    videoUrl = videoEntry?.value || undefined
+    mascotModell = mascotEntry?.value || undefined
+  } catch { /* DB unreachable */ }
 
   return (
     <>
-      <HoneyDripBackground videoUrl={videoEntry?.value || undefined} />
+      <HoneyDripBackground videoUrl={videoUrl} />
       <div className="relative min-h-screen flex flex-col" style={{ background: 'var(--shop-bg)', color: 'var(--shop-ink)', fontFamily: 'var(--font-manrope), system-ui, sans-serif' }}>
         {children}
-        <BeeMascot />
+        <BeeMascot modell={mascotModell} />
         <ShopTracker />
       </div>
     </>
