@@ -407,6 +407,7 @@ export default function InhaltePage() {
           onChange={e => handleChange('mascot.modell', e.target.value)}
         >
           <option value="/biene.glb">Chibi-Königin (V2)</option>
+          <option value="/biene-krone.glb">Chibi-Königin mit Krone (V1)</option>
           <option value="/biene-realistisch.glb">Realistische Biene (V3)</option>
         </select>
         <p className="text-[11px] text-zinc-400 mt-1.5 font-mono">mascot.modell</p>
