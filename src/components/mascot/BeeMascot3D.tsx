@@ -133,6 +133,39 @@ export default function BeeMascot3D({ modell = '/biene.glb' }: BeeMascot3DProps)
         }
       })
 
+      // --- Year color marking (Jahresfarbkennzeichen) ---
+      // Cycle: 1/6=weiß, 2/7=gelb, 3/8=rot, 4/9=grün, 5/0=blau
+      const jahresfarben: Record<number, number> = {
+        0: 0x0055ff, // blau (2025, 2030)
+        1: 0xffffff, // weiß (2021, 2026)
+        2: 0xffdd00, // gelb (2022, 2027)
+        3: 0xdd0000, // rot  (2023, 2028)
+        4: 0x00aa00, // grün (2024, 2029)
+      }
+      const jahrFarbe = jahresfarben[new Date().getFullYear() % 5]
+      const rumpfBone = gltf.scene.getObjectByName('Rumpf')
+      if (rumpfBone) {
+        const scheibeGeo = new THREE.CircleGeometry(0.06, 24)
+        const scheibeMat = new THREE.MeshStandardMaterial({
+          color: jahrFarbe,
+          roughness: 0.3,
+          metalness: 0.1,
+          side: THREE.DoubleSide,
+        })
+        const scheibe = new THREE.Mesh(scheibeGeo, scheibeMat)
+        // Position on thorax top — slightly above center, facing up
+        scheibe.position.set(0, 0.42, 0.12)
+        scheibe.rotation.x = -Math.PI / 2.3
+        rumpfBone.add(scheibe)
+
+        // Load KörBee logo onto the marking disc
+        new THREE.TextureLoader().load('/Koerbee_Logo.png', (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace
+          scheibeMat.map = tex
+          scheibeMat.needsUpdate = true
+        })
+      }
+
       // --- Bone helper (generalized for head, antennae, etc.) ---
       const _d = new THREE.Quaternion()
       const _e = new THREE.Euler(0, 0, 0, 'YXZ')
