@@ -22,7 +22,6 @@ const manrope = Manrope({
 const caveat = Caveat({
   variable: '--font-caveat',
   subsets: ['latin'],
-  weight: ['500', '700'],
 })
 
 const ibmPlexMono = IBM_Plex_Mono({
