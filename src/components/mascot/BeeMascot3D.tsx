@@ -7,7 +7,6 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 
 const CONFIG = {
-  modell: '/biene.glb',
   tempo: 2.4,
   tempoWarenkorb: 6,
   fluegelFrequenz: 12,
@@ -26,7 +25,12 @@ const klemme = THREE.MathUtils.clamp
 const winkelDiff = (a: number, b: number) =>
   Math.atan2(Math.sin(a - b), Math.cos(a - b))
 
-export default function BeeMascot3D() {
+export interface BeeMascot3DProps {
+  /** Path to GLB model in /public, e.g. "/biene.glb" */
+  modell?: string
+}
+
+export default function BeeMascot3D({ modell = '/biene.glb' }: BeeMascot3DProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
 
@@ -79,10 +83,7 @@ export default function BeeMascot3D() {
         -(py / innerHeight) * 2 + 1,
         0.5,
       )
-      const richtung = ndc
-        .unproject(kamera)
-        .sub(kamera.position)
-        .normalize()
+      const richtung = ndc.unproject(kamera).sub(kamera.position).normalize()
       const t = (tiefe - kamera.position.z) / richtung.z
       return kamera.position.clone().addScaledVector(richtung, t)
     }
@@ -92,12 +93,11 @@ export default function BeeMascot3D() {
       return [r.left + r.width / 2, r.top + r.height / 2]
     }
 
-    function neuesZiel() {
-      const anflug = Math.random() < 0.18
-      const tiefe = anflug
+    function zufallsPunkt(nahAnflug = false) {
+      const tiefe = nahAnflug
         ? THREE.MathUtils.randFloat(3, 5)
         : THREE.MathUtils.randFloat(-9, 1.5)
-      const rand = anflug ? 0.35 : 0.85
+      const rand = nahAnflug ? 0.35 : 0.85
       return pixelZuWelt(
         innerWidth * (0.5 + THREE.MathUtils.randFloatSpread(rand)),
         innerHeight * (0.5 + THREE.MathUtils.randFloatSpread(rand * 0.9)),
@@ -107,7 +107,7 @@ export default function BeeMascot3D() {
 
     // --- Load model ---
     const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
-    loader.loadAsync(o.modell).then((gltf) => {
+    loader.loadAsync(modell).then((gltf) => {
       if (!laeuft) return
 
       const biene = new THREE.Group()
@@ -149,9 +149,7 @@ export default function BeeMascot3D() {
         kopfP = gltf.scene
           .getWorldQuaternion(new THREE.Quaternion())
           .invert()
-          .multiply(
-            kopfBone.parent!.getWorldQuaternion(new THREE.Quaternion()),
-          )
+          .multiply(kopfBone.parent!.getWorldQuaternion(new THREE.Quaternion()))
       }
 
       function kopfDrehen(dt: number) {
@@ -160,78 +158,64 @@ export default function BeeMascot3D() {
         const lokal = kamera.position
           .clone()
           .sub(kopfBone.getWorldPosition(_v))
-          .applyQuaternion(
-            gltf.scene.getWorldQuaternion(_q).invert(),
-          )
+          .applyQuaternion(gltf.scene.getWorldQuaternion(_q).invert())
         const winkel = THREE.MathUtils.radToDeg(lokal.angleTo(VORNE))
         const blick = klemme(
-          (o.kopfGeradeAb - winkel) / (o.kopfGeradeAb - o.kopfBlickBis),
-          0,
-          1,
+          (o.kopfGeradeAb - winkel) / (o.kopfGeradeAb - o.kopfBlickBis), 0, 1,
         )
-        const zielGieren =
-          blick *
-          klemme(
-            Math.atan2(lokal.x, lokal.z),
-            -rad(o.kopfMaxGieren),
-            rad(o.kopfMaxGieren),
-          )
-        const zielNicken =
-          blick *
-          klemme(
-            Math.atan2(lokal.y, Math.hypot(lokal.x, lokal.z)),
-            -rad(o.kopfMaxNicken),
-            rad(o.kopfMaxNicken),
-          )
+        const zG = blick * klemme(Math.atan2(lokal.x, lokal.z), -rad(o.kopfMaxGieren), rad(o.kopfMaxGieren))
+        const zN = blick * klemme(Math.atan2(lokal.y, Math.hypot(lokal.x, lokal.z)), -rad(o.kopfMaxNicken), rad(o.kopfMaxNicken))
         const k = Math.min(1, dt * 4)
-        kopfGieren += (zielGieren - kopfGieren) * k
-        kopfNicken += (zielNicken - kopfNicken) * k
+        kopfGieren += (zG - kopfGieren) * k
+        kopfNicken += (zN - kopfNicken) * k
         _d.setFromEuler(_e.set(-kopfNicken, kopfGieren, 0, 'YXZ'))
-        kopfBone.quaternion
-          .copy(kopfP)
-          .invert()
-          .multiply(_d)
-          .multiply(kopfP)
-          .multiply(kopfRuhe)
+        kopfBone.quaternion.copy(kopfP).invert().multiply(_d).multiply(kopfP).multiply(kopfRuhe)
       }
 
-      // --- Maneuver system ---
+      // =====================================================================
+      // Maneuver system — each maneuver produces a series of waypoints.
+      // The bee always flies with the SAME soft steering, never teleporting.
+      // =====================================================================
       type Manoever =
-        | { typ: 'erkunden'; ziel: THREE.Vector3 }
+        | { typ: 'erkunden' }
         | { typ: 'schweben'; bis: number; zentrum: THREE.Vector3 }
         | { typ: 'achter'; start: number; dauer: number; cx: number; cy: number; rx: number; ry: number; tiefe: number }
-        | { typ: 'sturzflug'; kurve: THREE.CatmullRomCurve3; dauer: number; t: number }
-        | { typ: 'vorbeiflug'; kurve: THREE.CatmullRomCurve3; dauer: number; t: number }
+        | { typ: 'kurvenpfad'; kurve: THREE.CatmullRomCurve3; dauer: number; t: number }
+
+      let zeit = 0
+      let ziel = zufallsPunkt()
+      let tempoFaktor = 1
+      let lenkFaktor = 1.2 // how aggressively the bee steers toward target
 
       function neuesManoever(): Manoever {
         const r = Math.random()
 
-        if (r < 0.25) {
-          // Schweben: hover at a spot for 2-4 seconds
-          return {
-            typ: 'schweben',
-            bis: zeit + 2 + Math.random() * 2,
-            zentrum: biene.position.clone(),
-          }
+        if (r < 0.22) {
+          // Schweben: hover at current spot for 2-4 seconds
+          tempoFaktor = 0.3
+          lenkFaktor = 3
+          return { typ: 'schweben', bis: zeit + 2 + Math.random() * 2, zentrum: biene.position.clone() }
         }
 
-        if (r < 0.45) {
-          // Achter: figure-8 pattern for 6-10 seconds
+        if (r < 0.42) {
+          // Achter: figure-8 for 6-10 seconds
+          tempoFaktor = 1.2
+          lenkFaktor = 3
           const cx = innerWidth * (0.3 + Math.random() * 0.4)
           const cy = innerHeight * (0.2 + Math.random() * 0.4)
-          const rx = innerWidth * (0.12 + Math.random() * 0.18)
-          const ry = innerHeight * (0.08 + Math.random() * 0.12)
           return {
-            typ: 'achter',
-            start: zeit,
-            dauer: 6 + Math.random() * 4,
-            cx, cy, rx, ry,
+            typ: 'achter', start: zeit, dauer: 6 + Math.random() * 4,
+            cx, cy,
+            rx: innerWidth * (0.12 + Math.random() * 0.18),
+            ry: innerHeight * (0.08 + Math.random() * 0.12),
             tiefe: THREE.MathUtils.randFloat(-4, 2),
           }
         }
 
-        if (r < 0.60) {
-          // Sturzflug: swoop down then pull back up
+        if (r < 0.58) {
+          // Sturzflug: swoop via curve waypoints
+          tempoFaktor = 1.6
+          lenkFaktor = 2
           const startPos = biene.position.clone()
           const tiefPunkt = pixelZuWelt(
             innerWidth * (0.3 + Math.random() * 0.4),
@@ -243,46 +227,43 @@ export default function BeeMascot3D() {
             innerHeight * (0.1 + Math.random() * 0.2),
             THREE.MathUtils.randFloat(-5, 0),
           )
-          const kurve = new THREE.CatmullRomCurve3(
-            [startPos, tiefPunkt, hochPunkt],
-            false, 'centripetal',
-          )
+          const kurve = new THREE.CatmullRomCurve3([startPos, tiefPunkt, hochPunkt], false, 'centripetal')
           return {
-            typ: 'sturzflug',
-            kurve,
-            dauer: klemme(kurve.getLength() / (o.tempo * 1.8), 1.5, 3.5),
-            t: 0,
+            typ: 'kurvenpfad', kurve,
+            dauer: klemme(kurve.getLength() / (o.tempo * 1.6), 2, 4), t: 0,
           }
         }
 
-        if (r < 0.75) {
-          // Vorbeiflug: fast straight pass across screen
+        if (r < 0.72) {
+          // Vorbeiflug: sweeping pass — but via a curve the bee steers along
+          tempoFaktor = 2
+          lenkFaktor = 2.5
           const vonLinks = Math.random() < 0.5
           const hoehe = innerHeight * (0.15 + Math.random() * 0.5)
           const tiefe = THREE.MathUtils.randFloat(-2, 4)
-          const start = pixelZuWelt(vonLinks ? -120 : innerWidth + 120, hoehe, tiefe)
+          const startPos = biene.position.clone()
           const mitte = pixelZuWelt(
-            innerWidth * 0.5,
-            hoehe + THREE.MathUtils.randFloatSpread(innerHeight * 0.2),
-            tiefe + THREE.MathUtils.randFloatSpread(3),
+            innerWidth * (vonLinks ? 0.6 : 0.4),
+            hoehe + THREE.MathUtils.randFloatSpread(innerHeight * 0.15),
+            tiefe + THREE.MathUtils.randFloatSpread(2),
           )
-          const ende = pixelZuWelt(vonLinks ? innerWidth + 120 : -120, hoehe + THREE.MathUtils.randFloatSpread(100), tiefe)
-          // Start the bee near the edge for flyby
-          biene.position.copy(start)
-          const kurve = new THREE.CatmullRomCurve3(
-            [start, mitte, ende],
-            false, 'centripetal',
+          const ende = pixelZuWelt(
+            vonLinks ? innerWidth * 0.9 : innerWidth * 0.1,
+            hoehe + THREE.MathUtils.randFloatSpread(80),
+            tiefe,
           )
+          const kurve = new THREE.CatmullRomCurve3([startPos, mitte, ende], false, 'centripetal')
           return {
-            typ: 'vorbeiflug',
-            kurve,
-            dauer: klemme(kurve.getLength() / (o.tempo * 2.2), 2, 4),
-            t: 0,
+            typ: 'kurvenpfad', kurve,
+            dauer: klemme(kurve.getLength() / (o.tempo * 2), 2.5, 5), t: 0,
           }
         }
 
-        // Erkunden: fly to a random point (classic behavior)
-        return { typ: 'erkunden', ziel: neuesZiel() }
+        // Erkunden: chain of 2-4 random points
+        tempoFaktor = 1
+        lenkFaktor = 1.2
+        ziel = zufallsPunkt(Math.random() < 0.18)
+        return { typ: 'erkunden' }
       }
 
       // --- State ---
@@ -298,62 +279,72 @@ export default function BeeMascot3D() {
         t: number
         fertig: () => void
       } | null = null
-      let zeit = 0
-      let manoever: Manoever = { typ: 'erkunden', ziel: neuesZiel() }
+      let manoever: Manoever = { typ: 'erkunden' }
+      let erkundenZaehler = 0 // how many explore points visited before switching
 
       function ausrichten(richtung: THREE.Vector3, dt: number) {
         const horiz = Math.hypot(richtung.x, richtung.z)
         const gewicht = horiz / Math.max(richtung.length(), 1e-6)
         const zielGieren = Math.atan2(richtung.x, richtung.z)
         const maxSchritt = rad(o.maxDrehung) * dt * gewicht * gewicht
-        const schritt = klemme(
-          winkelDiff(zielGieren, gieren),
-          -maxSchritt,
-          maxSchritt,
-        )
+        const schritt = klemme(winkelDiff(zielGieren, gieren), -maxSchritt, maxSchritt)
         gieren += schritt
         const zielNicken = klemme(
           -Math.atan2(richtung.y, Math.max(horiz, 1e-6)),
-          -rad(o.maxNicken),
-          rad(o.maxNicken),
+          -rad(o.maxNicken), rad(o.maxNicken),
         )
         nicken += (zielNicken - nicken) * Math.min(1, dt * 4)
         const zielNeigung = klemme(
           -(schritt / Math.max(dt, 1e-4)) * 0.35,
-          -rad(o.maxNeigung),
-          rad(o.maxNeigung),
+          -rad(o.maxNeigung), rad(o.maxNeigung),
         )
         neigung += (zielNeigung - neigung) * Math.min(1, dt * 4)
         biene.rotation.set(nicken, gieren, neigung)
       }
 
+      // Core steering — always the same soft physics
+      function steuern(zielPos: THREE.Vector3, dt: number, tempo: number, lenk: number) {
+        const zumZiel = zielPos.clone().sub(biene.position)
+        const wunsch = zumZiel.normalize().multiplyScalar(tempo)
+        geschw.lerp(wunsch, Math.min(1, dt * lenk))
+        geschw.setLength(tempo)
+        biene.position.addScaledVector(geschw, dt)
+        ausrichten(geschw, dt)
+      }
+
+      function istAmZiel() {
+        return ziel.clone().sub(biene.position).length() < 0.8
+      }
+
       function freiFliegen(dt: number) {
         const m = manoever
+        const tempo = o.tempo * tempoFaktor
 
         if (m.typ === 'erkunden') {
-          const zumZiel = m.ziel.clone().sub(biene.position)
-          if (zumZiel.length() < 0.8) {
-            manoever = neuesManoever()
-            return
+          steuern(ziel, dt, tempo, lenkFaktor)
+          if (istAmZiel()) {
+            erkundenZaehler++
+            if (erkundenZaehler >= 2 + Math.floor(Math.random() * 3)) {
+              // After 2-4 explore points, switch to a different maneuver
+              erkundenZaehler = 0
+              manoever = neuesManoever()
+            } else {
+              ziel = zufallsPunkt(Math.random() < 0.18)
+            }
           }
-          const wunsch = zumZiel.normalize().multiplyScalar(o.tempo)
-          geschw.lerp(wunsch, Math.min(1, dt * 1.2))
-          geschw.setLength(o.tempo)
-          biene.position.addScaledVector(geschw, dt)
-          ausrichten(geschw, dt)
 
         } else if (m.typ === 'schweben') {
-          // Gentle drift around center point
+          // Drift gently around center
           const drift = new THREE.Vector3(
-            Math.sin(zeit * 1.3) * 0.15,
-            Math.sin(zeit * 0.9 + 1) * 0.1,
-            Math.sin(zeit * 0.7 + 2) * 0.08,
+            Math.sin(zeit * 1.3) * 0.3,
+            Math.sin(zeit * 0.9 + 1) * 0.2,
+            Math.sin(zeit * 0.7 + 2) * 0.15,
           )
-          const zumZentrum = m.zentrum.clone().add(drift).sub(biene.position)
-          geschw.lerp(zumZentrum.multiplyScalar(2), Math.min(1, dt * 3))
-          biene.position.addScaledVector(geschw, dt)
-          ausrichten(geschw, dt)
-          if (zeit > m.bis) manoever = neuesManoever()
+          ziel = m.zentrum.clone().add(drift)
+          steuern(ziel, dt, o.tempo * 0.3, 3)
+          if (zeit > m.bis) {
+            manoever = neuesManoever()
+          }
 
         } else if (m.typ === 'achter') {
           const fortschritt = (zeit - m.start) / m.dauer
@@ -361,38 +352,29 @@ export default function BeeMascot3D() {
             manoever = neuesManoever()
             return
           }
+          // Smooth figure-8 with sine easing at start/end
+          const blend = fortschritt < 0.1
+            ? fortschritt / 0.1
+            : fortschritt > 0.9
+              ? (1 - fortschritt) / 0.1
+              : 1
           const winkel = fortschritt * Math.PI * 2
-          // Lemniscate (figure-8)
           const px = m.cx + m.rx * Math.sin(winkel)
           const py = m.cy + m.ry * Math.sin(winkel * 2)
-          const zielPos = pixelZuWelt(px, py, m.tiefe)
-          const richtung = zielPos.clone().sub(biene.position)
-          geschw.copy(richtung).multiplyScalar(1 / Math.max(dt, 1e-4))
-          geschw.clampLength(0, o.tempo * 1.5)
-          biene.position.lerp(zielPos, Math.min(1, dt * 5))
-          ausrichten(richtung.normalize(), dt)
+          const achterZiel = pixelZuWelt(px, py, m.tiefe)
+          // Blend between current target and figure-8 position for smooth entry/exit
+          ziel = biene.position.clone().lerp(achterZiel, blend)
+          steuern(ziel, dt, tempo, lenkFaktor)
 
-        } else if (m.typ === 'sturzflug') {
+        } else if (m.typ === 'kurvenpfad') {
           m.t = Math.min(1, m.t + dt / m.dauer)
+          // Smooth ease-in-out along the curve
           const s = m.t < 0.5 ? 2 * m.t * m.t : 1 - Math.pow(-2 * m.t + 2, 2) / 2
-          const neu = m.kurve.getPointAt(s)
-          const richtung = neu.clone().sub(biene.position)
-          if (richtung.lengthSq() > 1e-8) ausrichten(richtung, dt)
-          biene.position.copy(neu)
-          if (m.t >= 1) manoever = neuesManoever()
-
-        } else if (m.typ === 'vorbeiflug') {
-          m.t = Math.min(1, m.t + dt / m.dauer)
-          const s = m.t < 0.3
-            ? (m.t / 0.3) * 0.3  // ease in
-            : m.t > 0.7
-              ? 0.7 + ((m.t - 0.7) / 0.3) * 0.3  // ease out
-              : m.t  // constant speed middle
-          const neu = m.kurve.getPointAt(klemme(s, 0, 1))
-          const richtung = neu.clone().sub(biene.position)
-          if (richtung.lengthSq() > 1e-8) ausrichten(richtung, dt)
-          biene.position.copy(neu)
-          if (m.t >= 1) manoever = neuesManoever()
+          ziel = m.kurve.getPointAt(s)
+          steuern(ziel, dt, tempo, lenkFaktor)
+          if (m.t >= 1) {
+            manoever = neuesManoever()
+          }
         }
       }
 
@@ -415,17 +397,15 @@ export default function BeeMascot3D() {
           setTimeout(() => {
             const links = Math.random() < 0.5
             biene.position.copy(
-              pixelZuWelt(
-                links ? -100 : innerWidth + 100,
-                innerHeight * Math.random() * 0.6,
-                -7,
-              ),
+              pixelZuWelt(links ? -100 : innerWidth + 100, innerHeight * Math.random() * 0.6, -7),
             )
             geschw.set(links ? o.tempo : -o.tempo, 0, 0)
             gieren = links ? Math.PI / 2 : -Math.PI / 2
             biene.scale.setScalar(1)
             biene.visible = true
-            manoever = { typ: 'erkunden', ziel: neuesZiel() }
+            erkundenZaehler = 0
+            manoever = { typ: 'erkunden' }
+            ziel = zufallsPunkt()
             modus = 'frei'
           }, 1500)
         }
@@ -436,7 +416,6 @@ export default function BeeMascot3D() {
         const korb = document.querySelector('#cart-icon')
         if (!korb || modus !== 'frei') return
         const [kx, ky] = elementMitte(korb)
-        // Start from current position, arc through center, into cart
         const punkte = [
           biene.position.clone(),
           pixelZuWelt(innerWidth / 2, innerHeight * 0.3, 2.5),
@@ -463,9 +442,7 @@ export default function BeeMascot3D() {
         else if (modus === 'warenkorb') warenkorbFliegen(dt)
 
         // Wing flapping
-        const schlag =
-          rad(o.fluegelAmplitude) *
-          Math.sin(zeit * o.fluegelFrequenz * 2 * Math.PI)
+        const schlag = rad(o.fluegelAmplitude) * Math.sin(zeit * o.fluegelFrequenz * 2 * Math.PI)
         for (const [f, vorz] of fluegel) if (f) f.rotation.z = vorz * schlag
 
         // Hover bobbing
@@ -504,7 +481,7 @@ export default function BeeMascot3D() {
         cleanupRef.current = null
       }
     }
-  }, [])
+  }, [modell])
 
   return <div ref={wrapperRef} />
 }
