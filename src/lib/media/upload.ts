@@ -2,6 +2,10 @@ import { upload } from '@vercel/blob/client'
 
 export const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov']
 
+export function isAudioPath(pathname: string) {
+  return /\.(mp3|m4a|wav|ogg|oga|weba)$/i.test(pathname)
+}
+
 export function isVideoPath(pathname: string) {
   const ext = pathname.split('.').pop()?.toLowerCase() ?? ''
   return VIDEO_EXTENSIONS.includes(ext)

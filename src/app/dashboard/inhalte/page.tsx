@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { uploadMedia, isVideoPath } from '@/lib/media/upload'
+import { HERO_ANIMATIONS, resolveHeroAnimation } from '@/lib/hero-media'
 
 const CMS_KEYS = [
   { key: 'hero.title', label: 'Hero Überschrift', multiline: false, placeholder: 'Frisch vom Stock.' },
@@ -145,6 +146,10 @@ export default function InhaltePage() {
   const [liveVideo, setLiveVideo] = useState('')
   const [videoBusy, setVideoBusy] = useState<string | null>(null)
   const videoFileRef = useRef<HTMLInputElement>(null)
+  const [liveAnimation, setLiveAnimation] = useState('')
+  const [soundUrl, setSoundUrl] = useState('')
+  const [soundBusy, setSoundBusy] = useState(false)
+  const soundFileRef = useRef<HTMLInputElement>(null)
 
   const loadContent = useCallback(async (loc: Locale) => {
     setLoading(true)
@@ -173,6 +178,8 @@ export default function InhaltePage() {
       if (cmsRes.ok) {
         const cms: Record<string, string> = await cmsRes.json()
         setLiveVideo(cms['hero.video'] ?? '')
+        setLiveAnimation(resolveHeroAnimation(cms).id)
+        setSoundUrl(cms['hero.animation.sound'] ?? '')
       }
     } finally {
       setVideosLoading(false)
@@ -191,14 +198,60 @@ export default function InhaltePage() {
     setValues(prev => ({ ...prev, [key]: value }))
   }
 
-  const setVideoLive = async (url: string) => {
+  // Hero-Medien gelten für alle Sprachen → immer unter locale "de" speichern
+  const saveMedia = async (key: string, value: string) => {
     const res = await fetch('/api/cms/content', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: 'hero.video', value: url, locale: 'de' }),
+      body: JSON.stringify({ key, value, locale: 'de' }),
     })
-    if (!res.ok) throw new Error('Live schalten fehlgeschlagen')
+    if (!res.ok) throw new Error('Speichern fehlgeschlagen')
+  }
+
+  const setVideoLive = async (url: string) => {
+    await saveMedia('hero.video', url)
     setLiveVideo(url)
+  }
+
+  const handleAnimationLive = async (id: string) => {
+    setVideoBusy(`anim:${id}`)
+    try {
+      await saveMedia('hero.animation', id)
+      setLiveAnimation(id)
+    } catch (e) {
+      alert((e as Error).message)
+    } finally {
+      setVideoBusy(null)
+    }
+  }
+
+  const handleSoundUpload = async (file: File) => {
+    setSoundBusy(true)
+    try {
+      const old = soundUrl
+      const blob = await uploadMedia(file, 'sounds')
+      await saveMedia('hero.animation.sound', blob.url)
+      setSoundUrl(blob.url)
+      if (old) await fetch('/api/media', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: old }) })
+    } catch (e) {
+      alert((e as Error).message || 'Upload fehlgeschlagen')
+    } finally {
+      setSoundBusy(false)
+    }
+  }
+
+  const handleSoundRemove = async () => {
+    if (!soundUrl || !confirm('Sound entfernen?')) return
+    setSoundBusy(true)
+    try {
+      await saveMedia('hero.animation.sound', '')
+      await fetch('/api/media', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: soundUrl }) })
+      setSoundUrl('')
+    } catch (e) {
+      alert((e as Error).message)
+    } finally {
+      setSoundBusy(false)
+    }
   }
 
   const handleGoLive = async (url: string) => {
@@ -250,10 +303,7 @@ export default function InhaltePage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const keysToSave = [
-        ...CMS_KEYS.map(({ key }) => ({ key, value: values[key] ?? '' })),
-        { key: 'mascot.modell', value: values['mascot.modell'] ?? '/biene.glb' },
-      ]
+      const keysToSave = CMS_KEYS.map(({ key }) => ({ key, value: values[key] ?? '' }))
       await Promise.all(
         keysToSave.map(({ key, value }) =>
           fetch('/api/cms/content', {
@@ -396,21 +446,90 @@ export default function InhaltePage() {
         <p className="text-[11px] text-zinc-400 mt-2 font-mono">hero.video</p>
       </div>
 
-      {/* Mascot model selector */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm">
-        <label className="block text-[13px] font-semibold text-zinc-700 mb-2">
-          Maskottchen-Modell
-        </label>
-        <select
-          className={inputClass}
-          value={values['mascot.modell'] ?? '/biene.glb'}
-          onChange={e => handleChange('mascot.modell', e.target.value)}
-        >
-          <option value="/biene.glb">Chibi-Königin (V2)</option>
-          <option value="/biene-krone.glb">Chibi-Königin mit Krone (V1)</option>
-          <option value="/biene-realistisch.glb">Realistische Biene (V3)</option>
-        </select>
-        <p className="text-[11px] text-zinc-400 mt-1.5 font-mono">mascot.modell</p>
+      {/* Hero-Animation: immer genau eine live */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm mb-8">
+        <label className="block text-[13px] font-semibold text-zinc-700 mb-1">Hero-Animation</label>
+        <p className="text-[12px] text-zinc-400 mb-4">
+          Es ist immer genau eine Animation live – auf Startseite und im Shop, für alle Sprachen.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {HERO_ANIMATIONS.map(a => {
+            const isLive = liveAnimation === a.id
+            return (
+              <div
+                key={a.id}
+                className={`rounded-xl border-2 p-3 flex flex-col gap-2 transition-all ${
+                  isLive ? 'border-amber-500 ring-2 ring-amber-200' : 'border-zinc-200'
+                }`}
+              >
+                <div>
+                  <p className="text-[13px] font-semibold text-zinc-800">{a.label}</p>
+                  <p className="text-[11px] text-zinc-400">{a.description}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isLive ? (
+                    <span className="text-[11px] bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-semibold">● Live</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void handleAnimationLive(a.id)}
+                      disabled={videoBusy !== null}
+                      className="text-[11px] bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white px-3 py-1 rounded-lg font-semibold transition-colors"
+                    >
+                      {videoBusy === `anim:${a.id}` ? '…' : 'Live schalten'}
+                    </button>
+                  )}
+                  <a
+                    href={`/?animation=${a.id}`}
+                    target="_blank"
+                    rel="noopener"
+                    className="ml-auto text-[11px] text-zinc-500 hover:text-zinc-800 hover:bg-zinc-50 px-2.5 py-1 rounded-lg font-medium transition-colors"
+                  >
+                    Vorschau ↗
+                  </a>
+                </div>
+                {a.kind === 'flying-bees' && (
+                  <div className="border-t border-zinc-100 pt-2 mt-1">
+                    <p className="text-[11px] font-medium text-zinc-500 mb-1.5">Sound beim Klick auf die müde Biene</p>
+                    <input
+                      ref={soundFileRef}
+                      type="file"
+                      accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/ogg,audio/webm"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        e.target.value = ''
+                        if (file) void handleSoundUpload(file)
+                      }}
+                    />
+                    {soundUrl && <audio src={soundUrl} controls preload="none" className="w-full h-8 mb-1.5" />}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => soundFileRef.current?.click()}
+                        disabled={soundBusy}
+                        className="text-[11px] bg-zinc-100 hover:bg-zinc-200 disabled:opacity-50 text-zinc-700 px-3 py-1 rounded-lg font-medium transition-colors"
+                      >
+                        {soundBusy ? '…' : soundUrl ? 'Sound ersetzen' : '+ Sound hochladen'}
+                      </button>
+                      {soundUrl && (
+                        <button
+                          type="button"
+                          onClick={() => void handleSoundRemove()}
+                          disabled={soundBusy}
+                          className="text-[11px] text-red-600 hover:bg-red-50 disabled:opacity-50 px-2.5 py-1 rounded-lg font-medium transition-colors"
+                        >
+                          Entfernen
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <p className="text-[11px] text-zinc-400 mt-2 font-mono">hero.animation</p>
       </div>
 
       {/* Fields */}

@@ -113,3 +113,42 @@ input, select, textarea {
 @media (prefers-reduced-motion: reduce) {
   .product-tile-3d:hover { transform: none; }
 }
+
+/* Fliegende 3D-Bienen (src/components/landing/FlyingBees.tsx) – Sprechblase folgt per JS dem Kopf */
+.bee-bubble-anchor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 56;
+  pointer-events: none;
+  will-change: transform;
+}
+.bee-bubble {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: #fff;
+  color: #1c1c1e;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.15);
+  opacity: 0;
+  transform: translateX(-30%) scale(0.6);
+  transform-origin: 30% 100%;
+  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(.22,.68,0,1.4);
+}
+.bee-bubble.is-talking { opacity: 1; transform: translateX(-30%) scale(1); }
+.bee-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 30%;
+  border: 7px solid transparent;
+  border-top-color: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bee-bubble-anchor { display: none; }
+}

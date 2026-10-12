@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import type { Locale } from '@/lib/shop/i18n'
 import LandingContent from '@/components/landing/LandingContent'
 import HoneyDripBackground from '@/components/shop/HoneyDripBackground'
+import { HERO_MEDIA_KEYS, HERO_ANIMATIONS } from '@/lib/hero-media'
+import { heroMediaFromCms } from '@/lib/hero-media-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,9 +21,10 @@ async function loadCms(locale: Locale): Promise<Record<string, string>> {
   })
   const cms: Record<string, string> = {}
   for (const e of entries) if (e.locale === 'de') cms[e.key] = e.value
-  // Medien (Video, Maskottchen) sind sprachunabhängig und kommen immer aus "de"
+  // Medien (Video, Animation, Sound) sind sprachunabhängig und kommen immer aus "de"
+  const media: readonly string[] = HERO_MEDIA_KEYS
   for (const e of entries) {
-    if (e.locale !== 'de' && e.value.trim() && e.key !== 'hero.video' && e.key !== 'mascot.modell') cms[e.key] = e.value
+    if (e.locale !== 'de' && e.value.trim() && !media.includes(e.key)) cms[e.key] = e.value
   }
   return cms
 }
@@ -47,7 +50,8 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default async function LandingPage() {
+export default async function LandingPage({ searchParams }: { searchParams: Promise<{ animation?: string }> }) {
+  const { animation: vorschau } = await searchParams
   const locale = await getLocale()
   let cms: Record<string, string> = {}
   let blogPosts: { id: string; title: string; slug: string; excerpt: string | null; coverImage: string | null; category: string; publishedAt: Date | null }[] = []
@@ -63,10 +67,15 @@ export default async function LandingPage() {
     ])
   } catch { /* DB unreachable — show page with defaults */ }
 
+  const media = heroMediaFromCms(cms)
+  const { videoUrl, soundUrl } = media
+  // ?animation=<id> zeigt eine Animation zur Vorschau, ohne sie live zu schalten
+  const animation = HERO_ANIMATIONS.find(a => a.id === vorschau) ?? media.animation
+
   return (
     <>
-      <HoneyDripBackground videoUrl={cms['hero.video'] || undefined} />
-      <LandingContent cms={cms} blogPosts={blogPosts} locale={locale} />
+      <HoneyDripBackground videoUrl={videoUrl} />
+      <LandingContent cms={cms} blogPosts={blogPosts} locale={locale} animation={animation} soundUrl={soundUrl} />
     </>
   )
 }

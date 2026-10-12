@@ -16,7 +16,10 @@ export async function POST(req: NextRequest) {
       body,
       request: req,
       onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ['image/*', 'video/mp4', 'video/webm', 'video/quicktime'],
+        allowedContentTypes: [
+          'image/*', 'video/mp4', 'video/webm', 'video/quicktime',
+          'audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm',
+        ],
         maximumSizeInBytes: 200 * 1024 * 1024,
         addRandomSuffix: true,
       }),

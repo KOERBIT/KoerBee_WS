@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import BeeMascot from '@/components/mascot/BeeMascot'
+import { cookies } from 'next/headers'
+import HeroAnimation from '@/components/landing/HeroAnimation'
 import ShopTracker from '@/components/shop/ShopTracker'
 import HoneyDripBackground from '@/components/shop/HoneyDripBackground'
-import { prisma } from '@/lib/prisma'
+import { getHeroMedia } from '@/lib/hero-media-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,29 +27,15 @@ export const viewport: Viewport = {
 }
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
-  let videoUrl: string | undefined
-  let mascotModell: string | undefined
-  try {
-    const [videoEntry, mascotEntry] = await Promise.all([
-      prisma.cmsContent.findUnique({
-        where: { key_locale: { key: 'hero.video', locale: 'de' } },
-        select: { value: true },
-      }),
-      prisma.cmsContent.findUnique({
-        where: { key_locale: { key: 'mascot.modell', locale: 'de' } },
-        select: { value: true },
-      }),
-    ])
-    videoUrl = videoEntry?.value || undefined
-    mascotModell = mascotEntry?.value || undefined
-  } catch { /* DB unreachable */ }
+  const { videoUrl, animation, soundUrl } = await getHeroMedia()
+  const locale = (await cookies()).get('shop-locale')?.value === 'en' ? 'en' : 'de'
 
   return (
     <>
       <HoneyDripBackground videoUrl={videoUrl} />
       <div className="relative min-h-screen flex flex-col" style={{ background: 'var(--shop-bg)', color: 'var(--shop-ink)', fontFamily: 'var(--font-manrope), system-ui, sans-serif' }}>
         {children}
-        <BeeMascot modell={mascotModell} />
+        <HeroAnimation animation={animation} locale={locale} soundUrl={soundUrl} />
         <ShopTracker />
       </div>
     </>

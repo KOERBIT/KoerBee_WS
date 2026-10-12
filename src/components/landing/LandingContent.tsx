@@ -3,13 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import { marked } from 'marked'
 import type { Locale } from '@/lib/shop/i18n'
 import { formatEur, formatDate, unitLabel } from '@/lib/shop/format'
 import LanguageToggle from '@/components/shop/LanguageToggle'
-
-const BeeMascot = dynamic(() => import('@/components/mascot/BeeMascot3D'), { ssr: false })
+import HeroAnimation from '@/components/landing/HeroAnimation'
+import type { HeroAnimationOption } from '@/lib/hero-media'
 
 function renderMarkdown(text: string): string {
   return marked.parse(text, { async: false, breaks: true }) as string
@@ -95,6 +94,8 @@ interface Props {
   cms: Record<string, string>
   blogPosts: BlogPostPreview[]
   locale: Locale
+  animation: HeroAnimationOption
+  soundUrl?: string
 }
 
 function FadeIn({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -311,7 +312,7 @@ function ProductShowcase({ product, index, locale }: { product: ShopProduct; ind
   )
 }
 
-export default function LandingContent({ cms, blogPosts, locale }: Props) {
+export default function LandingContent({ cms, blogPosts, locale, animation, soundUrl }: Props) {
   const [products, setProducts] = useState<ShopProduct[]>([])
   const ui = UI[locale]
 
@@ -352,8 +353,8 @@ export default function LandingContent({ cms, blogPosts, locale }: Props) {
 
       <LanguageToggle locale={locale} floating />
 
-      {/* 3D Bee */}
-      <BeeMascot modell={cms['mascot.modell'] || undefined} />
+      {/* Hero-Animation (in der Verwaltung live geschaltet) */}
+      <HeroAnimation animation={animation} locale={locale} soundUrl={soundUrl} />
 
       {/* ─── Hero ─── */}
       <section

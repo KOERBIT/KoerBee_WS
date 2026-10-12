@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { uploadMedia, isVideoPath } from '@/lib/media/upload'
+import { uploadMedia, isVideoPath, isAudioPath } from '@/lib/media/upload'
 
 interface MediaItem {
   url: string
@@ -26,7 +26,7 @@ export default function MediathekPage() {
   useEffect(() => { load() }, [])
 
   async function upload(file: File) {
-    const folder = file.type.startsWith('video/') ? 'videos' : 'media'
+    const folder = file.type.startsWith('video/') ? 'videos' : file.type.startsWith('audio/') ? 'sounds' : 'media'
     setUploading('0%')
     try {
       await uploadMedia(file, folder, p => setUploading(`${p}%`))
@@ -77,7 +77,7 @@ export default function MediathekPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <input ref={fileRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple className="hidden"
+          <input ref={fileRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime,audio/*" multiple className="hidden"
             onChange={async e => {
               const files = e.target.files
               if (!files) return
@@ -112,14 +112,19 @@ export default function MediathekPage() {
         Object.entries(grouped).map(([folder, folderItems]) => (
           <div key={folder} className="mb-8">
             <h2 className="text-[13px] font-semibold text-zinc-500 uppercase tracking-wide mb-3">
-              {folder === 'produkte' ? '🍯 Produkte' : folder === 'media' ? '📷 Allgemein' : folder === 'videos' ? '🎬 Videos' : `📁 ${folder}`}
+              {folder === 'produkte' ? '🍯 Produkte' : folder === 'media' ? '📷 Allgemein' : folder === 'videos' ? '🎬 Videos' : folder === 'sounds' ? '🔊 Sounds' : `📁 ${folder}`}
               <span className="ml-2 text-zinc-400 font-normal normal-case">({folderItems.length})</span>
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {folderItems.map(item => (
                 <div key={item.url} className="group relative bg-white rounded-xl border border-zinc-200 overflow-hidden hover:shadow-md transition-shadow">
                   <div className="aspect-square bg-zinc-100">
-                    {isVideoPath(item.pathname) ? (
+                    {isAudioPath(item.pathname) ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-2">
+                        <span className="text-3xl">🔊</span>
+                        <audio src={item.url} controls preload="none" className="w-full h-8" />
+                      </div>
+                    ) : isVideoPath(item.pathname) ? (
                       <video src={item.url} muted loop playsInline autoPlay preload="metadata" className="w-full h-full object-cover" />
                     ) : (
                       <img src={item.url} alt={item.pathname} className="w-full h-full object-cover" />
