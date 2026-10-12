@@ -5,6 +5,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { marked } from 'marked'
+import type { Locale } from '@/lib/shop/i18n'
+import { formatEur, formatDate, unitLabel } from '@/lib/shop/format'
+import LanguageToggle from '@/components/shop/LanguageToggle'
 
 const BeeMascot = dynamic(() => import('@/components/mascot/BeeMascot3D'), { ssr: false })
 
@@ -12,12 +15,66 @@ function renderMarkdown(text: string): string {
   return marked.parse(text, { async: false, breaks: true }) as string
 }
 
+const UI = {
+  de: {
+    heroTitle: 'Frisch vom Stock.',
+    heroText: 'Honig, Wachs & mehr — direkt vom Imker.\nEhrliche Produkte, faire Preise.',
+    heroCta: 'Produkte entdecken',
+    aboutLabel: 'Hallo, ich bin der Imker.',
+    aboutTitle: 'Leidenschaft für Bienen & Natur',
+    aboutText1: 'Was als Hobby begann, ist heute meine Berufung. Meine Bienenvölker stehen an sorgfältig ausgewählten Standorten — umgeben von Wiesen, Wäldern und Obstbäumen. Jedes Glas Honig erzählt die Geschichte seiner Tracht.',
+    aboutText2: 'Mir ist wichtig, dass meine Produkte natürlich, unbehandelt und ehrlich sind. Keine Tricks, keine Zusätze — nur das, was die Bienen uns schenken.',
+    productsLabel: 'Aus dem Stock',
+    productsTitle: 'Unsere Produkte',
+    brand: 'KörBee Imkerei',
+    brandSuffix: 'Imkerei',
+    product: 'Produkt',
+    toShop: 'Zum Shop',
+    noProducts: 'Produkte werden bald hinzugefügt.',
+    newsLabel: 'Aktuelles',
+    newsTitle: 'Neuigkeiten',
+    allPosts: 'Alle Beiträge →',
+    contact: 'Kontakt',
+    imprint: 'Impressum',
+    privacy: 'Datenschutz',
+    withdrawal: 'Widerruf',
+    shipping: 'Versand & Zahlung',
+    admin: 'Verwaltung',
+  },
+  en: {
+    heroTitle: 'Fresh from the hive.',
+    heroText: 'Honey, wax & more — straight from the beekeeper.\nHonest products, fair prices.',
+    heroCta: 'Discover our products',
+    aboutLabel: "Hi, I'm the beekeeper.",
+    aboutTitle: 'A passion for bees & nature',
+    aboutText1: 'What started as a hobby has become my calling. My bee colonies live at carefully chosen sites, surrounded by meadows, woods and fruit trees. Every jar of honey tells the story of the blossoms it came from.',
+    aboutText2: 'It matters to me that my products are natural, pure and honest. No tricks, no additives — just what the bees give us.',
+    productsLabel: 'From the hive',
+    productsTitle: 'Our products',
+    brand: 'KörBee Beekeeping',
+    brandSuffix: 'Beekeeping',
+    product: 'Product',
+    toShop: 'Visit the shop',
+    noProducts: 'Products coming soon.',
+    newsLabel: 'Latest',
+    newsTitle: 'News',
+    allPosts: 'All posts →',
+    contact: 'Contact',
+    imprint: 'Legal notice',
+    privacy: 'Privacy policy',
+    withdrawal: 'Right of withdrawal',
+    shipping: 'Shipping & payment',
+    admin: 'Admin',
+  },
+} satisfies Record<Locale, Record<string, string>>
+
 interface ShopProduct {
   id: string
   name: string
   shopName: string | null
   shopNameEn: string | null
   description: string | null
+  descriptionEn: string | null
   imageUrl: string | null
   price: number
   shopPrice: number | null
@@ -37,6 +94,7 @@ interface BlogPostPreview {
 interface Props {
   cms: Record<string, string>
   blogPosts: BlogPostPreview[]
+  locale: Locale
 }
 
 function FadeIn({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -66,7 +124,8 @@ function FadeIn({ children, className = '', delay = 0 }: { children: React.React
 }
 
 /* ── Apple-style scroll-driven product showcase ── */
-function ProductShowcase({ product, index }: { product: ShopProduct; index: number }) {
+function ProductShowcase({ product, index, locale }: { product: ShopProduct; index: number; locale: Locale }) {
+  const ui = UI[locale]
   const sectionRef = useRef<HTMLDivElement>(null)
   const [progress, setProgress] = useState(0)
 
@@ -89,7 +148,9 @@ function ProductShowcase({ product, index }: { product: ShopProduct; index: numb
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
-  const name = product.shopName ?? product.name
+  const name = (locale === 'en' ? product.shopNameEn : null) || product.shopName || product.name
+  const description = (locale === 'en' ? product.descriptionEn : null) || product.description
+  const unit = unitLabel(product.unit, locale)
   // Eased progress for smoother feel
   const ease = progress * progress * (3 - 2 * progress) // smoothstep
   const imgScale = 0.85 + ease * 0.15
@@ -183,7 +244,7 @@ function ProductShowcase({ product, index }: { product: ShopProduct; index: numb
                 marginBottom: 4,
               }}
             >
-              Produkt {String(index + 1).padStart(2, '0')}
+              {ui.product} {String(index + 1).padStart(2, '0')}
             </p>
             <h3
               style={{
@@ -196,7 +257,7 @@ function ProductShowcase({ product, index }: { product: ShopProduct; index: numb
             >
               {name}
             </h3>
-            {product.description && (
+            {description && (
               <div
                 className="prose-landing"
                 style={{
@@ -206,7 +267,7 @@ function ProductShowcase({ product, index }: { product: ShopProduct; index: numb
                   marginBottom: 24,
                   maxWidth: 380,
                 }}
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(product.description) }}
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(description) }}
               />
             )}
             <div className="flex items-center gap-5 flex-wrap">
@@ -218,15 +279,12 @@ function ProductShowcase({ product, index }: { product: ShopProduct; index: numb
                   fontSize: '1.3rem',
                 }}
               >
-                {(product.shopPrice ?? product.price).toLocaleString('de-DE', {
-                  style: 'currency',
-                  currency: 'EUR',
-                })}
+                {formatEur(product.shopPrice ?? product.price, locale)}
                 <span
                   className="ml-1"
                   style={{ fontSize: '.75rem', color: 'var(--shop-dim)', fontWeight: 400 }}
                 >
-                  / {product.unit}
+                  / {unit}
                 </span>
               </span>
               <Link
@@ -243,7 +301,7 @@ function ProductShowcase({ product, index }: { product: ShopProduct; index: numb
                   display: 'inline-block',
                 }}
               >
-                Zum Shop
+                {ui.toShop}
               </Link>
             </div>
           </div>
@@ -253,19 +311,20 @@ function ProductShowcase({ product, index }: { product: ShopProduct; index: numb
   )
 }
 
-export default function LandingContent({ cms, blogPosts }: Props) {
+export default function LandingContent({ cms, blogPosts, locale }: Props) {
   const [products, setProducts] = useState<ShopProduct[]>([])
+  const ui = UI[locale]
 
   // CMS values with fallbacks
-  const heroTitle = cms['hero.title'] || 'Frisch vom Stock.'
-  const heroText = cms['hero.text'] || 'Honig, Wachs & mehr — direkt vom Imker.\nEhrliche Produkte, faire Preise.'
-  const heroCta = cms['hero.cta'] || 'Produkte entdecken'
-  const aboutLabel = cms['about.label'] || 'Hallo, ich bin der Imker.'
-  const aboutTitle = cms['about.title'] || 'Leidenschaft für Bienen & Natur'
-  const aboutText1 = cms['about.text1'] || 'Was als Hobby begann, ist heute meine Berufung. Meine Bienenvölker stehen an sorgfältig ausgewählten Standorten — umgeben von Wiesen, Wäldern und Obstbäumen. Jedes Glas Honig erzählt die Geschichte seiner Tracht.'
-  const aboutText2 = cms['about.text2'] || 'Mir ist wichtig, dass meine Produkte natürlich, unbehandelt und ehrlich sind. Keine Tricks, keine Zusätze — nur das, was die Bienen uns schenken.'
-  const productsLabel = cms['products.label'] || 'Aus dem Stock'
-  const productsTitle = cms['products.title'] || 'Unsere Produkte'
+  const heroTitle = cms['hero.title'] || ui.heroTitle
+  const heroText = cms['hero.text'] || ui.heroText
+  const heroCta = cms['hero.cta'] || ui.heroCta
+  const aboutLabel = cms['about.label'] || ui.aboutLabel
+  const aboutTitle = cms['about.title'] || ui.aboutTitle
+  const aboutText1 = cms['about.text1'] || ui.aboutText1
+  const aboutText2 = cms['about.text2'] || ui.aboutText2
+  const productsLabel = cms['products.label'] || ui.productsLabel
+  const productsTitle = cms['products.title'] || ui.productsTitle
 
   useEffect(() => {
     fetch('/api/shop/products')
@@ -282,6 +341,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
 
   return (
     <div
+      lang={locale}
       className="min-h-screen flex flex-col"
       style={{
         background: 'var(--shop-bg)',
@@ -289,6 +349,8 @@ export default function LandingContent({ cms, blogPosts }: Props) {
         fontFamily: 'var(--font-manrope), system-ui, sans-serif',
       }}
     >
+
+      <LanguageToggle locale={locale} floating />
 
       {/* 3D Bee */}
       <BeeMascot modell={cms['mascot.modell'] || undefined} />
@@ -324,7 +386,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
                   color: 'var(--shop-accent)',
                 }}
               >
-                KörBee Imkerei
+                {ui.brand}
               </p>
             </div>
           </FadeIn>
@@ -442,7 +504,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
             style={{ scrollSnapType: 'y proximity' }}
           >
             {products.map((p, i) => (
-              <ProductShowcase key={p.id} product={p} index={i} />
+              <ProductShowcase key={p.id} product={p} index={i} locale={locale} />
             ))}
           </div>
         ) : (
@@ -457,7 +519,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
                 }}
               >
                 <p className="text-4xl mb-3">🐝</p>
-                <p>Produkte werden bald hinzugefügt.</p>
+                <p>{ui.noProducts}</p>
               </div>
             </FadeIn>
           </div>
@@ -470,9 +532,9 @@ export default function LandingContent({ cms, blogPosts }: Props) {
           <FadeIn>
             <div className="text-center mb-8">
               <p style={{ fontFamily: 'var(--font-caveat), cursive', fontWeight: 700, fontSize: '1.3rem', color: 'var(--shop-accent)', marginBottom: 4 }}>
-                Aktuelles
+                {ui.newsLabel}
               </p>
-              <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.4rem, 3vw, 1.9rem)' }}>Neuigkeiten</h2>
+              <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.4rem, 3vw, 1.9rem)' }}>{ui.newsTitle}</h2>
             </div>
           </FadeIn>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -490,7 +552,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
                     <h3 className="text-[14px] font-bold line-clamp-2">{post.title}</h3>
                     {post.excerpt && <p className="text-[12px] mt-1 line-clamp-2" style={{ color: 'var(--shop-dim)' }}>{post.excerpt}</p>}
                     <p className="text-[11px] mt-2" style={{ color: 'var(--shop-dim)' }}>
-                      {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }) : ''}
+                      {post.publishedAt ? formatDate(post.publishedAt, locale, { day: 'numeric', month: 'long' }) : ''}
                     </p>
                   </div>
                 </Link>
@@ -498,7 +560,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
             ))}
           </div>
           <div className="text-center mt-6">
-            <Link href="/blog" className="text-[13px] font-medium hover:opacity-70 transition-opacity" style={{ color: 'var(--shop-accent)', textDecoration: 'none' }}>Alle Beiträge →</Link>
+            <Link href="/blog" className="text-[13px] font-medium hover:opacity-70 transition-opacity" style={{ color: 'var(--shop-accent)', textDecoration: 'none' }}>{ui.allPosts}</Link>
           </div>
         </section>
       )}
@@ -526,7 +588,7 @@ export default function LandingContent({ cms, blogPosts }: Props) {
               KörBee
             </span>
             <span style={{ fontSize: '.68rem', letterSpacing: '.08em', textTransform: 'uppercase' }}>
-              Imkerei
+              {ui.brandSuffix}
             </span>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 items-center justify-center">
@@ -549,42 +611,42 @@ export default function LandingContent({ cms, blogPosts }: Props) {
               style={{ color: 'var(--shop-dim)', textDecoration: 'none' }}
               className="hover:opacity-70 transition-opacity"
             >
-              Kontakt
+              {ui.contact}
             </Link>
             <Link
               href="/impressum"
               style={{ color: 'var(--shop-dim)', textDecoration: 'none' }}
               className="hover:opacity-70 transition-opacity"
             >
-              Impressum
+              {ui.imprint}
             </Link>
             <Link
               href="/datenschutz"
               style={{ color: 'var(--shop-dim)', textDecoration: 'none' }}
               className="hover:opacity-70 transition-opacity"
             >
-              Datenschutz
+              {ui.privacy}
             </Link>
             <Link
               href="/widerruf"
               style={{ color: 'var(--shop-dim)', textDecoration: 'none' }}
               className="hover:opacity-70 transition-opacity"
             >
-              Widerruf
+              {ui.withdrawal}
             </Link>
             <Link
               href="/versand"
               style={{ color: 'var(--shop-dim)', textDecoration: 'none' }}
               className="hover:opacity-70 transition-opacity"
             >
-              Versand & Zahlung
+              {ui.shipping}
             </Link>
             <Link
               href="/login"
               style={{ color: 'var(--shop-dim)', textDecoration: 'none', opacity: 0.4, fontSize: '.72rem' }}
               className="hover:opacity-70 transition-opacity"
             >
-              Verwaltung
+              {ui.admin}
             </Link>
           </div>
         </div>

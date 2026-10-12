@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import LanguageToggle from '@/components/shop/LanguageToggle'
 
 type Locale = 'de' | 'en'
 const L = {
@@ -26,8 +27,12 @@ function PasswortVergessenInner() {
 
   useEffect(() => { const m = document.cookie.match(/shop-locale=([^;]*)/); if (m?.[1] === 'en') setLocale('en') }, [])
 
-  if (resetToken) return <NewPasswordForm token={resetToken} t={t} />
-  return <RequestResetForm t={t} />
+  return (
+    <>
+      <LanguageToggle locale={locale} floating />
+      {resetToken ? <NewPasswordForm token={resetToken} t={t} /> : <RequestResetForm t={t} />}
+    </>
+  )
 }
 
 function RequestResetForm({ t }: { t: Record<string, string> }) {

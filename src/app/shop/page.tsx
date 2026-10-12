@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { formatEur, unitLabel } from '@/lib/shop/format'
 
 type Locale = 'de' | 'en'
 
@@ -219,8 +220,8 @@ function ProductCard({ p, locale, t, onAdd, justAdded, threshold }: {
           {desc && <ExpandableDesc text={desc} locale={locale} />}
           <div className="mt-auto pt-3 flex items-center justify-between">
             <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontVariantNumeric: 'tabular-nums', fontWeight: 500, fontSize: '.92rem' }}>
-              {(p.shopPrice ?? p.price).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-              <span className="text-xs ml-1" style={{ color: 'var(--shop-dim)' }}>/ {p.unit}</span>
+              {formatEur(p.shopPrice ?? p.price, locale)}
+              <span className="text-xs ml-1" style={{ color: 'var(--shop-dim)' }}>/ {unitLabel(p.unit, locale)}</span>
             </span>
             <button
               onClick={() => onAdd(p.id)}
@@ -394,7 +395,7 @@ export default function ShopLandingPage() {
         <div className="mx-4 mt-2">
           <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-2.5 rounded-2xl" style={{ background: 'var(--shop-cream)', border: '1px solid var(--shop-border)' }}>
             <Link href={`/blog/${latestPost.slug}`} className="flex items-center gap-2 text-[13px] font-medium" style={{ color: 'var(--shop-ink)', textDecoration: 'none' }}>
-              <span style={{ color: 'var(--shop-accent)' }}>Neu:</span>
+              <span style={{ color: 'var(--shop-accent)' }}>{locale === 'de' ? 'Neu:' : 'New:'}</span>
               <span className="truncate">{latestPost.title}</span>
             </Link>
             <button

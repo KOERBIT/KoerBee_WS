@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { formatEur, formatDate } from '@/lib/shop/format'
 
 interface OrderItem { product: { name: string; shopName: string | null }; quantity: number; priceAtOrder: number }
 interface Order { id: string; status: string; createdAt: string; items: OrderItem[] }
@@ -46,13 +47,13 @@ export default function KontoPage() {
             return (
               <Link key={o.id} href={`/shop/konto/bestellung/${o.id}`} className="block bg-white rounded-2xl border border-zinc-100 p-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-zinc-500">{new Date(o.createdAt).toLocaleDateString('de-DE')}</span>
+                  <span className="text-sm text-zinc-500">{formatDate(o.createdAt, locale)}</span>
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[o.status] ?? 'bg-zinc-100'}`}>
                     {statusLabels[o.status] ?? o.status}
                   </span>
                 </div>
                 <p className="text-sm text-zinc-700">{o.items.map(i => `${i.quantity}x ${i.product.shopName ?? i.product.name}`).join(', ')}</p>
-                <p className="text-amber-700 font-bold mt-1">{total.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</p>
+                <p className="text-amber-700 font-bold mt-1">{formatEur(total, locale)}</p>
               </Link>
             )
           })}

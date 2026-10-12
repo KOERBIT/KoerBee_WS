@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { formatEur, unitLabel } from '@/lib/shop/format'
+import LanguageToggle from '@/components/shop/LanguageToggle'
 
 type Locale = 'de' | 'en'
 
@@ -200,6 +202,7 @@ export default function ProduktePage() {
             </span>
           </Link>
           <div className="flex items-center gap-4 text-sm">
+            <LanguageToggle locale={locale} />
             <Link
               href="/shop/warenkorb"
               id="cart-icon"
@@ -270,8 +273,8 @@ export default function ProduktePage() {
                     {pDesc(p) && <ExpandableDesc text={pDesc(p)!} locale={locale} />}
                     <div className="mt-auto pt-4 flex items-center justify-between">
                       <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontVariantNumeric: 'tabular-nums', fontWeight: 500, fontSize: '.95rem' }}>
-                        {(p.shopPrice ?? p.price).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                        <span className="text-xs ml-1" style={{ color: 'var(--shop-dim)' }}>/ {p.unit}</span>
+                        {formatEur(p.shopPrice ?? p.price, locale)}
+                        <span className="text-xs ml-1" style={{ color: 'var(--shop-dim)' }}>/ {unitLabel(p.unit, locale)}</span>
                       </span>
                       <button
                         onClick={() => addToCart(p.id)}

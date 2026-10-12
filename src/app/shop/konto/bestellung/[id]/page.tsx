@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { formatEur, formatDate, unitLabel } from '@/lib/shop/format'
 
 interface OrderItem { product: { name: string; shopName: string | null; unit: string }; quantity: number; priceAtOrder: number }
 interface Order { id: string; status: string; createdAt: string; statusChangedAt: string; note: string | null; items: OrderItem[] }
@@ -35,8 +36,8 @@ export default function BestellungDetailPage() {
           <h1 className="text-xl font-bold text-zinc-800">{locale === 'de' ? 'Bestelldetails' : 'Order Details'}</h1>
           <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${STATUS_COLORS[order.status]}`}>{statusLabels[order.status]}</span>
         </div>
-        <p className="text-sm text-zinc-500 mb-1">{locale === 'de' ? 'Bestellt am' : 'Ordered on'}: {new Date(order.createdAt).toLocaleDateString('de-DE')}</p>
-        <p className="text-sm text-zinc-500 mb-4">{locale === 'de' ? 'Letzte Aktualisierung' : 'Last update'}: {new Date(order.statusChangedAt).toLocaleDateString('de-DE')}</p>
+        <p className="text-sm text-zinc-500 mb-1">{locale === 'de' ? 'Bestellt am' : 'Ordered on'}: {formatDate(order.createdAt, locale)}</p>
+        <p className="text-sm text-zinc-500 mb-4">{locale === 'de' ? 'Letzte Aktualisierung' : 'Last update'}: {formatDate(order.statusChangedAt, locale)}</p>
 
         <table className="w-full text-sm mb-4">
           <thead><tr className="border-b border-zinc-100 text-zinc-500"><th className="text-left py-2">{locale === 'de' ? 'Produkt' : 'Product'}</th><th className="text-right py-2">{locale === 'de' ? 'Menge' : 'Qty'}</th><th className="text-right py-2">{locale === 'de' ? 'Preis' : 'Price'}</th><th className="text-right py-2">{locale === 'de' ? 'Summe' : 'Subtotal'}</th></tr></thead>
@@ -44,14 +45,14 @@ export default function BestellungDetailPage() {
             {order.items.map((i, idx) => (
               <tr key={idx} className="border-b border-zinc-50">
                 <td className="py-2">{i.product.shopName ?? i.product.name}</td>
-                <td className="text-right py-2">{i.quantity} {i.product.unit}</td>
-                <td className="text-right py-2">{i.priceAtOrder.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</td>
-                <td className="text-right py-2 font-medium">{(i.quantity * i.priceAtOrder).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</td>
+                <td className="text-right py-2">{i.quantity} {unitLabel(i.product.unit, locale)}</td>
+                <td className="text-right py-2">{formatEur(i.priceAtOrder, locale)}</td>
+                <td className="text-right py-2 font-medium">{formatEur(i.quantity * i.priceAtOrder, locale)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="text-right font-bold text-amber-700 text-lg">{total.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</p>
+        <p className="text-right font-bold text-amber-700 text-lg">{formatEur(total, locale)}</p>
         {order.note && <p className="mt-4 text-sm text-zinc-600 bg-zinc-50 rounded-xl p-3">{order.note}</p>}
       </div>
     </>

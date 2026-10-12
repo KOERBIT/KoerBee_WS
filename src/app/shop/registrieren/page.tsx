@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import LanguageToggle from '@/components/shop/LanguageToggle'
 
 type Locale = 'de' | 'en'
 const L = {
@@ -49,6 +50,7 @@ export default function ShopRegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-amber-50/30">
+      <LanguageToggle locale={locale} floating />
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-bold text-zinc-800 text-center mb-6">{t.title}</h1>
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-6 space-y-4">

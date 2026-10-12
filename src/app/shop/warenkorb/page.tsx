@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { formatEur, unitLabel } from '@/lib/shop/format'
+import LanguageToggle from '@/components/shop/LanguageToggle'
 
 type Locale = 'de' | 'en'
 interface CartItem { productId: string; quantity: number }
@@ -115,9 +117,12 @@ export default function WarenkorbPage() {
               KörBee
             </span>
           </Link>
-          <Link href="/shop/produkte" className="hover:opacity-70 transition-opacity" style={{ color: 'var(--shop-dim)', textDecoration: 'none', fontWeight: 600, fontSize: '.85rem' }}>
-            {t.back}
-          </Link>
+          <div className="flex items-center gap-3">
+            <LanguageToggle locale={locale} />
+            <Link href="/shop/produkte" className="hover:opacity-70 transition-opacity" style={{ color: 'var(--shop-dim)', textDecoration: 'none', fontWeight: 600, fontSize: '.85rem' }}>
+              {t.back}
+            </Link>
+          </div>
         </nav>
       </header>
 
@@ -156,7 +161,7 @@ export default function WarenkorbPage() {
                     <div className="flex-1">
                       <h3 className="font-bold" style={{ color: 'var(--shop-ink)' }}>{pName(p)}</h3>
                       <p className="text-sm" style={{ color: 'var(--shop-dim)', fontFamily: "'IBM Plex Mono', monospace" }}>
-                        {price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} / {p.unit}
+                        {formatEur(price, locale)} / {unitLabel(p.unit, locale)}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -173,7 +178,7 @@ export default function WarenkorbPage() {
                       >+</button>
                     </div>
                     <span className="w-24 text-right font-bold" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '.95rem' }}>
-                      {(price * item.quantity).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      {formatEur(price * item.quantity, locale)}
                     </span>
                     <button
                       onClick={() => removeItem(item.productId)}
@@ -206,7 +211,7 @@ export default function WarenkorbPage() {
             <div className="mt-6 flex items-center justify-between px-1">
               <span className="text-lg font-extrabold">{t.total}</span>
               <span className="text-xl font-extrabold" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                {total.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                {formatEur(total, locale)}
               </span>
             </div>
 

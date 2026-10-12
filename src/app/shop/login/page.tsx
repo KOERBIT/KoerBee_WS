@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import LanguageToggle from '@/components/shop/LanguageToggle'
 
 type Locale = 'de' | 'en'
 const L = {
@@ -51,6 +52,7 @@ function ShopLoginForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-amber-50/30">
+      <LanguageToggle locale={locale} floating />
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-bold text-zinc-800 text-center mb-6">{t.title}</h1>
         {verified && <p className="mb-4 text-green-600 text-sm text-center bg-green-50 border border-green-200 rounded-xl p-3">{t.verified}</p>}
