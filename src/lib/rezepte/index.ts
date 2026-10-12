@@ -11,6 +11,6 @@ export const RECIPES: RecipeEntry[] = [
     slug: 'propolis-zirbensalbe',
     title: 'Propolis-Zirbensalbe',
     category: 'Salben',
-    description: 'Feste, gut streichbare Salbe auf Shea-Basis mit Bienenwachs, Propolis und Zirbenharz – mit Mengenrechner.',
+    description: 'Feste, gut streichbare Salbe auf Shea-Basis mit Bienenwachs, Propolis, Zirbenharz und Ringelblumenöl – mit Mengenrechner.',
   },
 ]

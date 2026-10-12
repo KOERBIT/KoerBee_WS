@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { DecimalInput } from '@/components/DecimalInput'
 import {
   calcSalbe, switchSalbeMode, salbeWarnings, formatGrams, formatNumber,
-  DEFAULT_SALBE_INPUT, FIRMNESS_OPTIONS, RESIN_OPTIONS, SalbeInput, SalbeMode,
+  DEFAULT_SALBE_INPUT, FIRMNESS_OPTIONS, RESIN_OPTIONS, CALENDULA_OPTIONS, SalbeInput, SalbeMode,
 } from '@/lib/rezepte/salbe'
 
 const STORAGE_KEY = 'rezept-salbe-v1'
@@ -16,7 +16,8 @@ const STEPS: { title: string; temp?: string; text: string }[] = [
   { title: 'Zirbenharz in Shea lösen', temp: '75–80 °C', text: 'Harz im Gefrierfach spröde werden lassen, grob zerkleinern und mit der Shea Butter 30–45 Minuten im Wasserbad halten. Das verhindert gleichzeitig, dass die Shea später körnig wird. Ohne Harz die Shea 15–20 Minuten bei 70–75 °C halten.' },
   { title: 'Abseihen', text: 'Heiße Shea-Harz-Mischung durch Kaffeefilter oder Baumwolltuch im Sieb gießen. Filter danach wegwerfen.' },
   { title: 'Wachs dazu', temp: 'ca. 70 °C', text: 'Bienenwachs separat schmelzen (Schmelzpunkt 62–64 °C) und mit der abgeseihten Shea-Mischung verrühren.' },
-  { title: 'Propolis-Lanolin einrühren', text: 'Vom Herd nehmen und gründlich rühren, bis alles gleichmäßig ist. Bei ca. 50 °C das Vitamin E zugeben.' },
+  { title: 'Propolis-Lanolin einrühren', text: 'Vom Herd nehmen und gründlich rühren, bis alles gleichmäßig ist.' },
+  { title: 'Ringelblumenöl und Vitamin E zugeben', temp: 'ca. 50 °C', text: 'Ringelblumenöl (zimmerwarm) und Vitamin E einrühren. Die niedrige Temperatur schont die Wirkstoffe des Öls. Weiter rühren, bis alles gleichmäßig verbunden ist.' },
   { title: 'Löffeltest', text: 'Etwas Salbe auf einen kalten Teller geben und 2–3 Minuten in den Kühlschrank stellen. Zu weich: etwas Wachs nachschmelzen. Zu fest: etwas Shea oder Lanolin dazu.' },
   { title: 'Abfüllen und schnell kühlen', text: 'In Glas- oder Alutiegel füllen und 1–2 Stunden in den Kühlschrank stellen. Danach kühl und dunkel lagern, Haltbarkeit etwa 12 Monate.' },
 ]
@@ -94,7 +95,7 @@ export default function PropolisZirbensalbePage() {
         <Link href="/dashboard/rezepte" className="text-[12px] font-medium text-amber-600 hover:text-amber-700">← Rezepte · Salben</Link>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 mt-1">Propolis-Zirbensalbe</h1>
         <p className="text-zinc-500 text-[14px] mt-1 max-w-2xl">
-          Feste, aber gut streichbare Salbe auf Shea-Basis mit eigenem Bienenwachs, Propolis und Zirbenharz. Gib die Shea-Menge oder die gewünschte Gesamtmenge ein, alle anderen Zutaten werden mitgerechnet.
+          Feste, aber gut streichbare Salbe auf Shea-Basis mit eigenem Bienenwachs, Propolis, Zirbenharz und Ringelblumenöl. Gib die Shea-Menge oder die gewünschte Gesamtmenge ein, alle anderen Zutaten werden mitgerechnet.
         </p>
       </div>
 
@@ -133,6 +134,12 @@ export default function PropolisZirbensalbePage() {
               value={input.resinPer250} onChange={v => set('resinPer250', v)} />
           </div>
 
+          <div>
+            <label className="block text-[12px] font-medium text-zinc-500 mb-1">Ringelblumenöl (je 250 g Shea)</label>
+            <Segmented options={CALENDULA_OPTIONS.map(o => ({ label: o.label, sub: `${o.grams} g`, value: o.grams }))}
+              value={input.calendulaPer250} onChange={v => set('calendulaPer250', v)} />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[12px] font-medium text-zinc-500 mb-1">Tinktur-Stärke</label>
@@ -169,6 +176,7 @@ export default function PropolisZirbensalbePage() {
           <Row name="Propolis-Tinktur"
             role={`eingedampft, bei ${formatNumber(input.tinctureStrengthPct, input.tinctureStrengthPct % 1 ? 1 : 0)} % ca. ${formatGrams(r.propolisG)} Propolis`}
             value={`${formatNumber(r.tinctureMl)} ml`} />
+          {input.calendulaPer250 > 0 && <Row name="Ringelblumenöl" role="pflegend, am Ende bei ca. 50 °C" value={formatGrams(r.calendulaG)} />}
           <Row name="Vitamin E Öl" role="ca. 1 %, Oxidationsschutz" value={formatGrams(r.vitaminEG)} />
 
           <div className="flex flex-wrap gap-2 mt-4">

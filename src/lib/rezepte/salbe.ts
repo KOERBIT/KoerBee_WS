@@ -23,6 +23,16 @@ export const FIRMNESS_OPTIONS = [
   { label: 'Fest', grams: 45 },
 ] as const
 
+export const CALENDULA_OPTIONS = [
+  { label: 'Ohne', grams: 0 },
+  { label: 'Dezent', grams: 25 },
+  { label: 'Kräftig', grams: 50 },
+] as const
+
+/** Ab dieser Ölmenge (g je 250 g Shea) wird die Salbe mit weniger als "Fest" zu weich */
+export const CALENDULA_SOFT_THRESHOLD = 50
+export const FIRM_WAX = 45
+
 export const RESIN_OPTIONS = [
   { label: 'Ohne', grams: 0 },
   { label: 'Dezent', grams: 10 },
@@ -37,6 +47,8 @@ export interface SalbeInput {
   waxPer250: number
   /** Zirbenharz in g je 250 g Shea */
   resinPer250: number
+  /** Ringelblumenöl in g je 250 g Shea */
+  calendulaPer250: number
   /** Propolis-Gehalt der Tinktur in % */
   tinctureStrengthPct: number
   /** Propolis-Anteil in der fertigen Salbe in % */
@@ -48,6 +60,7 @@ export const DEFAULT_SALBE_INPUT: SalbeInput = {
   amount: 250,
   waxPer250: 35,
   resinPer250: 10,
+  calendulaPer250: 25,
   tinctureStrengthPct: 20,
   propolisPct: 2.5,
 }
@@ -57,6 +70,7 @@ export interface SalbeResult {
   resinG: number
   waxG: number
   lanolinG: number
+  calendulaG: number
   vitaminEG: number
   propolisG: number
   tinctureMl: number
@@ -69,11 +83,11 @@ export function calcSalbe(input: SalbeInput): SalbeResult {
   const amount = Math.max(0, input.amount)
   const p = Math.max(0, input.propolisPct) / 100
   const share = 1 - VITAMIN_E_SHARE - p
-  const factor = 1 + (input.waxPer250 + input.resinPer250 + LANOLIN_PER_250) / 250
+  const factor = 1 + (input.waxPer250 + input.resinPer250 + input.calendulaPer250 + LANOLIN_PER_250) / 250
 
   // Bei unsinnigem Propolis-Anteil (≥ 99 %) gibt es keine sinnvolle Lösung
   if (share <= 0) {
-    return { sheaG: 0, resinG: 0, waxG: 0, lanolinG: 0, vitaminEG: 0, propolisG: 0, tinctureMl: 0, totalG: 0, jars: 0, waxPct: 0 }
+    return { sheaG: 0, resinG: 0, waxG: 0, lanolinG: 0, calendulaG: 0, vitaminEG: 0, propolisG: 0, tinctureMl: 0, totalG: 0, jars: 0, waxPct: 0 }
   }
 
   const sheaG = input.mode === 'shea' ? amount : (amount * share) / factor
@@ -87,6 +101,7 @@ export function calcSalbe(input: SalbeInput): SalbeResult {
     resinG: input.resinPer250 * k,
     waxG,
     lanolinG: LANOLIN_PER_250 * k,
+    calendulaG: input.calendulaPer250 * k,
     vitaminEG: totalG * VITAMIN_E_SHARE,
     propolisG,
     tinctureMl: input.tinctureStrengthPct > 0 ? propolisG / (input.tinctureStrengthPct / 100) : 0,
@@ -107,6 +122,7 @@ export function salbeWarnings(input: SalbeInput, result: SalbeResult): string[] 
   const w: string[] = []
   if (input.propolisPct > PROPOLIS_MAX_PCT) w.push('Propolis über 5 %')
   if (result.tinctureMl > TINCTURE_WARN_ML) w.push('Viel Tinktur: fast vollständig eindampfen')
+  if (input.calendulaPer250 >= CALENDULA_SOFT_THRESHOLD && input.waxPer250 < FIRM_WAX) w.push('Viel Öl: Festigkeit „Fest" wählen')
   return w
 }
 
