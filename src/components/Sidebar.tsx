@@ -70,6 +70,15 @@ const navItems = [
     ),
   },
   {
+    label: 'Rezepte',
+    href: '/dashboard/rezepte',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 4h7a3 3 0 013 3v14a2 2 0 00-2-2H2z" /><path d="M22 4h-7a3 3 0 00-3 3v14a2 2 0 012-2h8z" />
+      </svg>
+    ),
+  },
+  {
     label: 'Kalender',
     href: '/dashboard/calendar',
     icon: (
@@ -212,7 +221,7 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 space-y-0.5">
         {navItems.map((item) => {
-          const active = pathname === item.href
+          const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(`${item.href}/`))
           return (
             <Link
               key={item.href}
