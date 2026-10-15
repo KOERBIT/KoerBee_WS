@@ -152,3 +152,134 @@ input, select, textarea {
 @media (prefers-reduced-motion: reduce) {
   .bee-bubble-anchor { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Dashboard Theme System — CSS Custom Properties
+   ═══════════════════════════════════════════════════════════ */
+
+/* Default theme (light, amber accents — matches existing shop design) */
+:root {
+  --dash-bg: #f5f5f7;
+  --dash-card: #ffffff;
+  --dash-card-glass: rgba(255,255,255,0.85);
+  --dash-card-border: rgba(24,21,15,0.08);
+  --dash-card-shadow: 0 8px 32px rgba(24,21,15,0.08), 0 2px 8px rgba(24,21,15,0.04);
+  --dash-card-shadow-hover: 0 16px 48px rgba(24,21,15,0.14), 0 4px 12px rgba(24,21,15,0.06);
+  --dash-text: #18181b;
+  --dash-text-dim: #52525b;
+  --dash-text-muted: #a1a1aa;
+  --dash-accent: #d98c1f;
+  --dash-accent-soft: rgba(217,140,31,0.10);
+  --dash-accent-2: #b45309;
+  --dash-accent-3: #7c6b3a;
+  --dash-sidebar-bg: #ffffff;
+  --dash-sidebar-active: rgba(217,140,31,0.08);
+  --dash-sidebar-text: #3f3f46;
+  --dash-sidebar-border: rgba(24,21,15,0.08);
+  --dash-highlight: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, transparent 100%);
+}
+
+/* Smoky Honey — warm beige with honey/copper tones */
+[data-theme="smoky-honey"] {
+  --dash-bg: #F5F0EB;
+  --dash-card: #FFFEFA;
+  --dash-card-glass: rgba(255,254,250,0.85);
+  --dash-card-border: rgba(139,105,20,0.08);
+  --dash-card-shadow: 0 8px 32px rgba(139,105,20,0.10), 0 2px 8px rgba(139,105,20,0.06);
+  --dash-card-shadow-hover: 0 16px 48px rgba(139,105,20,0.16), 0 4px 12px rgba(139,105,20,0.08);
+  --dash-text: #3D2E0A;
+  --dash-text-dim: #7A6B4F;
+  --dash-text-muted: #A89A7C;
+  --dash-accent: #8B6914;
+  --dash-accent-soft: rgba(139,105,20,0.10);
+  --dash-accent-2: #B87333;
+  --dash-accent-3: #7C9070;
+  --dash-sidebar-bg: #FAF5EE;
+  --dash-sidebar-active: rgba(139,105,20,0.08);
+  --dash-sidebar-text: #5C4E35;
+  --dash-sidebar-border: rgba(139,105,20,0.08);
+  --dash-highlight: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, transparent 100%);
+}
+
+/* Nordic — cool ice blue with teal/mustard accents */
+[data-theme="nordic"] {
+  --dash-bg: #EEF2F6;
+  --dash-card: #FFFFFF;
+  --dash-card-glass: rgba(255,255,255,0.80);
+  --dash-card-border: rgba(26,83,92,0.06);
+  --dash-card-shadow: 0 8px 32px rgba(26,83,92,0.08), 0 2px 8px rgba(26,83,92,0.04);
+  --dash-card-shadow-hover: 0 16px 48px rgba(26,83,92,0.14), 0 4px 12px rgba(26,83,92,0.06);
+  --dash-text: #1A2B33;
+  --dash-text-dim: #4A6670;
+  --dash-text-muted: #8BA3AD;
+  --dash-accent: #1A535C;
+  --dash-accent-soft: rgba(26,83,92,0.08);
+  --dash-accent-2: #C5A332;
+  --dash-accent-3: #8B7FA8;
+  --dash-sidebar-bg: #F5F8FB;
+  --dash-sidebar-active: rgba(26,83,92,0.06);
+  --dash-sidebar-text: #3A5A63;
+  --dash-sidebar-border: rgba(26,83,92,0.06);
+  --dash-highlight: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, transparent 100%);
+}
+
+/* Propolis — dark anthracite with honey gold accents */
+[data-theme="propolis"] {
+  --dash-bg: #1C1917;
+  --dash-card: rgba(42,36,28,0.80);
+  --dash-card-glass: rgba(42,36,28,0.60);
+  --dash-card-border: rgba(212,168,71,0.12);
+  --dash-card-shadow: 0 8px 32px rgba(0,0,0,0.30), 0 2px 8px rgba(0,0,0,0.20);
+  --dash-card-shadow-hover: 0 16px 48px rgba(212,168,71,0.12), 0 4px 12px rgba(0,0,0,0.30);
+  --dash-text: #F2ECDC;
+  --dash-text-dim: #BFB49A;
+  --dash-text-muted: #8A7E66;
+  --dash-accent: #D4A847;
+  --dash-accent-soft: rgba(212,168,71,0.12);
+  --dash-accent-2: #C07850;
+  --dash-accent-3: #5B8A72;
+  --dash-sidebar-bg: #151210;
+  --dash-sidebar-active: rgba(212,168,71,0.10);
+  --dash-sidebar-text: #A89A7C;
+  --dash-sidebar-border: rgba(212,168,71,0.08);
+  --dash-highlight: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 100%);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Dashboard Tile — 3D glassmorphism card utility
+   ═══════════════════════════════════════════════════════════ */
+
+.dash-tile {
+  background: var(--dash-card);
+  border: 1px solid var(--dash-card-border);
+  box-shadow: var(--dash-card-shadow);
+  border-radius: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.35s cubic-bezier(.22,.68,0,1.1), box-shadow 0.35s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.dash-tile::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: var(--dash-highlight);
+  pointer-events: none;
+  z-index: 1;
+}
+.dash-tile:hover {
+  transform: perspective(800px) rotateX(-1.5deg) rotateY(1.5deg) translateY(-4px);
+  box-shadow: var(--dash-card-shadow-hover);
+}
+
+/* Propolis theme needs backdrop-blur on cards */
+[data-theme="propolis"] .dash-tile {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-tile:hover { transform: none; }
+}

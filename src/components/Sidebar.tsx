@@ -200,7 +200,7 @@ export default function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="w-60 shrink-0 flex flex-col h-screen sticky top-0 bg-white border-r border-zinc-100">
+    <aside className="w-60 shrink-0 flex flex-col h-screen sticky top-0" style={{ background: 'var(--dash-sidebar-bg)', borderRight: '1px solid var(--dash-sidebar-border)' }}>
       {/* Logo */}
       <div className="px-5 py-6 flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-zinc-50">
@@ -213,8 +213,8 @@ export default function Sidebar() {
           />
         </div>
         <div className="flex flex-col">
-          <span className="text-[15px] font-semibold tracking-tight text-zinc-900">KörBee</span>
-          <span className="text-[10px] font-medium tracking-widest uppercase text-zinc-400">Verwaltung</span>
+          <span className="text-[15px] font-semibold tracking-tight" style={{ color: 'var(--dash-text)' }}>KörBee</span>
+          <span className="text-[10px] font-medium tracking-widest uppercase" style={{ color: 'var(--dash-text-muted)' }}>Verwaltung</span>
         </div>
       </div>
 
@@ -226,13 +226,15 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-colors ${
-                active
-                  ? 'bg-amber-50 text-amber-700'
-                  : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
-              }`}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-colors"
+              style={active
+                ? { background: 'var(--dash-sidebar-active)', color: 'var(--dash-accent)' }
+                : { color: 'var(--dash-sidebar-text)' }
+              }
+              onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = 'var(--dash-sidebar-active)'; e.currentTarget.style.color = 'var(--dash-text)' } }}
+              onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--dash-sidebar-text)' } }}
             >
-              <span className={active ? 'text-amber-600' : ''}>{item.icon}</span>
+              <span style={active ? { color: 'var(--dash-accent)' } : {}}>{item.icon}</span>
               {item.label}
             </Link>
           )

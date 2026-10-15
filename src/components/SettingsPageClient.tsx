@@ -6,6 +6,7 @@ import CreateUserModal from '@/components/CreateUserModal'
 import PayPalSettingsForm from '@/components/PayPalSettingsForm'
 import MailSettingsForm from '@/components/MailSettingsForm'
 import AnthropicSettingsForm from '@/components/AnthropicSettingsForm'
+import ThemeSwitcher from '@/components/ThemeSwitcher'
 
 interface SettingsPageClientProps {
   users: Array<{ id: string; email: string; name: string | null }>
@@ -37,6 +38,17 @@ export default function SettingsPageClient({
           Einstellungen
         </h1>
         <p className="text-zinc-500 text-[14px] mt-1">Konto- und App-Einstellungen</p>
+      </div>
+
+      {/* Design-Theme */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
+        <div className="px-5 py-4 border-b border-zinc-100">
+          <h2 className="text-[15px] font-semibold text-zinc-900">Design-Theme</h2>
+          <p className="text-[12px] text-zinc-400 mt-0.5">Wähle das Aussehen deiner Verwaltung</p>
+        </div>
+        <div className="px-5 py-5">
+          <ThemeSwitcher />
+        </div>
       </div>
 
       {/* Konto */}
