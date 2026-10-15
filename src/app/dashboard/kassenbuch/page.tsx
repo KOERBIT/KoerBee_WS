@@ -944,50 +944,55 @@ export default function KassenbuchPage() {
     </div>
   )
 
+  const tabTiles: { id: Tab; label: string; icon: string; value: string; sub: string }[] = [
+    { id: 'verkauf', label: 'Verkäufe', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 3h6v4H9z', value: fmt(totalSales), sub: `${sales.length} Buchungen` },
+    { id: 'kommission', label: 'Kommission', icon: 'M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0', value: fmt(consignmentValue), sub: `${activeConsignments.length} aktiv` },
+    { id: 'paypal', label: 'PayPal', icon: 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6', value: `${paypalTxns.length}`, sub: 'Transaktionen' },
+    { id: 'artikel', label: 'Artikel & Lager', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', value: `${products.length}`, sub: 'Produkte' },
+    { id: 'ausgaben', label: 'Ausgaben', icon: 'M2 7h20M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM12 11v6M9 14h6', value: fmt(expenses.filter(e => new Date(e.date).getMonth() === new Date().getMonth() && new Date(e.date).getFullYear() === new Date().getFullYear()).reduce((s, e) => s + e.amount, 0)), sub: 'Diesen Monat' },
+    { id: 'laeden', label: 'Läden', icon: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9zM9 22V12h6v10', value: `${commissionStores.length}`, sub: 'Kommissionsläden' },
+    { id: 'lagerkorrektionen', label: 'Lagerkorrekturen', icon: 'M4 4h16v16H4zM4 12h16M12 4v16', value: `${stockCorrections.length}`, sub: 'Korrekturen' },
+    { id: 'uebersicht', label: 'Übersicht', icon: 'M18 20V10M12 20V4M6 20v-6', value: fmt(monthTotal), sub: 'Diesen Monat' },
+  ]
+
   return (
     <div className="px-4 md:px-8 py-8 max-w-5xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Kassenbuch</h1>
-          <p className="text-zinc-500 text-[14px] mt-1">Honigverkauf & Kommission</p>
+          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--dash-text)' }}>Kassenbuch</h1>
+          <p className="text-[14px] mt-1" style={{ color: 'var(--dash-text-dim)' }}>Honigverkauf & Kommission</p>
         </div>
         <button onClick={() => setShowExport(true)}
-          className="flex items-center gap-2 px-4 py-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl text-[13px] font-medium transition-colors">
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-medium transition-colors"
+          style={{ border: '1px solid var(--dash-card-border)', color: 'var(--dash-text-dim)', background: 'var(--dash-card)' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider mb-1">Diesen Monat</p>
-          <p className="text-xl font-semibold text-zinc-900">{fmt(monthTotal)}</p>
-        </div>
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider mb-1">Gesamt</p>
-          <p className="text-xl font-semibold text-zinc-900">{fmt(totalSales)}</p>
-        </div>
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider mb-1">Kommission</p>
-          <p className="text-xl font-semibold text-zinc-900">{fmt(consignmentValue)}</p>
-          <p className="text-[11px] text-zinc-400">{activeConsignments.length} aktiv</p>
-        </div>
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider mb-1">Ausgaben (Monat)</p>
-          <p className="text-xl font-semibold text-zinc-900">{fmt(expenses.filter(e => new Date(e.date).getMonth() === new Date().getMonth() && new Date(e.date).getFullYear() === new Date().getFullYear()).reduce((s, e) => s + e.amount, 0))}</p>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 mb-6 overflow-x-auto">
-        {(['verkauf', 'kommission', 'paypal', 'artikel', 'ausgaben', 'laeden', 'lagerkorrektionen', 'uebersicht'] as Tab[]).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 py-2 rounded-lg text-[13px] font-medium transition-colors capitalize whitespace-nowrap ${tab === t ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
-            {t === 'verkauf' ? 'Verkäufe' : t === 'kommission' ? 'Kommission' : t === 'paypal' ? 'PayPal' : t === 'artikel' ? 'Artikel' : t === 'ausgaben' ? 'Ausgaben' : t === 'laeden' ? 'Läden' : t === 'lagerkorrektionen' ? 'Lagerkorrektionen' : 'Übersicht'}
-          </button>
-        ))}
+      {/* Kachel-Navigation */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+        {tabTiles.map((t) => {
+          const active = tab === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className="dash-tile p-4 text-left transition-all"
+              style={active ? { borderColor: 'var(--dash-accent)', boxShadow: `var(--dash-card-shadow-hover), inset 0 0 0 1px var(--dash-accent)` } : {}}
+            >
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-3" style={{ background: active ? 'var(--dash-accent-soft)' : 'var(--dash-accent-soft)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={active ? 'var(--dash-accent)' : 'var(--dash-text-muted)'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <path d={t.icon} />
+                </svg>
+              </div>
+              <p className="text-[13px] font-semibold mb-0.5" style={{ color: active ? 'var(--dash-accent)' : 'var(--dash-text)' }}>{t.label}</p>
+              <p className="text-[17px] font-bold leading-tight" style={{ color: 'var(--dash-text)' }}>{t.value}</p>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--dash-text-muted)' }}>{t.sub}</p>
+            </button>
+          )
+        })}
       </div>
 
       {/* VERKÄUFE */}
