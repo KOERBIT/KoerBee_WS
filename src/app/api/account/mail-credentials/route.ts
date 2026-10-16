@@ -9,13 +9,15 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const c = await prisma.mailCredential.findUnique({
     where: { userId: session.user.id },
-    select: { imapHost: true, imapPort: true, imapUser: true, imapPassword: true, updatedAt: true },
+    select: { imapHost: true, imapPort: true, imapUser: true, imapPassword: true, smtpUser: true, smtpPassword: true, updatedAt: true },
   })
   return NextResponse.json({
     imapHost: c?.imapHost ?? 'imap.gmx.net',
     imapPort: c?.imapPort ?? 993,
     imapUser: c?.imapUser ?? '',
     hasPassword: !!c?.imapPassword,
+    smtpUser: c?.smtpUser ?? '',
+    hasSmtpPassword: !!c?.smtpPassword,
     updatedAt: c?.updatedAt ?? null,
   })
 }
@@ -25,13 +27,15 @@ export async function PUT(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const userId = session.user.id
 
-  let body: { imapHost?: unknown; imapPort?: unknown; imapUser?: unknown; imapPassword?: unknown }
+  let body: { imapHost?: unknown; imapPort?: unknown; imapUser?: unknown; imapPassword?: unknown; smtpUser?: unknown; smtpPassword?: unknown }
   try { body = await req.json() } catch { return NextResponse.json({ error: 'invalid_body' }, { status: 400 }) }
 
   const imapHost = (typeof body.imapHost === 'string' && body.imapHost.trim()) || 'imap.gmx.net'
   const imapPort = Number(body.imapPort) || 993
   const imapUser = typeof body.imapUser === 'string' ? body.imapUser.trim() : ''
   const imapPassword = typeof body.imapPassword === 'string' ? body.imapPassword.trim() : ''
+  const smtpUser = typeof body.smtpUser === 'string' ? body.smtpUser.trim() : ''
+  const smtpPassword = typeof body.smtpPassword === 'string' ? body.smtpPassword.trim() : ''
 
   if (!imapUser) return NextResponse.json({ error: 'user_required' }, { status: 400 })
 
@@ -40,11 +44,12 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'password_required' }, { status: 400 })
   }
   const encryptedPw = imapPassword ? encrypt(imapPassword) : existing!.imapPassword
+  const encryptedSmtpPw = smtpPassword ? encrypt(smtpPassword) : (existing?.smtpPassword ?? null)
 
   await prisma.mailCredential.upsert({
     where: { userId },
-    create: { userId, imapHost, imapPort, imapUser, imapPassword: encryptedPw },
-    update: { imapHost, imapPort, imapUser, imapPassword: encryptedPw },
+    create: { userId, imapHost, imapPort, imapUser, imapPassword: encryptedPw, smtpUser: smtpUser || null, smtpPassword: encryptedSmtpPw },
+    update: { imapHost, imapPort, imapUser, imapPassword: encryptedPw, smtpUser: smtpUser || null, smtpPassword: encryptedSmtpPw },
   })
   return NextResponse.json({ ok: true })
 }

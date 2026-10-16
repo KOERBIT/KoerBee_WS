@@ -479,6 +479,8 @@ model MailCredential {
   imapPassword String   // AES-256-GCM-verschlüsselt
   smtpHost     String   @default("mail.gmx.net")
   smtpPort     Int      @default(587)
+  smtpUser     String?  // Separate Absenderadresse für Quittungen (optional, Fallback: imapUser)
+  smtpPassword String?  // Falls SMTP-Konto eigenes Passwort hat (optional, Fallback: imapPassword)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

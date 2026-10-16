@@ -16,7 +16,9 @@ export async function getSmtpConfigForUser(userId: string): Promise<SmtpConfig |
   const c = await prisma.mailCredential.findUnique({ where: { userId } })
   if (!c || !c.imapUser || !c.imapPassword) return null
   try {
-    return { host: c.smtpHost, port: c.smtpPort, user: c.imapUser, password: decrypt(c.imapPassword) }
+    const user = c.smtpUser || c.imapUser
+    const password = c.smtpPassword ? decrypt(c.smtpPassword) : decrypt(c.imapPassword)
+    return { host: c.smtpHost, port: c.smtpPort, user, password }
   } catch {
     return null
   }

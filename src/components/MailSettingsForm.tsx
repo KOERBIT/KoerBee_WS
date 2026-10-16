@@ -8,6 +8,9 @@ export default function MailSettingsForm() {
   const [imapUser, setImapUser] = useState('')
   const [imapPassword, setImapPassword] = useState('')
   const [hasPassword, setHasPassword] = useState(false)
+  const [smtpUser, setSmtpUser] = useState('')
+  const [smtpPassword, setSmtpPassword] = useState('')
+  const [hasSmtpPassword, setHasSmtpPassword] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -19,6 +22,8 @@ export default function MailSettingsForm() {
       setImapPort(d.imapPort ?? 993)
       setImapUser(d.imapUser ?? '')
       setHasPassword(!!d.hasPassword)
+      setSmtpUser(d.smtpUser ?? '')
+      setHasSmtpPassword(!!d.hasSmtpPassword)
     }).finally(() => setLoading(false))
   }, [])
 
@@ -26,7 +31,7 @@ export default function MailSettingsForm() {
     setSaving(true); setMsg(null)
     const res = await fetch('/api/account/mail-credentials', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imapHost, imapPort, imapUser, imapPassword }),
+      body: JSON.stringify({ imapHost, imapPort, imapUser, imapPassword, smtpUser, smtpPassword }),
     })
     const data = await res.json().catch(() => ({}))
     setSaving(false)
@@ -36,6 +41,7 @@ export default function MailSettingsForm() {
       return
     }
     setImapPassword(''); setHasPassword(true)
+    setSmtpPassword(''); if (smtpUser) setHasSmtpPassword(true)
     setMsg({ kind: 'ok', text: 'Gespeichert.' })
   }
 
@@ -78,6 +84,22 @@ export default function MailSettingsForm() {
         <label className="block text-[12px] font-medium text-zinc-500 mb-1">Passwort / App-Passwort</label>
         <input type="password" value={imapPassword} onChange={e => setImapPassword(e.target.value)}
           placeholder={hasPassword ? '•••••••• (gespeichert – leer lassen, um es zu behalten)' : 'App-Passwort'}
+          className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+      </div>
+
+      <hr className="border-zinc-200" />
+      <p className="text-[12px] text-zinc-500">
+        <strong>Versand-E-Mail für Quittungen</strong> – optional. Falls leer, wird die obige IMAP-Adresse auch zum Versenden verwendet.
+      </p>
+      <div>
+        <label className="block text-[12px] font-medium text-zinc-500 mb-1">Absender-E-Mail (SMTP)</label>
+        <input value={smtpUser} onChange={e => setSmtpUser(e.target.value)} placeholder="z.B. Imker.KoerBee@gmx.de"
+          className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+      </div>
+      <div>
+        <label className="block text-[12px] font-medium text-zinc-500 mb-1">SMTP-Passwort (falls abweichend)</label>
+        <input type="password" value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)}
+          placeholder={hasSmtpPassword ? '•••••••• (gespeichert – leer lassen, um es zu behalten)' : 'Leer = gleich wie oben'}
           className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-[13px] bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
       </div>
 
