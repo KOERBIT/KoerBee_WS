@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { DecimalInput } from '@/components/DecimalInput'
 import {
   calcSalbe, switchSalbeMode, salbeWarnings, formatGrams, formatNumber,
-  DEFAULT_SALBE_INPUT, FIRMNESS_OPTIONS, RESIN_OPTIONS, CALENDULA_OPTIONS, SalbeInput, SalbeMode,
+  DEFAULT_SALBE_INPUT, FIRMNESS_OPTIONS, RESIN_OPTIONS, CALENDULA_OPTIONS, JOJOBA_OPTIONS, SalbeInput, SalbeMode,
 } from '@/lib/rezepte/salbe'
 
 const STORAGE_KEY = 'rezept-salbe-v1'
@@ -17,7 +17,7 @@ const STEPS: { title: string; temp?: string; text: string }[] = [
   { title: 'Abseihen', text: 'Heiße Shea-Harz-Mischung durch Kaffeefilter oder Baumwolltuch im Sieb gießen. Filter danach wegwerfen.' },
   { title: 'Wachs dazu', temp: 'ca. 70 °C', text: 'Bienenwachs separat schmelzen (Schmelzpunkt 62–64 °C) und mit der abgeseihten Shea-Mischung verrühren.' },
   { title: 'Propolis-Lanolin einrühren', text: 'Vom Herd nehmen und gründlich rühren, bis alles gleichmäßig ist.' },
-  { title: 'Ringelblumenöl und Vitamin E zugeben', temp: 'ca. 50 °C', text: 'Ringelblumenöl (zimmerwarm) und Vitamin E einrühren. Die niedrige Temperatur schont die Wirkstoffe des Öls. Weiter rühren, bis alles gleichmäßig verbunden ist.' },
+  { title: 'Öle und Vitamin E zugeben', temp: 'ca. 50 °C', text: 'Ringelblumenöl, Jojobaöl (jeweils zimmerwarm) und Vitamin E einrühren. Die niedrige Temperatur schont die Wirkstoffe der Öle. Weiter rühren, bis alles gleichmäßig verbunden ist.' },
   { title: 'Löffeltest', text: 'Etwas Salbe auf einen kalten Teller geben und 2–3 Minuten in den Kühlschrank stellen. Zu weich: etwas Wachs nachschmelzen. Zu fest: etwas Shea oder Lanolin dazu.' },
   { title: 'Abfüllen und schnell kühlen', text: 'In Glas- oder Alutiegel füllen und 1–2 Stunden in den Kühlschrank stellen. Danach kühl und dunkel lagern, Haltbarkeit etwa 12 Monate.' },
 ]
@@ -140,6 +140,12 @@ export default function PropolisZirbensalbePage() {
               value={input.calendulaPer250} onChange={v => set('calendulaPer250', v)} />
           </div>
 
+          <div>
+            <label className="block text-[12px] font-medium text-zinc-500 mb-1">Jojobaöl (je 250 g Shea)</label>
+            <Segmented options={JOJOBA_OPTIONS.map(o => ({ label: o.label, sub: `${o.grams} g`, value: o.grams }))}
+              value={input.jojobaPer250} onChange={v => set('jojobaPer250', v)} />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[12px] font-medium text-zinc-500 mb-1">Tinktur-Stärke</label>
@@ -177,6 +183,7 @@ export default function PropolisZirbensalbePage() {
             role={`eingedampft, bei ${formatNumber(input.tinctureStrengthPct, input.tinctureStrengthPct % 1 ? 1 : 0)} % ca. ${formatGrams(r.propolisG)} Propolis`}
             value={`${formatNumber(r.tinctureMl)} ml`} />
           {input.calendulaPer250 > 0 && <Row name="Ringelblumenöl" role="pflegend, am Ende bei ca. 50 °C" value={formatGrams(r.calendulaG)} />}
+          {input.jojobaPer250 > 0 && <Row name="Jojobaöl" role="feuchtigkeitsspendend, am Ende bei ca. 50 °C" value={formatGrams(r.jojobaG)} />}
           <Row name="Vitamin E Öl" role="ca. 1 %, Oxidationsschutz" value={formatGrams(r.vitaminEG)} />
 
           <div className="flex flex-wrap gap-2 mt-4">
