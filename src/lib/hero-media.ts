@@ -21,11 +21,11 @@ export const HERO_ANIMATIONS: HeroAnimationOption[] = [
   { id: 'mascot-v1', kind: 'mascot', model: '/biene-krone.glb', label: 'Chibi-Königin mit Krone (V1)', description: '3D-Maskottchen' },
   { id: 'mascot-v3', kind: 'mascot', model: '/biene-realistisch.glb', label: 'Realistische Königin (V3)', description: '3D-Maskottchen mit Jahresfarbe' },
   { id: 'flying-bees', kind: 'flying-bees', label: 'Fliegende Bienen (3D)', description: 'Sportliche & müde Biene, Klick auf die Müde spielt den Sound' },
-  { id: 'maja', kind: 'mascot', model: '/insekten/maja.glb', label: 'Maja (Insekt 1)', description: 'Einzelne Biene' },
-  { id: 'insekt2', kind: 'mascot', model: '/insekten/insekt2.glb', label: 'Insekt 2', description: 'Einzelne Biene' },
-  { id: 'willi', kind: 'mascot', model: '/insekten/willi.glb', label: 'Willi (Insekt 3)', description: 'Einzelne Biene mit Augen & Mund' },
-  { id: 'duo-maja-insekt2', kind: 'duo', models: ['/insekten/maja.glb', '/insekten/insekt2.glb'], label: 'Maja + Insekt 2', description: 'Duo: fliegen zusammen' },
-  { id: 'duo-maja-willi', kind: 'duo', models: ['/insekten/maja.glb', '/insekten/willi.glb'], label: 'Maja + Willi', description: 'Duo: fliegen zusammen' },
+  { id: 'maja', kind: 'mascot', model: '/insekten/maja.glb', label: 'Maja 1', description: 'Einzelne Biene' },
+  { id: 'insekt2', kind: 'mascot', model: '/insekten/insekt2.glb', label: 'Maja 2', description: 'Einzelne Biene' },
+  { id: 'willi', kind: 'mascot', model: '/insekten/willi.glb', label: 'Willi 1', description: 'Einzelne Biene mit Augen & Mund' },
+  { id: 'duo-maja-insekt2', kind: 'duo', models: ['/insekten/maja.glb', '/insekten/insekt2.glb'], label: 'Maja 1 + Maja 2', description: 'Duo: fliegen zusammen' },
+  { id: 'duo-maja-willi', kind: 'duo', models: ['/insekten/maja.glb', '/insekten/willi.glb'], label: 'Maja 1 + Willi 1', description: 'Duo: fliegen zusammen' },
 ]
 
 export const DEFAULT_HERO_ANIMATION = 'mascot-v2'
