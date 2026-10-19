@@ -7,6 +7,7 @@ import type { HeroAnimationOption } from '@/lib/hero-media'
 // three.js nur laden, wenn die jeweilige Animation auch live ist
 const BeeMascot3D = dynamic(() => import('@/components/mascot/BeeMascot3D'), { ssr: false })
 const FlyingBees = dynamic(() => import('@/components/landing/FlyingBees'), { ssr: false })
+const BeeDuo3D = dynamic(() => import('@/components/mascot/BeeDuo3D'), { ssr: false })
 
 /** Zeigt die in der Verwaltung live geschaltete Hero-Animation (siehe lib/hero-media.ts). */
 export default function HeroAnimation({ animation, locale, soundUrl }: {
@@ -19,6 +20,8 @@ export default function HeroAnimation({ animation, locale, soundUrl }: {
       return <BeeMascot3D modell={animation.model} />
     case 'flying-bees':
       return <FlyingBees locale={locale} soundUrl={soundUrl} />
+    case 'duo':
+      return animation.models ? <BeeDuo3D modelle={animation.models} /> : null
     default:
       return null
   }

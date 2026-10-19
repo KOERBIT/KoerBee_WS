@@ -2,7 +2,7 @@
 // gespeichert sprachunabhängig unter CMS-Key `hero.animation` (locale "de").
 // Neue Animation = Eintrag hier + Darstellung in components/landing/HeroAnimation.tsx
 
-export type HeroAnimationKind = 'none' | 'mascot' | 'flying-bees'
+export type HeroAnimationKind = 'none' | 'mascot' | 'flying-bees' | 'duo'
 
 export interface HeroAnimationOption {
   id: string
@@ -11,6 +11,8 @@ export interface HeroAnimationOption {
   description: string
   /** GLB-Modell (nur Maskottchen) */
   model?: string
+  /** Zwei GLB-Modelle (nur Duo) — [Anführer, Begleiter] */
+  models?: [string, string]
 }
 
 export const HERO_ANIMATIONS: HeroAnimationOption[] = [
@@ -19,6 +21,11 @@ export const HERO_ANIMATIONS: HeroAnimationOption[] = [
   { id: 'mascot-v1', kind: 'mascot', model: '/biene-krone.glb', label: 'Chibi-Königin mit Krone (V1)', description: '3D-Maskottchen' },
   { id: 'mascot-v3', kind: 'mascot', model: '/biene-realistisch.glb', label: 'Realistische Königin (V3)', description: '3D-Maskottchen mit Jahresfarbe' },
   { id: 'flying-bees', kind: 'flying-bees', label: 'Fliegende Bienen (3D)', description: 'Sportliche & müde Biene, Klick auf die Müde spielt den Sound' },
+  { id: 'maja', kind: 'mascot', model: '/insekten/maja.glb', label: 'Maja (Insekt 1)', description: 'Einzelne Biene' },
+  { id: 'insekt2', kind: 'mascot', model: '/insekten/insekt2.glb', label: 'Insekt 2', description: 'Einzelne Biene' },
+  { id: 'willi', kind: 'mascot', model: '/insekten/willi.glb', label: 'Willi (Insekt 3)', description: 'Einzelne Biene mit Augen & Mund' },
+  { id: 'duo-maja-insekt2', kind: 'duo', models: ['/insekten/maja.glb', '/insekten/insekt2.glb'], label: 'Maja + Insekt 2', description: 'Duo: fliegen zusammen' },
+  { id: 'duo-maja-willi', kind: 'duo', models: ['/insekten/maja.glb', '/insekten/willi.glb'], label: 'Maja + Willi', description: 'Duo: fliegen zusammen' },
 ]
 
 export const DEFAULT_HERO_ANIMATION = 'mascot-v2'
