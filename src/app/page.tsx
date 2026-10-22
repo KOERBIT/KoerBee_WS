@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import type { Locale } from '@/lib/shop/i18n'
 import LandingContent from '@/components/landing/LandingContent'
 import HoneyDripBackground from '@/components/shop/HoneyDripBackground'
-import { HERO_MEDIA_KEYS, HERO_ANIMATIONS } from '@/lib/hero-media'
+import { HERO_MEDIA_KEYS, HERO_ANIMATIONS, resolveHeroAnimation } from '@/lib/hero-media'
 import { heroMediaFromCms } from '@/lib/hero-media-server'
 
 export const dynamic = 'force-dynamic'
@@ -70,7 +70,10 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
   const media = heroMediaFromCms(cms)
   const { videoUrl, soundUrl } = media
   // ?animation=<id> zeigt eine Animation zur Vorschau, ohne sie live zu schalten
-  const animation = HERO_ANIMATIONS.find(a => a.id === vorschau) ?? media.animation
+  // random-daily → über resolveHeroAnimation auflösen statt den Platzhalter-Eintrag zu nehmen
+  const animation = vorschau === 'random-daily'
+    ? resolveHeroAnimation({ 'hero.animation': 'random-daily' })
+    : HERO_ANIMATIONS.find(a => a.id === vorschau) ?? media.animation
 
   return (
     <>
