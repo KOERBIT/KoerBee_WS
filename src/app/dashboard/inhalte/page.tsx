@@ -178,7 +178,7 @@ export default function InhaltePage() {
       if (cmsRes.ok) {
         const cms: Record<string, string> = await cmsRes.json()
         setLiveVideo(cms['hero.video'] ?? '')
-        setLiveAnimation(resolveHeroAnimation(cms).id)
+        setLiveAnimation(cms['hero.animation'] === 'random-daily' ? 'random-daily' : resolveHeroAnimation(cms).id)
         setSoundUrl(cms['hero.animation.sound'] ?? '')
       }
     } finally {

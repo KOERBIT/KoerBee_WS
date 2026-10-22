@@ -18,4 +18,15 @@ describe('resolveHeroAnimation', () => {
   it('IDs sind eindeutig', () => {
     expect(new Set(HERO_ANIMATIONS.map(a => a.id)).size).toBe(HERO_ANIMATIONS.length)
   })
+  it('random-daily gibt eine echte Animation zurück (nicht none/random-daily)', () => {
+    const result = resolveHeroAnimation({ 'hero.animation': 'random-daily' })
+    expect(result.id).not.toBe('none')
+    expect(result.id).not.toBe('random-daily')
+    expect(result.kind).not.toBe('none')
+  })
+  it('random-daily ist deterministisch (gleicher Tag → gleiches Ergebnis)', () => {
+    const a = resolveHeroAnimation({ 'hero.animation': 'random-daily' })
+    const b = resolveHeroAnimation({ 'hero.animation': 'random-daily' })
+    expect(a.id).toBe(b.id)
+  })
 })
