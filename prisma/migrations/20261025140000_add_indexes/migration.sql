@@ -1,0 +1,24 @@
+-- Indizes für häufig gefilterte Fremdschlüssel-/Filterspalten
+CREATE INDEX IF NOT EXISTS "Apiary_userId_idx" ON "Apiary"("userId");
+CREATE INDEX IF NOT EXISTS "Colony_apiaryId_idx" ON "Colony"("apiaryId");
+CREATE INDEX IF NOT EXISTS "Inspection_colonyId_date_idx" ON "Inspection"("colonyId", "date");
+CREATE INDEX IF NOT EXISTS "InspectionItem_inspectionId_idx" ON "InspectionItem"("inspectionId");
+CREATE INDEX IF NOT EXISTS "Treatment_colonyId_date_idx" ON "Treatment"("colonyId", "date");
+CREATE INDEX IF NOT EXISTS "NfcTag_colonyId_idx" ON "NfcTag"("colonyId");
+CREATE INDEX IF NOT EXISTS "NfcAction_nfcTagId_idx" ON "NfcAction"("nfcTagId");
+CREATE INDEX IF NOT EXISTS "Task_userId_completed_idx" ON "Task"("userId", "completed");
+CREATE INDEX IF NOT EXISTS "Task_colonyId_idx" ON "Task"("colonyId");
+CREATE INDEX IF NOT EXISTS "BreedingLine_userId_idx" ON "BreedingLine"("userId");
+CREATE INDEX IF NOT EXISTS "BreedingBatch_lineId_idx" ON "BreedingBatch"("lineId");
+CREATE INDEX IF NOT EXISTS "Product_userId_idx" ON "Product"("userId");
+CREATE INDEX IF NOT EXISTS "Customer_userId_idx" ON "Customer"("userId");
+CREATE INDEX IF NOT EXISTS "Sale_userId_date_idx" ON "Sale"("userId", "date");
+CREATE INDEX IF NOT EXISTS "SaleItem_saleId_idx" ON "SaleItem"("saleId");
+CREATE INDEX IF NOT EXISTS "Consignment_userId_date_idx" ON "Consignment"("userId", "date");
+CREATE INDEX IF NOT EXISTS "ConsignmentItem_consignmentId_idx" ON "ConsignmentItem"("consignmentId");
+CREATE INDEX IF NOT EXISTS "Expense_userId_date_idx" ON "Expense"("userId", "date");
+CREATE INDEX IF NOT EXISTS "PreOrder_status_createdAt_idx" ON "PreOrder"("status", "createdAt");
+CREATE INDEX IF NOT EXISTS "PreOrder_shopCustomerId_idx" ON "PreOrder"("shopCustomerId");
+CREATE INDEX IF NOT EXISTS "PreOrderItem_preOrderId_idx" ON "PreOrderItem"("preOrderId");
+CREATE INDEX IF NOT EXISTS "BloomReport_userId_date_idx" ON "BloomReport"("userId", "date");
+CREATE INDEX IF NOT EXISTS "PayPalTransaction_userId_status_idx" ON "PayPalTransaction"("userId", "status");
