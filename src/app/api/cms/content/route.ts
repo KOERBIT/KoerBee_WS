@@ -53,6 +53,10 @@ export async function PUT(request: NextRequest) {
     )
   }
 
+  if (session.user?.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   try {
     const body = (await request.json()) as Record<string, unknown>
     const { key, value, locale = 'de' } = body as {

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  if (session.user?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const customers = await prisma.shopCustomer.findMany({
     orderBy: { createdAt: 'desc' },

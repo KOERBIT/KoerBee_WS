@@ -6,6 +6,7 @@ import { put, list, del } from '@vercel/blob'
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (session.user?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { blobs } = await list()
   const media = blobs.map(b => ({
@@ -20,6 +21,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (session.user?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null
@@ -43,6 +45,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (session.user?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { url } = await req.json()
   if (!url) return NextResponse.json({ error: 'URL fehlt' }, { status: 400 })
