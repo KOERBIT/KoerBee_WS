@@ -8,19 +8,73 @@ import MailSettingsForm from '@/components/MailSettingsForm'
 import AnthropicSettingsForm from '@/components/AnthropicSettingsForm'
 import ThemeSwitcher from '@/components/ThemeSwitcher'
 
+type ManagedUser = { id: string; email: string; name: string | null; role: string; disabled: boolean }
+
 interface SettingsPageClientProps {
-  users: Array<{ id: string; email: string; name: string | null }>
+  users: ManagedUser[]
   currentUserEmail: string | undefined
+  currentUserId?: string
   isAdmin?: boolean
 }
 
 export default function SettingsPageClient({
   users: initialUsers,
   currentUserEmail,
+  currentUserId,
   isAdmin = false,
 }: SettingsPageClientProps) {
   const [usersList, setUsersList] = useState(initialUsers)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+
+  const [userError, setUserError] = useState('')
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  async function updateUser(id: string, body: Record<string, unknown>): Promise<boolean> {
+    setUserError('')
+    setBusyId(id)
+    try {
+      const res = await fetch(`/api/account/users/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setUserError(data.error || 'Änderung fehlgeschlagen')
+        return false
+      }
+      if (data.user) setUsersList((list) => list.map((u) => (u.id === id ? { ...u, ...data.user } : u)))
+      return true
+    } catch {
+      setUserError('Änderung fehlgeschlagen')
+      return false
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function resetPassword(user: ManagedUser) {
+    const pw = window.prompt(`Neues Passwort für ${user.email} (mindestens 8 Zeichen):`)
+    if (!pw) return
+    if (await updateUser(user.id, { password: pw })) window.alert('Passwort wurde gesetzt.')
+  }
+
+  async function deleteUser(user: ManagedUser) {
+    if (!window.confirm(`${user.email} wirklich löschen?\n\nAlle Daten dieses Nutzers (Völker, Verkäufe, Produkte …) werden unwiderruflich gelöscht.`)) return
+    setUserError('')
+    setBusyId(user.id)
+    try {
+      const res = await fetch(`/api/account/users/${user.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setUserError(data.error || 'Löschen fehlgeschlagen')
+        return
+      }
+      setUsersList((list) => list.filter((u) => u.id !== user.id))
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   const handleUserCreated = async () => {
     // Reload users list
@@ -115,16 +169,70 @@ export default function SettingsPageClient({
             <p className="text-[13px] text-zinc-400 mb-4">Keine Nutzer vorhanden</p>
           ) : (
             <div className="mb-4 space-y-2">
-              {usersList.map((user) => (
-                <div key={user.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-50">
-                  <div>
-                    <p className="text-[14px] font-medium text-zinc-900">{user.email}</p>
-                    {user.name && (
-                      <p className="text-[12px] text-zinc-400 mt-0.5">{user.name}</p>
+              {usersList.map((user) => {
+                const isSelf = user.id === currentUserId
+                const busy = busyId === user.id
+                return (
+                  <div
+                    key={user.id}
+                    className={`px-3 py-2 rounded-lg bg-zinc-50 ${user.disabled ? 'opacity-60' : ''}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-medium text-zinc-900 truncate">
+                          {user.email}
+                          {isSelf && <span className="ml-2 text-[11px] text-zinc-400">(du)</span>}
+                          {user.disabled && (
+                            <span className="ml-2 text-[11px] font-medium text-red-600">gesperrt</span>
+                          )}
+                        </p>
+                        {user.name && <p className="text-[12px] text-zinc-400 mt-0.5">{user.name}</p>}
+                      </div>
+                      <select
+                        value={user.role}
+                        disabled={isSelf || busy}
+                        onChange={(e) => updateUser(user.id, { role: e.target.value })}
+                        aria-label={`Rolle von ${user.email}`}
+                        className="text-[13px] border border-zinc-200 rounded-lg px-2 py-1 bg-white disabled:bg-zinc-100"
+                      >
+                        <option value="user">Nutzer</option>
+                        <option value="admin">Administrator</option>
+                      </select>
+                    </div>
+                    {!isSelf && (
+                      <div className="flex gap-3 mt-2 text-[12px]">
+                        <button
+                          disabled={busy}
+                          onClick={() => updateUser(user.id, { disabled: !user.disabled })}
+                          className="text-amber-600 hover:underline disabled:opacity-50"
+                        >
+                          {user.disabled ? 'Entsperren' : 'Sperren'}
+                        </button>
+                        <button
+                          disabled={busy}
+                          onClick={() => resetPassword(user)}
+                          className="text-amber-600 hover:underline disabled:opacity-50"
+                        >
+                          Passwort setzen
+                        </button>
+                        <button
+                          disabled={busy}
+                          onClick={() => deleteUser(user)}
+                          className="text-red-600 hover:underline disabled:opacity-50"
+                        >
+                          Löschen
+                        </button>
+                      </div>
                     )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
+            </div>
+          )}
+
+          {userError && (
+            <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-[13px] text-red-700">
+              {userError}
             </div>
           )}
 

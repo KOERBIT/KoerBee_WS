@@ -16,6 +16,7 @@ export default function CreateUserModal({
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [role, setRole] = useState<'user' | 'admin'>('user')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -32,6 +33,7 @@ export default function CreateUserModal({
           email,
           password,
           confirmPassword,
+          role,
         }),
       })
 
@@ -45,6 +47,7 @@ export default function CreateUserModal({
       setEmail('')
       setPassword('')
       setConfirmPassword('')
+      setRole('user')
       onUserCreated()
       onClose()
     } catch (err) {
@@ -116,6 +119,21 @@ export default function CreateUserModal({
               className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-amber-500"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-[14px] font-medium text-zinc-900 mb-2">
+              Rolle
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as 'user' | 'admin')}
+              disabled={loading}
+              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-[14px] bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="user">Nutzer (eigene Daten, kein Verwaltungszugriff)</option>
+              <option value="admin">Administrator (voller Zugriff)</option>
+            </select>
           </div>
 
           {error && (

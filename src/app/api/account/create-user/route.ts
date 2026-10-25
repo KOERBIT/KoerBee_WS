@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { NextRequest, NextResponse } from 'next/server'
+import { isRole } from '@/lib/user-admin'
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -24,10 +25,15 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = (await request.json()) as Record<string, unknown>
-    const { email, password, confirmPassword } = body as {
+    const { email, password, confirmPassword, role = 'user' } = body as {
       email: unknown
       password: unknown
       confirmPassword: unknown
+      role?: unknown
+    }
+
+    if (!isRole(role)) {
+      return NextResponse.json({ ok: false, error: 'Ungültige Rolle' }, { status: 422 })
     }
 
     // Validation
@@ -87,11 +93,13 @@ export async function POST(request: NextRequest) {
         email,
         passwordHash: hashedPassword,
         name: null,
+        role,
       },
       select: {
         id: true,
         email: true,
         name: true,
+        role: true,
       },
     })
 

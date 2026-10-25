@@ -51,6 +51,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!user.passwordHash) return null
+        if (user.disabled) return null
 
         const passwordMatch = await bcrypt.compare(
           credentials.password,
@@ -76,10 +77,18 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as { role?: string }).role ?? 'user'
-      } else if (token.id && !token.role) {
-        // Bestehende Sessions: Rolle einmalig aus der DB nachladen
-        const dbUser = await prisma.user.findUnique({ where: { id: token.id }, select: { role: true } })
-        token.role = dbUser?.role ?? 'user'
+        return token
+      }
+      if (token.id) {
+        // Rolle und Sperre bei jeder Anfrage frisch aus der DB lesen, damit
+        // Änderungen in der Nutzerverwaltung sofort wirken. Ein Fehler hier
+        // beendet die Session (next-auth löscht das Cookie).
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { role: true, disabled: true },
+        })
+        if (!dbUser || dbUser.disabled) throw new Error('user_inactive')
+        token.role = dbUser.role
       }
       return token
     },

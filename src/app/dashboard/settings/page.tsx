@@ -10,7 +10,7 @@ export default async function SettingsPage() {
   // Nutzerliste nur für Admins laden
   const users = isAdmin
     ? await prisma.user.findMany({
-        select: { id: true, email: true, name: true },
+        select: { id: true, email: true, name: true, role: true, disabled: true },
         orderBy: { createdAt: 'asc' },
       })
     : []
@@ -19,6 +19,7 @@ export default async function SettingsPage() {
     <SettingsPageClient
       users={users}
       currentUserEmail={session?.user?.email || undefined}
+      currentUserId={session?.user?.id}
       isAdmin={isAdmin}
     />
   )
