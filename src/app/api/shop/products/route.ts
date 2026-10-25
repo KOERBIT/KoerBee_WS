@@ -39,5 +39,9 @@ export async function GET() {
   // userId nicht an den Client senden
   const cleaned = products.map(({ userId: _, ...p }) => p)
 
-  return NextResponse.json({ products: cleaned, stockLowThreshold })
+  // Öffentlich und nicht personalisiert (keine Session/Cookies) → kurz am CDN cachebar
+  return NextResponse.json(
+    { products: cleaned, stockLowThreshold },
+    { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } },
+  )
 }

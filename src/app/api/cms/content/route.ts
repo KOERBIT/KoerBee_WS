@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { revalidateTag } from 'next/cache'
+import { CMS_CACHE_TAG } from '@/lib/cms-cache'
 
 /**
  * GET /api/cms/content
@@ -106,6 +108,8 @@ export async function PUT(request: NextRequest) {
         userId: session.user.id,
       },
     })
+
+    revalidateTag(CMS_CACHE_TAG, { expire: 0 })
 
     return NextResponse.json(cmsContent, { status: 200 })
   } catch (error) {

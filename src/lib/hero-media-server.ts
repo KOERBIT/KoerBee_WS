@@ -1,14 +1,11 @@
-import { prisma } from '@/lib/prisma'
-import { resolveHeroAnimation, HERO_MEDIA_KEYS } from '@/lib/hero-media'
+import { getCachedHeroEntries } from '@/lib/cms-cache'
+import { resolveHeroAnimation } from '@/lib/hero-media'
 
 /** Hero-Medien (Video, Animation, Sound) – sprachunabhängig immer aus locale "de". */
 export async function getHeroMedia() {
   const cms: Record<string, string> = {}
   try {
-    const entries = await prisma.cmsContent.findMany({
-      where: { locale: 'de', key: { in: [...HERO_MEDIA_KEYS] } },
-      select: { key: true, value: true },
-    })
+    const entries = await getCachedHeroEntries()
     for (const e of entries) cms[e.key] = e.value
   } catch { /* DB unreachable → Standardwerte */ }
   return heroMediaFromCms(cms)

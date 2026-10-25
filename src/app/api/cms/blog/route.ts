@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { revalidateTag } from 'next/cache'
+import { CMS_CACHE_TAG } from '@/lib/cms-cache'
 import slugify from 'slugify'
 
 /**
@@ -129,6 +131,8 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
       },
     })
+
+    revalidateTag(CMS_CACHE_TAG, { expire: 0 })
 
     return NextResponse.json(post, { status: 201 })
   } catch (error) {

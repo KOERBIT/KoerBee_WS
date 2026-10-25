@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
-import { prisma } from '@/lib/prisma'
+import { getCachedCmsEntries, getCachedLandingPosts } from '@/lib/cms-cache'
 import type { Locale } from '@/lib/shop/i18n'
 import LandingContent from '@/components/landing/LandingContent'
 import HoneyDripBackground from '@/components/shop/HoneyDripBackground'
@@ -15,10 +15,7 @@ async function getLocale(): Promise<Locale> {
 
 /** CMS-Texte der Sprache; leere/fehlende Übersetzungen fallen auf Deutsch zurück. */
 async function loadCms(locale: Locale): Promise<Record<string, string>> {
-  const entries = await prisma.cmsContent.findMany({
-    where: { locale: { in: ['de', locale] } },
-    select: { key: true, value: true, locale: true },
-  })
+  const entries = await getCachedCmsEntries(['de', locale])
   const cms: Record<string, string> = {}
   for (const e of entries) if (e.locale === 'de') cms[e.key] = e.value
   // Medien (Video, Animation, Sound) sind sprachunabhängig und kommen immer aus "de"
@@ -58,12 +55,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
   try {
     ;[cms, blogPosts] = await Promise.all([
       loadCms(locale),
-      prisma.blogPost.findMany({
-        where: { status: 'PUBLISHED' },
-        orderBy: { publishedAt: 'desc' },
-        take: 3,
-        select: { id: true, title: true, slug: true, excerpt: true, coverImage: true, category: true, publishedAt: true },
-      }),
+      getCachedLandingPosts().then(posts => posts.map(p => ({ ...p, publishedAt: p.publishedAt ? new Date(p.publishedAt) : null }))),
     ])
   } catch { /* DB unreachable — show page with defaults */ }
 
