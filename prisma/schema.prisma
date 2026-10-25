@@ -597,3 +597,12 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+
+// Zähler für Rate-Limiting (Login, Kontaktformular usw.); Fenster läuft bei resetAt ab
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}

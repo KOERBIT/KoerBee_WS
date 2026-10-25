@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { clientIp, rateLimitAll, tooManyRequests } from '@/lib/rate-limit'
 import { SignJWT } from 'jose'
 import { prisma } from '@/lib/prisma'
 import { sendPasswordResetEmail } from '@/lib/shop/mail'
@@ -6,6 +7,13 @@ import { sendPasswordResetEmail } from '@/lib/shop/mail'
 export async function POST(req: NextRequest) {
   const { email } = await req.json()
   if (!email) return NextResponse.json({ error: 'email_required' }, { status: 400 })
+
+  const ip = clientIp(req.headers)
+  const rl = await rateLimitAll([
+    [`shop-reset:${ip}:${String(email).toLowerCase()}`, 3, 60 * 60],
+    [`shop-reset-ip:${ip}`, 10, 60 * 60],
+  ])
+  if (!rl.ok) return tooManyRequests(rl.retryAfter)
 
   // Always return success to prevent email enumeration
   const customer = await prisma.shopCustomer.findUnique({

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { clientIp, rateLimitAll, tooManyRequests } from '@/lib/rate-limit'
 import nodemailer from 'nodemailer'
 import { prisma } from '@/lib/prisma'
 import { getSmtpConfigForUser } from '@/lib/receipt/mail'
@@ -6,6 +7,9 @@ import { escapeHtml } from '@/lib/shop/mail'
 
 export async function POST(req: Request) {
   try {
+    const rl = await rateLimitAll([[`contact-ip:${clientIp(req.headers)}`, 5, 60 * 60]])
+    if (!rl.ok) return tooManyRequests(rl.retryAfter)
+
     const body = await req.json().catch(() => null)
     const { name, email, subject, message } = body ?? {}
 

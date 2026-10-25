@@ -1,4 +1,5 @@
 import { NextAuthOptions } from 'next-auth'
+import { clientIp, rateLimitAll } from '@/lib/rate-limit'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import bcrypt from 'bcryptjs'
@@ -37,10 +38,18 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'E-Mail', type: 'email' },
         password: { label: 'Passwort', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           return null
         }
+
+        // Brute-Force-Schutz: je IP+E-Mail und je IP (Fehlversuche wie Erfolge zählen)
+        const ip = clientIp(req?.headers ?? {})
+        const rl = await rateLimitAll([
+          [`login:${ip}:${credentials.email.toLowerCase()}`, 10, 15 * 60],
+          [`login-ip:${ip}`, 40, 15 * 60],
+        ])
+        if (!rl.ok) return null
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },

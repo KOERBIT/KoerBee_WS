@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { clientIp, rateLimitAll, tooManyRequests } from '@/lib/rate-limit'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { signShopToken, setShopCookie } from '@/lib/shop/auth'
@@ -11,6 +12,9 @@ export async function POST(req: NextRequest) {
   if (!name || !email || !password) {
     return NextResponse.json({ error: 'name, email, password required' }, { status: 400 })
   }
+
+  const rl = await rateLimitAll([[`shop-register-ip:${clientIp(req.headers)}`, 5, 60 * 60]])
+  if (!rl.ok) return tooManyRequests(rl.retryAfter)
   if (password.length < 8) {
     return NextResponse.json({ error: 'password_too_short' }, { status: 400 })
   }

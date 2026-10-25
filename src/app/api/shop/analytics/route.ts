@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { clientIp, rateLimitAll, tooManyRequests } from '@/lib/rate-limit'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
@@ -7,6 +8,9 @@ export async function POST(req: NextRequest) {
     if (!path || typeof path !== 'string') {
       return NextResponse.json({ ok: false }, { status: 400 })
     }
+
+    const rl = await rateLimitAll([[`shop-analytics-ip:${clientIp(req.headers)}`, 200, 10 * 60]])
+    if (!rl.ok) return tooManyRequests(rl.retryAfter)
 
     const userAgent = req.headers.get('user-agent') ?? undefined
     const country = req.headers.get('x-vercel-ip-country') ?? undefined

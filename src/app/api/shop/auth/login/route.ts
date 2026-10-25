@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { clientIp, rateLimitAll, tooManyRequests } from '@/lib/rate-limit'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { signShopToken, setShopCookie } from '@/lib/shop/auth'
@@ -8,6 +9,13 @@ export async function POST(req: NextRequest) {
   if (!email || !password) {
     return NextResponse.json({ error: 'email and password required' }, { status: 400 })
   }
+
+  const ip = clientIp(req.headers)
+  const rl = await rateLimitAll([
+    [`shop-login:${ip}:${String(email).toLowerCase()}`, 10, 15 * 60],
+    [`shop-login-ip:${ip}`, 40, 15 * 60],
+  ])
+  if (!rl.ok) return tooManyRequests(rl.retryAfter)
 
   const customer = await prisma.shopCustomer.findUnique({
     where: { email: email.toLowerCase() },
