@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ownsTaskRefs } from '@/lib/task-refs'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -24,6 +25,9 @@ export async function POST(req: NextRequest) {
 
   const { title, description, dueDate, priority, colonyId, apiaryId } = await req.json()
   if (!title) return NextResponse.json({ error: 'Titel fehlt' }, { status: 400 })
+  if (!(await ownsTaskRefs(session.user.id, colonyId, apiaryId))) {
+    return NextResponse.json({ error: 'invalid_reference' }, { status: 422 })
+  }
 
   const task = await prisma.task.create({
     data: {

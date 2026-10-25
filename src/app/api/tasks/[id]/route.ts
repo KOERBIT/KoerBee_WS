@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ownsTaskRefs } from '@/lib/task-refs'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
@@ -12,6 +13,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!existing) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
 
   const body = await req.json()
+  if (!(await ownsTaskRefs(session.user.id, body.colonyId, body.apiaryId))) {
+    return NextResponse.json({ error: 'invalid_reference' }, { status: 422 })
+  }
   const task = await prisma.task.update({
     where: { id },
     data: {

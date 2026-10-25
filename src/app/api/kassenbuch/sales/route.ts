@@ -17,8 +17,32 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { customerName, customerEmail, customerId, date, notes, items } = await req.json()
-  if (!items || items.length === 0) return NextResponse.json({ error: 'Keine Positionen' }, { status: 400 })
+  let body
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'invalid_json' }, { status: 400 })
+  }
+  const { customerName, customerEmail, customerId, date, notes, items: rawItems } = body ?? {}
+  if (!Array.isArray(rawItems) || rawItems.length === 0) return NextResponse.json({ error: 'Keine Positionen' }, { status: 400 })
+
+  // Positionen prüfen: ganze Stückzahl > 0, Preis >= 0; doppelte Produkte zusammenfassen
+  const merged = new Map<string, { productId: string; quantity: number; price: number }>()
+  for (const raw of rawItems) {
+    const q = raw?.quantity
+    const p = raw?.price
+    if (typeof raw?.productId !== 'string' || !Number.isInteger(q) || q <= 0 || typeof p !== 'number' || !Number.isFinite(p) || p < 0) {
+      return NextResponse.json({ error: 'invalid_item' }, { status: 422 })
+    }
+    const key = `${raw.productId}|${p}`
+    const prev = merged.get(key)
+    if (prev) prev.quantity += q
+    else merged.set(key, { productId: raw.productId, quantity: q, price: p })
+  }
+  const items = [...merged.values()]
+
+  const saleDate = date ? new Date(date) : new Date()
+  if (isNaN(saleDate.getTime())) return NextResponse.json({ error: 'invalid_date' }, { status: 422 })
 
   // Optionale E-Mail leicht validieren (leer = keine).
   const email = typeof customerEmail === 'string' ? customerEmail.trim() : ''
@@ -32,13 +56,14 @@ export async function POST(req: NextRequest) {
   }
 
   // Lagerprüfung
-  const productIds = items.map((i: { productId: string }) => i.productId)
+  const productIds = items.map(i => i.productId)
   const products = await prisma.product.findMany({
     where: { id: { in: productIds }, userId: session.user.id },
   })
 
-  type SaleItem = { productId: string; quantity: number; price: number }
-  const typedItems = items as SaleItem[]
+  const typedItems = items
+  const requestedByProduct = new Map<string, number>()
+  for (const i of typedItems) requestedByProduct.set(i.productId, (requestedByProduct.get(i.productId) ?? 0) + i.quantity)
 
   const stockErrors: { productId: string; productName: string; requested: number; available: number }[] = []
   for (const item of typedItems) {
@@ -46,11 +71,12 @@ export async function POST(req: NextRequest) {
     if (!product) {
       return NextResponse.json({ error: 'product_not_found', productId: item.productId }, { status: 422 })
     }
-    if (item.quantity > product.stockQuantity) {
+    const requested = requestedByProduct.get(item.productId) ?? item.quantity
+    if (requested > product.stockQuantity) {
       stockErrors.push({
         productId: product.id,
         productName: product.name,
-        requested: item.quantity,
+        requested,
         available: product.stockQuantity,
       })
     }
@@ -61,7 +87,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Atomare Transaktion: Sale erstellen + Lager abziehen
-  const total = typedItems.reduce((sum, i) => sum + i.quantity * i.price, 0)
+  const cents = (n: number) => Math.round(n * 100) / 100
+  const total = cents(typedItems.reduce((sum, i) => sum + i.quantity * i.price, 0))
 
   try {
   const sale = await prisma.$transaction(async (tx) => {
@@ -70,34 +97,39 @@ export async function POST(req: NextRequest) {
         customerName: customerName || null,
         customerEmail: email || null,
         customerId: customerId || null,
-        date: date ? new Date(date) : new Date(),
+        date: saleDate,
         notes: notes || null,
         total,
         userId: session.user.id,
         items: {
-          create: (items as { productId: string; quantity: number; price: number }[]).map(i => ({
+          create: typedItems.map(i => ({
             productId: i.productId,
             quantity: i.quantity,
             price: i.price,
-            total: i.quantity * i.price,
+            total: cents(i.quantity * i.price),
           })),
         },
       },
       include: { items: { include: { product: true } }, customer: true },
     })
 
-    for (const item of typedItems) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stockQuantity: { decrement: item.quantity } },
+    // Bestand atomar prüfen + abziehen (schützt vor parallelen Verkäufen)
+    for (const [productId, qty] of requestedByProduct) {
+      const res = await tx.product.updateMany({
+        where: { id: productId, userId: session.user.id, stockQuantity: { gte: qty } },
+        data: { stockQuantity: { decrement: qty } },
       })
+      if (res.count === 0) throw new Error('insufficient_stock')
     }
 
     return created
   })
 
   return NextResponse.json(sale, { status: 201 })
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && e.message === 'insufficient_stock') {
+      return NextResponse.json({ error: 'insufficient_stock', items: [] }, { status: 409 })
+    }
     return NextResponse.json({ error: 'Fehler beim Speichern des Verkaufs' }, { status: 500 })
   }
 }

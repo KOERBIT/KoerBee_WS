@@ -17,6 +17,7 @@ jest.mock('@/lib/prisma', () => ({
       findFirst: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       create: jest.fn(),
       delete: jest.fn(),
     },
@@ -118,17 +119,54 @@ describe('POST /api/kassenbuch/sales — stock check', () => {
     const fakeSale = { id: 's-1', total: 42.5, items: [], customer: null }
     mockTx.mockImplementationOnce(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma as any))
     mockSale.create.mockResolvedValueOnce(fakeSale as any)
-    mockProduct.update.mockResolvedValue({ id: 'p-1', stockQuantity: 5 } as any)
+    mockProduct.updateMany.mockResolvedValue({ count: 1 } as any)
 
     const res = await POST(makeReq({
       items: [{ productId: 'p-1', quantity: 5, price: 8.5 }],
       customerName: 'Max',
     }))
     expect(res.status).toBe(201)
-    expect(mockProduct.update).toHaveBeenCalledWith({
-      where: { id: 'p-1' },
+    expect(mockProduct.updateMany).toHaveBeenCalledWith({
+      where: { id: 'p-1', userId: 'user-1', stockQuantity: { gte: 5 } },
       data: { stockQuantity: { decrement: 5 } },
     })
+  })
+
+  it.each([
+    ['negative Menge', { productId: 'p-1', quantity: -3, price: 8.5 }],
+    ['Menge 0', { productId: 'p-1', quantity: 0, price: 8.5 }],
+    ['gebrochene Menge', { productId: 'p-1', quantity: 1.5, price: 8.5 }],
+    ['negativer Preis', { productId: 'p-1', quantity: 1, price: -1 }],
+    ['Preis als String', { productId: 'p-1', quantity: 1, price: '8' }],
+  ])('rejects %s with 422', async (_name, item) => {
+    const res = await POST(makeReq({ items: [item] }))
+    expect(res.status).toBe(422)
+    expect(mockProduct.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('sums duplicate product lines for the stock check', async () => {
+    mockProduct.findMany.mockResolvedValueOnce([
+      { id: 'p-1', name: 'Honig 500g', stockQuantity: 5 } as any,
+    ])
+    const res = await POST(makeReq({
+      items: [
+        { productId: 'p-1', quantity: 3, price: 8.5 },
+        { productId: 'p-1', quantity: 3, price: 9 },
+      ],
+    }))
+    expect(res.status).toBe(409)
+    expect((await res.json()).items[0].requested).toBe(6)
+  })
+
+  it('returns 409 when stock changed concurrently (atomic check fails)', async () => {
+    mockProduct.findMany.mockResolvedValueOnce([
+      { id: 'p-1', name: 'Honig 500g', stockQuantity: 10 } as any,
+    ])
+    mockTx.mockImplementationOnce(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma as any))
+    mockSale.create.mockResolvedValueOnce({ id: 's-1' } as any)
+    mockProduct.updateMany.mockResolvedValue({ count: 0 } as any)
+    const res = await POST(makeReq({ items: [{ productId: 'p-1', quantity: 5, price: 8.5 }] }))
+    expect(res.status).toBe(409)
   })
 })
 

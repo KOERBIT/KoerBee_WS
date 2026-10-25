@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer'
 import { getSmtpConfigForUser } from '@/lib/receipt/mail'
 import { t, Locale } from './i18n'
 
-function escapeHtml(str: string): string {
+export function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
