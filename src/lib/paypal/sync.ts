@@ -3,6 +3,8 @@
 
 const DAY = 86400000
 export const MAX_WINDOW_DAYS = 31
+/** Die Reporting-API liefert Transaktionen bis ~3 h verzögert – Überlappung beim Folge-Sync. */
+export const OVERLAP_MS = 3 * 3600000
 
 export interface MappedTransaction {
   transactionId: string
@@ -14,11 +16,16 @@ export interface MappedTransaction {
   paypalStatus: string | null
 }
 
-/** Zeitraum für den nächsten Sync: ab letztem Sync, sonst Fallback-Zeitraum. */
+/**
+ * Zeitraum für den nächsten Sync: ab letztem Sync minus Überlappung (Dedup per Upsert),
+ * sonst Fallback-Zeitraum.
+ */
 export function resolveSyncRange(
   lastSyncedAt: Date | null, now: Date, fallbackDays: number,
 ): { start: Date; end: Date } {
-  const start = lastSyncedAt ?? new Date(now.getTime() - fallbackDays * DAY)
+  const start = lastSyncedAt
+    ? new Date(lastSyncedAt.getTime() - OVERLAP_MS)
+    : new Date(now.getTime() - fallbackDays * DAY)
   return { start, end: now }
 }
 

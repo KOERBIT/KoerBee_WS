@@ -13,7 +13,25 @@ describe('resolveSyncRange', () => {
   })
   it('startet inkrementell ab lastSyncedAt', () => {
     const last = new Date('2026-06-10T00:00:00Z')
-    expect(resolveSyncRange(last, now, 31).start).toEqual(last)
+    expect(resolveSyncRange(last, now, 31).start).toEqual(new Date(last.getTime() - 3 * 3600000))
+  })
+})
+
+describe('resolveSyncRange Überlappung', () => {
+  it('beginnt 3 Stunden vor lastSyncedAt, damit verspätete Transaktionen nicht verloren gehen', () => {
+    const now = new Date('2026-06-18T12:00:00Z')
+    const last = new Date('2026-06-18T10:00:00Z')
+    expect(resolveSyncRange(last, now, 31).start).toEqual(new Date('2026-06-18T07:00:00Z'))
+  })
+  it('Erstabruf hat keine Überlappung', () => {
+    const now = new Date('2026-06-18T12:00:00Z')
+    expect(resolveSyncRange(null, now, 10).start).toEqual(new Date(now.getTime() - 10 * DAY))
+  })
+  it('Fenster bleibt auch mit Überlappung in 31-Tage-Blöcken', () => {
+    const now = new Date('2026-06-18T00:00:00Z')
+    const { start, end } = resolveSyncRange(new Date(now.getTime() - 31 * DAY), now, 31)
+    chunkRange(start, end).forEach(c =>
+      expect((c.end.getTime() - c.start.getTime()) / DAY).toBeLessThanOrEqual(31))
   })
 })
 
@@ -71,7 +89,7 @@ describe('performSync', () => {
     const last = new Date('2026-06-10T00:00:00Z')
     const r = await performSync({ now, lastSyncedAt: last, fallbackDays: 31, fetchChunk, upsert })
     expect(fetchChunk).toHaveBeenCalledTimes(1)
-    expect(fetchChunk.mock.calls[0][0]).toEqual(last)
+    expect(fetchChunk.mock.calls[0][0]).toEqual(new Date(last.getTime() - 3 * 3600000))
     expect(r.newLastSyncedAt).toEqual(now)
     expect(r.imported).toBe(1)
   })

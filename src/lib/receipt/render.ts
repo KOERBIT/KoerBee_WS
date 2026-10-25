@@ -38,13 +38,22 @@ function qty(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toLocaleString('de-DE')
 }
 
+// Quittungsdaten immer in deutscher Zeit (Server läuft auf Vercel in UTC).
+const RECEIPT_TIME_ZONE = 'Europe/Berlin'
+
+function berlinYear(d: Date): string {
+  return new Intl.DateTimeFormat('de-DE', { year: 'numeric', timeZone: RECEIPT_TIME_ZONE }).format(d)
+}
+
 function fmtDate(d: Date): string {
-  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return d.toLocaleDateString('de-DE', {
+    day: '2-digit', month: '2-digit', year: 'numeric', timeZone: RECEIPT_TIME_ZONE,
+  })
 }
 
 /** Formatierte Quittungsnummer, z.B. "2026-0007". */
 export function formatReceiptNumber(number: number, date: Date): string {
-  return `${date.getFullYear()}-${String(number).padStart(4, '0')}`
+  return `${berlinYear(date)}-${String(number).padStart(4, '0')}`
 }
 
 const STYLE = `
