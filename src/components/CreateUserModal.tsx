@@ -58,7 +58,7 @@ export default function CreateUserModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center md:hidden bg-black/20">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <div className="bg-white rounded-2xl shadow-xl w-full mx-4 p-6 max-w-sm">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-[18px] font-semibold text-zinc-900">
