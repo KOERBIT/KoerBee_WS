@@ -32,6 +32,7 @@ model User {
   paypalCredential PayPalCredential?
   mailCredential   MailCredential?
   anthropicCredential AnthropicCredential?
+  honeyBuckets     HoneyBucket[]
   shopSettings     ShopSettings?
   cmsContents      CmsContent[]
   blogPosts        BlogPost[]
@@ -648,4 +649,15 @@ model RateLimit {
   resetAt DateTime
 
   @@index([resetAt])
+}
+
+// Gespeichertes Leergewicht je Eimergröße (20/25/40 kg) für den Honig-Abfüllrechner
+model HoneyBucket {
+  userId    String
+  sizeKg    Int
+  tareKg    Float
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, sizeKg])
 }

@@ -70,6 +70,15 @@ const navItems = [
     ),
   },
   {
+    label: 'Honig',
+    href: '/dashboard/honig',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 3h10v3H7zM6 6h12v14a1 1 0 01-1 1H7a1 1 0 01-1-1z" /><path d="M6 11h12" />
+      </svg>
+    ),
+  },
+  {
     label: 'Rezepte',
     href: '/dashboard/rezepte',
     icon: (
